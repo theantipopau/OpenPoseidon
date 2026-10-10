@@ -374,32 +374,23 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
         addColour(separator, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
         LoadControl(*separator);
 
+        // Version line in the sidebar footer: small, muted. Shows the first token of the build
+        // string, e.g. "PROTEUS  v3.05-da00252-dev".
+        const std::string fullVersion = (const char*)_version;
+        const std::string shortVersion = fullVersion.substr(0, fullVersion.find(' '));
         ParamClass* version = addClass("ProteusVersion", kProteusMenuIdBase + 94, nullptr);
         version->Add("type", CT_STATIC);
         version->Add("style", ST_LEFT);
         version->Add("font", RString("barlowregular"));
-        version->Add("sizeEx", 0.028f);
-        version->Add("text", _version);
-        version->Add("x", 0.07f);
-        version->Add("y", 0.40f);
-        version->Add("w", 0.50f);
-        version->Add("h", 0.04f);
+        version->Add("sizeEx", 0.026f);
+        version->Add("text", RString(("PROTEUS  v" + shortVersion).c_str()));
+        version->Add("x", 24.0f / 816.0f);
+        version->Add("y", 599.0f / 639.0f); // 40px footer at the bottom of the sidebar
+        version->Add("w", 0.32f - 2.0f * 24.0f / 816.0f);
+        version->Add("h", 0.05f);
         addColour(version, "colorBackground", 0.0f, 0.0f, 0.0f, 0.0f);
-        addColour(version, "colorText", 0.70f, 0.77f, 0.85f, 1.0f);
+        addColour(version, "colorText", 0.4f, 0.5f, 0.55f, 0.8f);
         LoadControl(*version);
-
-        ParamClass* footer = addClass("ProteusFooter", kProteusMenuIdBase + 95, "PROTEUS  -  OpenPoseidon engine");
-        footer->Add("type", CT_STATIC);
-        footer->Add("style", ST_LEFT);
-        footer->Add("font", RString("barlowregular"));
-        footer->Add("sizeEx", 0.024f);
-        footer->Add("x", 0.07f);
-        footer->Add("y", 0.92f);
-        footer->Add("w", 0.60f);
-        footer->Add("h", 0.04f);
-        addColour(footer, "colorBackground", 0.0f, 0.0f, 0.0f, 0.0f);
-        addColour(footer, "colorText", 0.50f, 0.58f, 0.66f, 1.0f);
-        LoadControl(*footer);
 
         for (int i = 0; i < static_cast<int>(sizeof(kProteusMenuItems) / sizeof(kProteusMenuItems[0])); ++i)
         {
