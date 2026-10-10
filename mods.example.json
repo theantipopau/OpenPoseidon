@@ -1,0 +1,9 @@
+{
+  "comment": "Copy to mods.json (gitignored). Mods are listed lowest priority first: the last-listed mod wins. data_path empty = Steam registry lookup for the retail install.",
+  "mods_dir": "C:/path/to/folder/containing/@ww4mod25-and-@Evos",
+  "mods": [
+    "@ww4mod25",
+    "@Evos"
+  ],
+  "data_path": ""
+}

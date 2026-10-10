@@ -16,3 +16,17 @@ __pycache__/
 *.so
 *.dylib
 imgui.ini
+
+# Local config and game/mod data. Never commit. Anchored to the repo root on purpose.
+/mods.json
+/Dta/
+/Res/
+/Addons/
+/Campaigns/
+/Missions/
+/MPMissions/
+/Templates/
+/SPTemplates/
+/Worlds/
+/@ww4mod25/
+/@Evos/
