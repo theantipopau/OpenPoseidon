@@ -54,6 +54,7 @@ protected:
 	RString _cursorName;
 	PackedColor _cursorColor;
 
+	bool _proteusTheme = false;
 	RefArray<Control> _controlsBackground;
 	RefArray<ControlObject> _objects;
 	RefArray<Control> _controlsForeground;
@@ -88,6 +89,11 @@ public:
 
 	ControlsContainer(ControlsContainer *parent);
 	~ControlsContainer() override;
+
+	// Proteus design system (see ProteusTheme.hpp). Call before Load(): buttons are created as
+	// ProteusTheme::MenuButton and retail background frames are created hidden.
+	void EnableProteusTheme() {_proteusTheme = true;}
+	bool ProteusThemeEnabled() const {return _proteusTheme;}
 	void Init();
 
 	int IDD() const {return _idd;}

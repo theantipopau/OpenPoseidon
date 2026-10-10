@@ -1,5 +1,7 @@
 #include <filesystem>
 
+#include <Poseidon/UI/ProteusTheme.hpp>
+
 #include <Poseidon/UI/LocalMapsDisplay.hpp>
 #include <Poseidon/UI/LocalMapEditor.hpp>
 
@@ -178,31 +180,17 @@ static constexpr int kLangRotationCount = sizeof(kLangRotation) / sizeof(kLangRo
 namespace
 {
 constexpr int kProteusMenuIdBase = 9600;
+constexpr int kProteusThemeIdBase = 9680;
 struct ProteusMenuItem
 {
     int target;
     const char* label;
 };
-// Proteus art ships in the executable's assets\ui folder. FindPicture accepts absolute paths,
-// so resolve it there. Empty when the file is missing and the picture simply isn't drawn.
-RString ProteusArtPath(const char* file)
-{
-    char exe[MAX_PATH] = {};
-    if (!GetModuleFileNameA(nullptr, exe, MAX_PATH))
-        return RString();
-    const std::filesystem::path path = std::filesystem::path(exe).parent_path() / "assets" / "ui" / file;
-    if (!std::filesystem::exists(path))
-        return RString();
-    return RString(path.string().c_str());
-}
-
 const ProteusMenuItem kProteusMenuItems[] = {
     {IDC_MAIN_GAME, "CAMPAIGN"},
     {IDC_MAIN_SINGLE, "SINGLE MISSIONS"},
     {IDC_MAIN_MULTIPLAYER, "MULTIPLAYER"},
-    {LocalMapsMenuId, "LOCAL MAPS"},
     {IDC_MAIN_EDITOR, "MISSION EDITOR"},
-    {IDC_MAIN_MODS, "MODS"},
     {IDC_MAIN_OPTIONS, "OPTIONS"},
     {IDC_MAIN_QUIT, "QUIT"},
 };
@@ -240,6 +228,7 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
     const char* mainRsc = (!IsMenuOverriddenByMod() && Res.FindEntry("RscDisplayMainRemaster"))
                               ? "RscDisplayMainRemaster"
                               : "RscDisplayMain";
+    EnableProteusTheme();
     Load(mainRsc);
 
     // Proteus layout: hide the loaded menu controls (kept so GetCtrl(IDC_MAIN_*) stays valid)
@@ -257,156 +246,30 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
 
         static ParamFile proteusCfg;
         proteusCfg.Clear();
-        auto addColour = [](ParamClass* cls, const char* name, float r, float g, float b, float a)
-        {
-            ParamEntry* arr = cls->AddArray(name);
-            arr->AddValue(r);
-            arr->AddValue(g);
-            arr->AddValue(b);
-            arr->AddValue(a);
-        };
-        int classCount = 0;
-        auto addClass = [&](const char* kind, int idc, const char* text) -> ParamClass*
-        {
-            const std::string name = std::string(kind) + std::to_string(classCount++);
-            ParamClass* cls = proteusCfg.AddClass(name.c_str());
-            cls->Add("idc", idc);
-            if (text)
-                cls->Add("text", RString(text));
-            return cls;
-        };
+        const float screenW = GLOB_ENGINE->Width2D();
+        const float screenH = GLOB_ENGINE->Height2D();
+        ProteusTheme::AddBackdrop(this, proteusCfg, kProteusThemeIdBase);
+        ProteusTheme::AddSidebarHeader(this, proteusCfg, kProteusThemeIdBase);
+        ProteusTheme::AddSidebarFooter(this, proteusCfg, kProteusThemeIdBase, _version);
 
-        // Back to front: key art, a dark wash for legibility, the logo, the button column, then text.
-        auto addFullScreen = [&](ParamClass* cls, float alpha)
-        {
-            cls->Add("x", 0.0f);
-            cls->Add("y", 0.0f);
-            cls->Add("w", 1.0f);
-            cls->Add("h", 1.0f);
-            addColour(cls, "colorBackground", 0.02f, 0.03f, 0.05f, alpha);
-            addColour(cls, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
-        };
-        ParamClass* art = addClass("ProteusArt", kProteusMenuIdBase + 90, nullptr);
-        art->Add("type", CT_STATIC);
-        art->Add("style", ST_PICTURE);
-        art->Add("text", ProteusArtPath("proteus_background.paa"));
-        addFullScreen(art, 0.0f);
-        LoadControl(*art);
-
-        // Dark edge vignette over the art, for readability. Transparent in the centre.
-        ParamClass* vignette = addClass("ProteusVignette", kProteusMenuIdBase + 96, nullptr);
-        vignette->Add("type", CT_STATIC);
-        vignette->Add("style", ST_PICTURE);
-        vignette->Add("text", ProteusArtPath("vignette.paa"));
-        addFullScreen(vignette, 0.0f);
-        LoadControl(*vignette);
-
-        ParamClass* wash = addClass("ProteusWash", kProteusMenuIdBase + 91, "");
-        wash->Add("type", CT_STATIC);
-        wash->Add("style", ST_LEFT);
-        addFullScreen(wash, 0.30f);
-        LoadControl(*wash);
-
-
-        // Glass sidebar on the left edge: 32% of the window, dark navy at 82% opacity, with a
-        // 3px cyan border on its left edge. Sized for the 816x639 menu; 3px is 0.0037 of 816.
-        ParamClass* panel = addClass("ProteusPanel", kProteusMenuIdBase + 93, "");
-        panel->Add("type", CT_STATIC);
-        panel->Add("style", ST_LEFT);
-        panel->Add("x", 0.0f);
-        panel->Add("y", 0.0f);
-        panel->Add("w", 0.32f);
-        panel->Add("h", 1.0f);
-        addColour(panel, "colorBackground", 0.031f, 0.055f, 0.078f, 0.82f);
-        addColour(panel, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
-        LoadControl(*panel);
-
-        ParamClass* accent = addClass("ProteusAccent", kProteusMenuIdBase + 97, "");
-        accent->Add("type", CT_STATIC);
-        accent->Add("style", ST_LEFT);
-        accent->Add("x", 0.0f);
-        accent->Add("y", 0.0f);
-        accent->Add("w", 0.0037f);
-        accent->Add("h", 1.0f);
-        addColour(accent, "colorBackground", 0.0f, 0.737f, 0.831f, 0.9f);
-        addColour(accent, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
-        LoadControl(*accent);
-
-        // Sidebar header: 80x80 logo centred, title beneath, thin cyan separator. Sizes are
-        // pixels at the 816x639 menu size, converted to screen fractions. Created after the
-        // panel so the panel does not cover them.
-        const float headerW = 0.32f;
-        const float logoW = 80.0f / 816.0f;
-        const float logoH = 80.0f / 639.0f;
-        ParamClass* logo = addClass("ProteusLogo", kProteusMenuIdBase + 92, nullptr);
-        logo->Add("type", CT_STATIC);
-        logo->Add("style", ST_PICTURE);
-        logo->Add("text", ProteusArtPath("logo.png"));
-        logo->Add("x", (headerW - logoW) * 0.5f);
-        logo->Add("y", 24.0f / 639.0f);
-        logo->Add("w", logoW);
-        logo->Add("h", logoH);
-        addColour(logo, "colorBackground", 0.0f, 0.0f, 0.0f, 0.0f);
-        addColour(logo, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
-        LoadControl(*logo);
-
-        ParamClass* title = addClass("ProteusTitle", kProteusMenuIdBase + 98, "PROTEUS");
-        title->Add("type", CT_STATIC);
-        title->Add("style", ST_CENTER);
-        title->Add("font", RString("barlowsemibold"));
-        title->Add("sizeEx", 0.05f);
-        title->Add("x", 0.0f);
-        title->Add("y", 112.0f / 639.0f);
-        title->Add("w", headerW);
-        title->Add("h", 40.0f / 639.0f);
-        addColour(title, "colorBackground", 0.0f, 0.0f, 0.0f, 0.0f);
-        addColour(title, "colorText", 0.784f, 0.863f, 0.925f, 1.0f);
-        LoadControl(*title);
-
-        ParamClass* separator = addClass("ProteusSeparator", kProteusMenuIdBase + 99, "");
-        separator->Add("type", CT_STATIC);
-        separator->Add("style", ST_LEFT);
-        separator->Add("x", 24.0f / 816.0f);
-        separator->Add("y", 160.0f / 639.0f);
-        separator->Add("w", headerW - 2.0f * 24.0f / 816.0f);
-        separator->Add("h", 1.0f / 639.0f);
-        addColour(separator, "colorBackground", 0.0f, 0.737f, 0.831f, 0.31f);
-        addColour(separator, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
-        LoadControl(*separator);
-
-        // Version line in the sidebar footer: small, muted. Shows the first token of the build
-        // string, e.g. "PROTEUS  v3.05-da00252-dev".
-        const std::string fullVersion = (const char*)_version;
-        const std::string shortVersion = fullVersion.substr(0, fullVersion.find(' '));
-        ParamClass* version = addClass("ProteusVersion", kProteusMenuIdBase + 94, nullptr);
-        version->Add("type", CT_STATIC);
-        version->Add("style", ST_LEFT);
-        version->Add("font", RString("barlowregular"));
-        version->Add("sizeEx", 0.026f);
-        version->Add("text", RString(("PROTEUS  v" + shortVersion).c_str()));
-        version->Add("x", 24.0f / 816.0f);
-        version->Add("y", 599.0f / 639.0f); // 40px footer at the bottom of the sidebar
-        version->Add("w", 0.32f - 2.0f * 24.0f / 816.0f);
-        version->Add("h", 0.05f);
-        addColour(version, "colorBackground", 0.0f, 0.0f, 0.0f, 0.0f);
-        addColour(version, "colorText", 0.4f, 0.5f, 0.55f, 0.8f);
-        LoadControl(*version);
-
+        // Button column: 24px side padding inside the sidebar, 42px buttons, 6px gaps.
+        const float sidebarPx = ProteusTheme::MetricsFor(screenW, screenH).sidebarW;
+        const float buttonW = (sidebarPx - 2.0f * ProteusTheme::PANEL_PADDING_H) / screenW;
+        const float buttonH = ProteusTheme::SidebarButtonHeight(screenW, screenH);
         for (int i = 0; i < static_cast<int>(sizeof(kProteusMenuItems) / sizeof(kProteusMenuItems[0])); ++i)
         {
-            ParamClass* button =
-                addClass("ProteusButton", kProteusMenuIdBase + i, kProteusMenuItems[i].label);
+            const std::string name = "ProteusButton" + std::to_string(i);
+            ParamClass* button = proteusCfg.AddClass(name.c_str());
+            button->Add("idc", kProteusMenuIdBase + i);
+            button->Add("text", RString(kProteusMenuItems[i].label));
             button->Add("type", CT_BUTTON);
             button->Add("style", ST_CENTER);
             button->Add("font", RString("barlowsemibold"));
             button->Add("sizeEx", 0.034f);
-            // Inside the sidebar: 24px side padding, 42px buttons, 6px gaps (816x639 menu).
-            button->Add("x", 0.0294f);
-            button->Add("y", 176.0f / 639.0f + 0.0751f * i); // 16px below the separator
-            button->Add("w", 0.261f);
-            button->Add("h", 0.0657f);
-            addColour(button, "colorBackground", 0.12f, 0.19f, 0.27f, 0.90f);
-            addColour(button, "colorText", 0.90f, 0.94f, 0.98f, 1.0f);
+            button->Add("x", ProteusTheme::PANEL_PADDING_H / screenW);
+            button->Add("y", ProteusTheme::SidebarButtonTop(i, screenH));
+            button->Add("w", buttonW);
+            button->Add("h", buttonH);
             LoadControl(*button);
         }
         // Keyboard focus must sit on a visible button, not the hidden retail Quit.
@@ -573,53 +436,8 @@ bool DisplayMain::DoKeyDown(unsigned nChar, unsigned nRepCnt, unsigned nFlags)
     return Display::DoKeyDown(nChar, nRepCnt, nFlags);
 }
 
-// Proteus menu button: transparent until focused. Focus (mouse or keyboard) shows a cyan wash,
-// a 3px cyan accent on the left edge, and slides the label 4px right. The label and the click
-// action are CButton's, unchanged.
-class ProteusMenuButton : public CButton
-{
-public:
-    using CButton::CButton;
-
-    void OnDraw(float alpha) override
-    {
-        const int screenW = GLOB_ENGINE->Width2D();
-        const int screenH = GLOB_ENGINE->Height2D();
-        const float xx = static_cast<int>(_x * screenW) + 0.5f;
-        const float yy = static_cast<int>(_y * screenH) + 0.5f;
-        const float ww = static_cast<int>(_w * screenW);
-        const float hh = static_cast<int>(_h * screenH);
-        const bool hot = IsFocused();
-        const bool pushed = IsEnabled() && _state;
-
-        if (hot)
-        {
-            Texture* white = GLOB_SCENE->Preloaded(TextureWhite);
-            MipInfo wash = GLOB_ENGINE->TextBank()->UseMipmap(white, 0, 0);
-            const float washAlpha = (pushed ? 0.25f : 0.12f) * alpha;
-            GLOB_ENGINE->Draw2D(wash, PackedColor(Color(0.0f, 0.737f, 0.831f, washAlpha)),
-                                Rect2DPixel(xx, yy, ww, hh));
-            MipInfo bar = GLOB_ENGINE->TextBank()->UseMipmap(white, 0, 0);
-            GLOB_ENGINE->Draw2D(bar, PackedColor(Color(0.0f, 0.737f, 0.831f, alpha)),
-                                Rect2DPixel(xx, yy, 3.0f, hh));
-        }
-
-        const float padding = 12.0f / screenW;
-        const float slide = hot ? 4.0f / screenW : 0.0f;
-        const float left = _x + padding + slide;
-        const float top = _y + 0.5f * (_h - _size);
-        const Color textColor = hot ? Color(1.0f, 1.0f, 1.0f, alpha) : Color(0.784f, 0.824f, 0.863f, 0.85f * alpha);
-        GLOB_ENGINE->DrawText(Point2DFloat(left, top), _size, Rect2DFloat(_x, _y, _w, _h), _font,
-                              PackedColor(textColor), _text);
-    }
-};
-
 Control* DisplayMain::OnCreateCtrl(int type, int idc, const ParamEntry& cls)
 {
-    if (type == CT_BUTTON && idc >= kProteusMenuIdBase
-        && idc < kProteusMenuIdBase + static_cast<int>(sizeof(kProteusMenuItems) / sizeof(kProteusMenuItems[0])))
-        return new ProteusMenuButton(this, idc, cls);
-
     switch (idc)
     {
         case IDC_MAIN_VERSION:

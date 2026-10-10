@@ -1,5 +1,6 @@
 
 #include <Poseidon/UI/Controls/UIControls.hpp>
+#include <Poseidon/UI/ProteusTheme.hpp>
 #include <Poseidon/UI/Controls/CursorLayout.hpp>
 #include <Poseidon/Input/ControllerUiLayout.hpp>
 #include <Poseidon/Input/InputSubsystem.hpp>
@@ -310,6 +311,9 @@ void ControlsContainer::LoadControlBackground(const ParamEntry& ctrlCls)
     Control* ctrl = OnCreateCtrl(type, idc, ctrlCls);
     if (ctrl != nullptr)
     {
+        // Proteus screens draw their own backdrop; the retail background frames stay hidden.
+        if (_proteusTheme)
+            ctrl->ShowCtrl(false);
         int index = _controlsBackground.Add(ctrl);
         if (ctrl->CanBeDefault() && ctrlCls.FindEntry("default") && (ctrlCls >> "default").GetInt())
         {
@@ -517,6 +521,8 @@ Control* ControlsContainer::OnCreateCtrl(int type, int idc, const ParamEntry& cl
         }
         case CT_BUTTON:
         {
+            if (_proteusTheme)
+                return new ProteusTheme::MenuButton(this, idc, cls);
             return new CButton(this, idc, cls);
         }
         case CT_SLIDER:
