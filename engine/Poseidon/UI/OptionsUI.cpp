@@ -1,4 +1,6 @@
 
+#include <filesystem>
+
 #include <Poseidon/UI/Options/OptionsShell.hpp>
 #include <Poseidon/Dev/Diag/OpDiag.hpp> // DIAG-001 hooks, empty unless POSEIDON_DIAG
 #include <Poseidon/Game/Mission/MissionPathLoader.hpp>
@@ -721,6 +723,12 @@ RString FindPicture(RString name)
     }
 
     name.Lower();
+
+    // An absolute path to an existing file is used as-is (e.g. art shipped beside the executable).
+    if (std::filesystem::path((const char*)name).is_absolute() && QIFStreamB::FileExist(name))
+    {
+        return name;
+    }
 
     // find in mission
     RString fullname = GetMissionDirectory() + name;
