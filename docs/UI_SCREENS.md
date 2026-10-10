@@ -9,7 +9,7 @@ The engine's UI is a `Display` tree built on `ControlsContainer` (`engine/Poseid
 | Screen Name | Display class | File(s) | Layout source | Status |
 | --- | --- | --- | --- | --- |
 | Main Menu | `DisplayMain` | `engine/Poseidon/UI/OptionsUIApp.cpp` | Code (Proteus layout) | Done (overhaul commits `679e7b0`–`e2c3721`) |
-| Campaign Select | `DisplayCampaignLoad` | `engine/Poseidon/UI/OptionsUIImpl.cpp` (`RscDisplayCampaignLoad`) | Resource | Pending |
+| Campaign Select | `DisplayCampaignLoad` | `engine/Poseidon/UI/OptionsUIImpl.cpp` | Code (2D controls; `RscDisplayCampaignLoad` is no longer loaded) | Done. Campaign list on the left, overview and mission history on the right. Statistics block not shown |
 | Single Missions | `DisplaySingleMission` | `engine/Poseidon/UI/OptionsUIImpl.cpp` (`RscDisplaySingleMission`) | Resource | Pending |
 | Multiplayer | `DisplayMultiplayer` | `engine/Poseidon/UI/DisplayUIMultiplayer.cpp` (`RscDisplayMultiplayer`) | Resource | Pending |
 | Local Maps | `LocalMapsDisplay` | `engine/Poseidon/UI/LocalMapsDisplay.cpp` / `.hpp` | Code (`AddControl`) | Removed from the main menu. Crashes when opened: `ScanLocalVehicles` throws |

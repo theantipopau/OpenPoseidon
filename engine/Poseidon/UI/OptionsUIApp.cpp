@@ -565,11 +565,11 @@ void DisplayMain::OnChildDestroyed(int idd, int exit)
             if (exit == IDC_OK)
             {
                 DisplayCampaignLoad* disp = dynamic_cast<DisplayCampaignLoad*>((ControlsContainer*)_child);
-                PoseidonAssert(dynamic_cast<C3DListBox*>(disp->GetCtrl(IDC_CAMPAIGN_HISTORY)));
+                PoseidonAssert(dynamic_cast<CListBox*>(disp->GetCtrl(IDC_CAMPAIGN_HISTORY)));
 
                 USER_CONFIG.easyMode = disp->_cadetMode;
 
-                C3DListBox* lbox = static_cast<C3DListBox*>(disp->GetCtrl(IDC_CAMPAIGN_HISTORY));
+                CListBox* lbox = static_cast<CListBox*>(disp->GetCtrl(IDC_CAMPAIGN_HISTORY));
                 CampaignHistory& campaign = disp->_campaigns[disp->_currentCampaign];
                 int sel = lbox->GetCurSel();
                 DoAssert(sel >= 0);
@@ -647,8 +647,8 @@ void DisplayMain::OnChildDestroyed(int idd, int exit)
             else if (exit == IDC_CAMPAIGN_REPLAY)
             {
                 DisplayCampaignLoad* disp = dynamic_cast<DisplayCampaignLoad*>((ControlsContainer*)_child);
-                PoseidonAssert(dynamic_cast<C3DListBox*>(disp->GetCtrl(IDC_CAMPAIGN_HISTORY)));
-                C3DListBox* lbox = static_cast<C3DListBox*>(disp->GetCtrl(IDC_CAMPAIGN_HISTORY));
+                PoseidonAssert(dynamic_cast<CListBox*>(disp->GetCtrl(IDC_CAMPAIGN_HISTORY)));
+                CListBox* lbox = static_cast<CListBox*>(disp->GetCtrl(IDC_CAMPAIGN_HISTORY));
                 CampaignHistory& campaign = disp->_campaigns[disp->_currentCampaign];
                 int sel = lbox->GetCurSel();
                 PoseidonAssert(sel >= 0);

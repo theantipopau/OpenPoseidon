@@ -36,4 +36,5 @@ Running log of changes made by agents on this fork. Newest first.
   - Main menu now uses the shared builders. MODS and LOCAL MAPS are removed from it. LOCAL MAPS crashes in `ScanLocalVehicles`, and MODS goes nowhere.
   - Options main page restyled as a centred panel with a cyan top border. The 3D laptop is hidden. Its links are Proteus items routed to the same handlers. BACK and Escape exit to the main menu.
   - Options sub-pages (Video, Audio, Controls, Difficulty) are not restyled yet.
-  - Still pending: Campaign Select, Single Missions, Multiplayer, Mission Editor launcher, and the resolution tiers. `docs/UI_SCREENS.md` has the full table.
+  - Campaign Select restyled. Every campaign is listed on the left and scrolls. Selecting one shows its name and overview on the right, with the mission history beneath. BACK, DIFFICULTY, REPLAY and BEGIN run along the bottom. The retail 3D book is not loaded, so the page is built from 2D controls. Overviews are each campaign's own HTML, so some show only a picture. The statistics block is not shown in this layout.
+  - Still pending: Single Missions, Multiplayer, Mission Editor launcher, and the resolution tiers. `docs/UI_SCREENS.md` has the full table.
