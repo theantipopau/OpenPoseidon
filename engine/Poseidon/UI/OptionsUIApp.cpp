@@ -1,3 +1,5 @@
+#include <filesystem>
+
 #include <Poseidon/UI/LocalMapsDisplay.hpp>
 #include <Poseidon/UI/LocalMapEditor.hpp>
 
@@ -181,6 +183,19 @@ struct ProteusMenuItem
     int target;
     const char* label;
 };
+// Proteus art ships in the executable's assets\ui folder. FindPicture accepts absolute paths,
+// so resolve it there. Empty when the file is missing and the picture simply isn't drawn.
+RString ProteusArtPath(const char* file)
+{
+    char exe[MAX_PATH] = {};
+    if (!GetModuleFileNameA(nullptr, exe, MAX_PATH))
+        return RString();
+    const std::filesystem::path path = std::filesystem::path(exe).parent_path() / "assets" / "ui" / file;
+    if (!std::filesystem::exists(path))
+        return RString();
+    return RString(path.string().c_str());
+}
+
 const ProteusMenuItem kProteusMenuItems[] = {
     {IDC_MAIN_GAME, "CAMPAIGN"},
     {IDC_MAIN_SINGLE, "SINGLE MISSIONS"},
@@ -274,24 +289,24 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
         ParamClass* art = addClass("ProteusArt", kProteusMenuIdBase + 90, nullptr);
         art->Add("type", CT_STATIC);
         art->Add("style", ST_PICTURE);
-        art->Add("text", RString("proteus_background.paa"));
+        art->Add("text", ProteusArtPath("proteus_background.paa"));
         addFullScreen(art, 0.0f);
         LoadControl(*art);
 
         ParamClass* wash = addClass("ProteusWash", kProteusMenuIdBase + 91, "");
         wash->Add("type", CT_STATIC);
         wash->Add("style", ST_LEFT);
-        addFullScreen(wash, 0.38f);
+        addFullScreen(wash, 0.30f);
         LoadControl(*wash);
 
         ParamClass* logo = addClass("ProteusLogo", kProteusMenuIdBase + 92, nullptr);
         logo->Add("type", CT_STATIC);
         logo->Add("style", ST_PICTURE);
-        logo->Add("text", RString("proteus_logo.paa"));
-        logo->Add("x", 0.06f);
-        logo->Add("y", 0.06f);
-        logo->Add("w", 0.20f);
-        logo->Add("h", 0.256f); // square in pixels at the 816x639 menu size
+        logo->Add("text", ProteusArtPath("proteus_logo.paa"));
+        logo->Add("x", 0.05f);
+        logo->Add("y", 0.04f);
+        logo->Add("w", 0.26f);
+        logo->Add("h", 0.332f); // square in pixels at the 816x639 menu size
         addColour(logo, "colorBackground", 0.0f, 0.0f, 0.0f, 0.0f);
         addColour(logo, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
         LoadControl(*logo);
@@ -315,7 +330,7 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
         version->Add("sizeEx", 0.028f);
         version->Add("text", _version);
         version->Add("x", 0.07f);
-        version->Add("y", 0.33f);
+        version->Add("y", 0.40f);
         version->Add("w", 0.50f);
         version->Add("h", 0.04f);
         addColour(version, "colorBackground", 0.0f, 0.0f, 0.0f, 0.0f);

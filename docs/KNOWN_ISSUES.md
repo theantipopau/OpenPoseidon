@@ -34,3 +34,9 @@ Build and runtime issues found during setup. Each entry notes whether it is fixe
 - **Mod mounting not verified.** The probe aborted before `ModSystem::SetModPath` logged `Mod path set` / `Loaded mod`. Retest once the installs are in place.
 - **Build warnings.** The `PoseidonGame` build logged 763 `warning:` lines (clang-cl and the Rust crate). No errors. Not triaged.
 - **Engine config is written to the user profile.** First run created `%APPDATA%\CWR\audio.cfg`. Expected; noted so it isn't mistaken for repo state.
+
+## Main menu art
+
+- **Picture lookup ignored absolute paths.** `FindPicture` only searched the mission directory, `dtaExt\`, and PBO banks under `data\`. Menu art shipped in `assets\ui` never resolved. Fixed: an absolute path to an existing file is now used as-is.
+- **2048-pixel background hangs the renderer.** A 2048-wide PAA in a picture control produced `wgr_bindless_texture_bind` validation errors, and the window stopped at "Wait a moment…". `CStatic` caps pictures at 1024 (`SetMaxSize(1024)`), so oversized art should be rejected or downscaled rather than hang. The menu art is kept at 1024 wide. Not fixed in the engine.
+- **Art packed in a mod PBO does not resolve.** `GetPictureName` looks in `data\` through the bank selected by path prefix, and the base game's `data` bank wins. A `data`-prefixed PBO in a mod is never checked. Art therefore ships loose beside the executable.
