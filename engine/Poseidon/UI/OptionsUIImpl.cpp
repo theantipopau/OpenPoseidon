@@ -7,6 +7,7 @@
 #include <Poseidon/UI/Map/UIMap.hpp>
 #include <Poseidon/World/Terrain/Landscape.hpp>
 #include <Poseidon/Core/resincl.hpp>
+#include <Poseidon/UI/ProteusTheme.hpp>
 #include <Poseidon/Input/InputSubsystem.hpp>
 #include <Poseidon/UI/UITestEngine.hpp>
 #include <Poseidon/World/Scene/Camera/Camera.hpp>
@@ -2216,28 +2217,145 @@ void PlayCreditsCutscene(Display* parent)
 }
 
 // Options display
+namespace
+{
+// Proteus Options page. Its items use IDs from kProteusOptionsIdBase and route to the retail
+// handlers below, so the handlers are unchanged. Exit goes straight back to the caller, since
+// the retail laptop's close animation is hidden on this page.
+constexpr int kProteusOptionsIdBase = 9800;
+const int kProteusOptionsTargets[] = {IDC_OPTIONS_VIDEO, IDC_OPTIONS_AUDIO, IDC_OPTIONS_CONFIGURE,
+                                      IDC_OPTIONS_DIFFICULTY, IDC_OPTIONS_CREDITS, IDC_CANCEL};
+const char* const kProteusOptionsLabels[] = {"VIDEO", "AUDIO", "CONTROLS", "DIFFICULTY", "CREDITS", "BACK"};
+constexpr int kProteusOptionsCount = 6;
+constexpr int kProteusOptionsCreditsIndex = 4;
+} // namespace
+
 DisplayOptions::DisplayOptions(ControlsContainer* parent, bool enableSimulation, bool credits) : Display(parent)
 {
     _enableSimulation = enableSimulation;
+    EnableProteusTheme();
     Load("RscDisplayOptions");
+
+    // Hide the retail page: the 3D laptop (which carries the links), the title and the bottom links.
+    // The laptop is a ControlObject, so it is found in the object list, not by GetCtrl.
+    for (int i = 0; i < _objects.Size(); ++i)
+    {
+        if (_objects[i]->IDC() == IDC_OPTIONS_NOTEBOOK)
+            _objects[i]->ShowCtrl(false);
+    }
+    for (int i = 0; i < _controlsForeground.Size(); ++i)
+        _controlsForeground[i]->ShowCtrl(false);
+    _indexDefault = ControlId::Null();
+
+    // Centred panel, 60% of the width, with a cyan top border. Coordinates are screen fractions
+    // on the 816x639 design canvas.
+    static ParamFile cfg;
+    cfg.Clear();
+    const float panelX = 0.2f, panelY = 0.16f, panelW = 0.6f, panelH = 0.70f;
+    ProteusTheme::AddArtBackdrop(this, cfg, 9790);
+    ProteusTheme::AddCentredPanel(this, cfg, 9793, panelX, panelY, panelW, panelH);
+
+    auto colour = [](ParamClass* c, const char* name, float r, float g, float b, float a)
+    {
+        ParamEntry* arr = c->AddArray(name);
+        arr->AddValue(r);
+        arr->AddValue(g);
+        arr->AddValue(b);
+        arr->AddValue(a);
+    };
+
+    // Heading and a 1px cyan separator beneath it.
+    ParamClass* heading = cfg.AddClass("ProteusOptionsHeading");
+    heading->Add("idc", 9795);
+    heading->Add("text", RString("OPTIONS"));
+    heading->Add("type", CT_STATIC);
+    heading->Add("style", ST_CENTER);
+    heading->Add("font", RString("barlowsemibold"));
+    heading->Add("sizeEx", 0.05f);
+    heading->Add("x", panelX);
+    heading->Add("y", 0.20f);
+    heading->Add("w", panelW);
+    heading->Add("h", 0.07f);
+    colour(heading, "colorBackground", 0.0f, 0.0f, 0.0f, 0.0f);
+    colour(heading, "colorText", 0.784f, 0.863f, 0.925f, 1.0f);
+    LoadControl(*heading);
+
+    ParamClass* rule = cfg.AddClass("ProteusOptionsRule");
+    rule->Add("idc", 9796);
+    rule->Add("text", RString(""));
+    rule->Add("type", CT_STATIC);
+    rule->Add("style", ST_LEFT);
+    rule->Add("x", panelX + 0.04f);
+    rule->Add("y", 0.28f);
+    rule->Add("w", panelW - 0.08f);
+    rule->Add("h", 1.0f / 639.0f);
+    colour(rule, "colorBackground", 0.0f, 0.737f, 0.831f, 0.31f);
+    colour(rule, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
+    LoadControl(*rule);
+
+    // Section buttons, stacked: VIDEO, AUDIO, CONTROLS, DIFFICULTY.
+    const float buttonH = 42.0f / 639.0f;
+    for (int i = 0; i < 4; ++i)
+    {
+        const std::string name = "ProteusOptionsItem" + std::to_string(i);
+        ParamClass* item = cfg.AddClass(name.c_str());
+        item->Add("idc", kProteusOptionsIdBase + i);
+        item->Add("text", RString(kProteusOptionsLabels[i]));
+        item->Add("type", CT_BUTTON);
+        item->Add("style", ST_LEFT);
+        item->Add("font", RString("barlowsemibold"));
+        item->Add("sizeEx", 0.034f);
+        item->Add("x", panelX + 0.04f);
+        item->Add("y", 0.31f + (buttonH + 6.0f / 639.0f) * i);
+        item->Add("w", panelW - 0.08f);
+        item->Add("h", buttonH);
+        LoadControl(*item);
+    }
+
+    // Bottom row: CREDITS on the left, BACK on the right, both in the secondary (transparent) style.
+    const float bottomY = 0.74f;
+    const float bottomW = 0.25f;
+    const struct { int index; float x; } bottom[] = {{kProteusOptionsCreditsIndex, panelX + 0.04f},
+                                                      {kProteusOptionsCount - 1, panelX + panelW - 0.04f - bottomW}};
+    for (const auto& b : bottom)
+    {
+        const std::string name = "ProteusOptionsBottom" + std::to_string(b.index);
+        ParamClass* item = cfg.AddClass(name.c_str());
+        item->Add("idc", kProteusOptionsIdBase + b.index);
+        item->Add("text", RString(kProteusOptionsLabels[b.index]));
+        item->Add("type", CT_BUTTON);
+        item->Add("style", ST_LEFT);
+        item->Add("font", RString("barlowsemibold"));
+        item->Add("sizeEx", 0.034f);
+        item->Add("x", b.x);
+        item->Add("y", bottomY);
+        item->Add("w", bottomW);
+        item->Add("h", buttonH);
+        LoadControl(*item);
+    }
+
+    // The retail page offers Credits only when the data set has them.
     if (!credits)
     {
-        // Null-checked: this path had not run since the shell replaced it, and a data set whose
-        // RscDisplayOptions omits the Credits button would have taken the whole screen down in
-        // its constructor — the same failure this fallback exists to fix.
-        if (IControl* ctrl = GetCtrl(IDC_OPTIONS_CREDITS))
-        {
+        if (IControl* ctrl = GetCtrl(kProteusOptionsIdBase + kProteusOptionsCreditsIndex))
             ctrl->ShowCtrl(false);
-        }
-        else
-        {
-            LOG_WARN(UI, "Options: RscDisplayOptions declares no Credits control (IDC {})", IDC_OPTIONS_CREDITS);
-        }
     }
+
+    FocusCtrl(kProteusOptionsIdBase);
 }
 
 void DisplayOptions::OnButtonClicked(int idc)
 {
+    if (idc >= kProteusOptionsIdBase && idc < kProteusOptionsIdBase + kProteusOptionsCount)
+    {
+        idc = kProteusOptionsTargets[idc - kProteusOptionsIdBase];
+        if (idc == IDC_CANCEL && ProteusThemeEnabled())
+        {
+            _exitWhenClose = idc;
+            Exit(idc);
+            return;
+        }
+    }
     switch (idc)
     {
         case IDC_CANCEL:

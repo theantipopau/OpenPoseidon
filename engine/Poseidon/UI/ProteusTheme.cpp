@@ -118,12 +118,8 @@ void MenuButton::OnDraw(float alpha)
                           PackedColor(Color(text.r, text.g, text.b, text.a * alpha)), _text);
 }
 
-void AddBackdrop(ControlsContainer* parent, ParamFile& cfg, int idcBase)
+void AddArtBackdrop(ControlsContainer* parent, ParamFile& cfg, int idcBase)
 {
-    const float screenW = GLOB_ENGINE->Width2D();
-    const float screenH = GLOB_ENGINE->Height2D();
-    const float sidebarFrac = MetricsFor(screenW, screenH).sidebarW / screenW;
-
     auto fullScreen = [&](ParamClass* cls, Rgba bg)
     {
         cls->Add("x", 0.0f);
@@ -159,10 +155,17 @@ void AddBackdrop(ControlsContainer* parent, ParamFile& cfg, int idcBase)
     wash->Add("style", ST_LEFT);
     fullScreen(wash, Rgba{0.02f, 0.03f, 0.05f, 0.30f});
     parent->LoadControl(*wash);
+}
+
+void AddSidebarPanel(ControlsContainer* parent, ParamFile& cfg, int idcBase)
+{
+    const float screenW = GLOB_ENGINE->Width2D();
+    const float screenH = GLOB_ENGINE->Height2D();
+    const float sidebarFrac = MetricsFor(screenW, screenH).sidebarW / screenW;
 
     // Glass sidebar on the left edge, with a 3px cyan border on its left edge.
     ParamClass* panel = NewClass(cfg, "ProteusPanel", "");
-    SetIdc(panel, idcBase + 3);
+    SetIdc(panel, idcBase + 0);
     panel->Add("type", CT_STATIC);
     panel->Add("style", ST_LEFT);
     panel->Add("x", 0.0f);
@@ -174,7 +177,7 @@ void AddBackdrop(ControlsContainer* parent, ParamFile& cfg, int idcBase)
     parent->LoadControl(*panel);
 
     ParamClass* accent = NewClass(cfg, "ProteusAccent", "");
-    SetIdc(accent, idcBase + 4);
+    SetIdc(accent, idcBase + 1);
     accent->Add("type", CT_STATIC);
     accent->Add("style", ST_LEFT);
     accent->Add("x", 0.0f);
@@ -184,6 +187,42 @@ void AddBackdrop(ControlsContainer* parent, ParamFile& cfg, int idcBase)
     SetColour(accent, "colorBackground", Rgba{ACCENT.r, ACCENT.g, ACCENT.b, 0.9f});
     SetColour(accent, "colorText", Rgba{1.0f, 1.0f, 1.0f, 1.0f});
     parent->LoadControl(*accent);
+}
+
+void AddBackdrop(ControlsContainer* parent, ParamFile& cfg, int idcBase)
+{
+    AddArtBackdrop(parent, cfg, idcBase);
+    AddSidebarPanel(parent, cfg, idcBase + 3);
+}
+
+void AddCentredPanel(ControlsContainer* parent, ParamFile& cfg, int idcBase, float x, float y, float w, float h)
+{
+    const float screenH = GLOB_ENGINE->Height2D();
+
+    ParamClass* panel = NewClass(cfg, "ProteusCentredPanel", "");
+    SetIdc(panel, idcBase + 0);
+    panel->Add("type", CT_STATIC);
+    panel->Add("style", ST_LEFT);
+    panel->Add("x", x);
+    panel->Add("y", y);
+    panel->Add("w", w);
+    panel->Add("h", h);
+    SetColour(panel, "colorBackground", PANEL_BG);
+    SetColour(panel, "colorText", Rgba{1.0f, 1.0f, 1.0f, 1.0f});
+    parent->LoadControl(*panel);
+
+    // 3px cyan top border across the panel.
+    ParamClass* top = NewClass(cfg, "ProteusCentredTop", "");
+    SetIdc(top, idcBase + 1);
+    top->Add("type", CT_STATIC);
+    top->Add("style", ST_LEFT);
+    top->Add("x", x);
+    top->Add("y", y);
+    top->Add("w", w);
+    top->Add("h", ACCENT_BAR_WIDTH / screenH);
+    SetColour(top, "colorBackground", ACCENT);
+    SetColour(top, "colorText", Rgba{1.0f, 1.0f, 1.0f, 1.0f});
+    parent->LoadControl(*top);
 }
 
 void AddSidebarHeader(ControlsContainer* parent, ParamFile& cfg, int idcBase)

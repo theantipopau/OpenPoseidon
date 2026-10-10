@@ -59,6 +59,13 @@ public:
 // idcBase..idcBase+4 (use the 9600+ range, unique per screen).
 void AddBackdrop(ControlsContainer* parent, ParamFile& cfg, int idcBase);
 
+// Full-bleed art, vignette and wash only, for screens without a sidebar. Owns idcBase..idcBase+2.
+void AddArtBackdrop(ControlsContainer* parent, ParamFile& cfg, int idcBase);
+
+// Centred panel with a 3px cyan top border, for settings screens. Coordinates are screen
+// fractions. Owns idcBase and idcBase+1.
+void AddCentredPanel(ControlsContainer* parent, ParamFile& cfg, int idcBase, float x, float y, float w, float h);
+
 // Logo, PROTEUS title and cyan separator across the top of the sidebar. Owns idcBase+5..+7.
 void AddSidebarHeader(ControlsContainer* parent, ParamFile& cfg, int idcBase);
 
