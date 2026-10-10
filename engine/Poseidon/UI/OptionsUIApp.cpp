@@ -171,6 +171,28 @@ static const char* kLangRotation[] = {
 };
 static constexpr int kLangRotationCount = sizeof(kLangRotation) / sizeof(kLangRotation[0]);
 
+// Proteus main menu. Buttons get IDs kProteusMenuIdBase + index and route to the real
+// menu action in OnButtonClicked, so the retail IDCs (kept loaded but hidden) are untouched.
+namespace
+{
+constexpr int kProteusMenuIdBase = 9600;
+struct ProteusMenuItem
+{
+    int target;
+    const char* label;
+};
+const ProteusMenuItem kProteusMenuItems[] = {
+    {IDC_MAIN_GAME, "CAMPAIGN"},
+    {IDC_MAIN_SINGLE, "SINGLE MISSIONS"},
+    {IDC_MAIN_MULTIPLAYER, "MULTIPLAYER"},
+    {LocalMapsMenuId, "LOCAL MAPS"},
+    {IDC_MAIN_EDITOR, "MISSION EDITOR"},
+    {IDC_MAIN_MODS, "MODS"},
+    {IDC_MAIN_OPTIONS, "OPTIONS"},
+    {IDC_MAIN_QUIT, "QUIT"},
+};
+} // namespace
+
 DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
 {
     _version = GetAppVersion();
@@ -204,7 +226,136 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
                               ? "RscDisplayMainRemaster"
                               : "RscDisplayMain";
     Load(mainRsc);
-    if (QIFStreamB::FileExist("assets\\ui\\openposeidon_logo.paa"))
+
+    // Proteus layout: hide the loaded menu controls (kept so GetCtrl(IDC_MAIN_*) stays valid)
+    // and build a streamlined column in code. Proteus takes the main menu even when a mod
+    // (e.g. @Evos) overrides the menu resource.
+    const bool proteusMenu = true;
+    if (proteusMenu)
+    {
+        for (int i = 0; i < _controlsBackground.Size(); ++i)
+            _controlsBackground[i]->ShowCtrl(false);
+        for (int i = 0; i < _controlsForeground.Size(); ++i)
+            _controlsForeground[i]->ShowCtrl(false);
+        // The retail default button (Quit) is still registered; Enter would fire it from a hidden control.
+        _indexDefault = ControlId::Null();
+
+        static ParamFile proteusCfg;
+        proteusCfg.Clear();
+        auto addColour = [](ParamClass* cls, const char* name, float r, float g, float b, float a)
+        {
+            ParamEntry* arr = cls->AddArray(name);
+            arr->AddValue(r);
+            arr->AddValue(g);
+            arr->AddValue(b);
+            arr->AddValue(a);
+        };
+        int classCount = 0;
+        auto addClass = [&](const char* kind, int idc, const char* text) -> ParamClass*
+        {
+            const std::string name = std::string(kind) + std::to_string(classCount++);
+            ParamClass* cls = proteusCfg.AddClass(name.c_str());
+            cls->Add("idc", idc);
+            if (text)
+                cls->Add("text", RString(text));
+            return cls;
+        };
+
+        // Back to front: key art, a dark wash for legibility, the logo, the button column, then text.
+        auto addFullScreen = [&](ParamClass* cls, float alpha)
+        {
+            cls->Add("x", 0.0f);
+            cls->Add("y", 0.0f);
+            cls->Add("w", 1.0f);
+            cls->Add("h", 1.0f);
+            addColour(cls, "colorBackground", 0.02f, 0.03f, 0.05f, alpha);
+            addColour(cls, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
+        };
+        ParamClass* art = addClass("ProteusArt", kProteusMenuIdBase + 90, nullptr);
+        art->Add("type", CT_STATIC);
+        art->Add("style", ST_PICTURE);
+        art->Add("text", RString("proteus_background.paa"));
+        addFullScreen(art, 0.0f);
+        LoadControl(*art);
+
+        ParamClass* wash = addClass("ProteusWash", kProteusMenuIdBase + 91, "");
+        wash->Add("type", CT_STATIC);
+        wash->Add("style", ST_LEFT);
+        addFullScreen(wash, 0.38f);
+        LoadControl(*wash);
+
+        ParamClass* logo = addClass("ProteusLogo", kProteusMenuIdBase + 92, nullptr);
+        logo->Add("type", CT_STATIC);
+        logo->Add("style", ST_PICTURE);
+        logo->Add("text", RString("proteus_logo.paa"));
+        logo->Add("x", 0.06f);
+        logo->Add("y", 0.06f);
+        logo->Add("w", 0.20f);
+        logo->Add("h", 0.256f); // square in pixels at the 816x639 menu size
+        addColour(logo, "colorBackground", 0.0f, 0.0f, 0.0f, 0.0f);
+        addColour(logo, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
+        LoadControl(*logo);
+
+        // Darker column behind the buttons.
+        ParamClass* panel = addClass("ProteusPanel", kProteusMenuIdBase + 93, "");
+        panel->Add("type", CT_STATIC);
+        panel->Add("style", ST_LEFT);
+        panel->Add("x", 0.60f);
+        panel->Add("y", 0.0f);
+        panel->Add("w", 0.40f);
+        panel->Add("h", 1.0f);
+        addColour(panel, "colorBackground", 0.02f, 0.03f, 0.05f, 0.55f);
+        addColour(panel, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
+        LoadControl(*panel);
+
+        ParamClass* version = addClass("ProteusVersion", kProteusMenuIdBase + 94, nullptr);
+        version->Add("type", CT_STATIC);
+        version->Add("style", ST_LEFT);
+        version->Add("font", RString("cwrbody"));
+        version->Add("sizeEx", 0.028f);
+        version->Add("text", _version);
+        version->Add("x", 0.07f);
+        version->Add("y", 0.33f);
+        version->Add("w", 0.50f);
+        version->Add("h", 0.04f);
+        addColour(version, "colorBackground", 0.0f, 0.0f, 0.0f, 0.0f);
+        addColour(version, "colorText", 0.70f, 0.77f, 0.85f, 1.0f);
+        LoadControl(*version);
+
+        ParamClass* footer = addClass("ProteusFooter", kProteusMenuIdBase + 95, "PROTEUS  -  OpenPoseidon engine");
+        footer->Add("type", CT_STATIC);
+        footer->Add("style", ST_LEFT);
+        footer->Add("font", RString("cwrbody"));
+        footer->Add("sizeEx", 0.024f);
+        footer->Add("x", 0.07f);
+        footer->Add("y", 0.92f);
+        footer->Add("w", 0.60f);
+        footer->Add("h", 0.04f);
+        addColour(footer, "colorBackground", 0.0f, 0.0f, 0.0f, 0.0f);
+        addColour(footer, "colorText", 0.50f, 0.58f, 0.66f, 1.0f);
+        LoadControl(*footer);
+
+        for (int i = 0; i < static_cast<int>(sizeof(kProteusMenuItems) / sizeof(kProteusMenuItems[0])); ++i)
+        {
+            ParamClass* button =
+                addClass("ProteusButton", kProteusMenuIdBase + i, kProteusMenuItems[i].label);
+            button->Add("type", CT_BUTTON);
+            button->Add("style", ST_CENTER);
+            button->Add("font", RString("cwrbody"));
+            button->Add("sizeEx", 0.034f);
+            button->Add("x", 0.64f);
+            button->Add("y", 0.30f + 0.064f * i);
+            button->Add("w", 0.28f);
+            button->Add("h", 0.052f);
+            addColour(button, "colorBackground", 0.12f, 0.19f, 0.27f, 0.90f);
+            addColour(button, "colorText", 0.90f, 0.94f, 0.98f, 1.0f);
+            LoadControl(*button);
+        }
+        // Keyboard focus must sit on a visible button, not the hidden retail Quit.
+        FocusCtrl(kProteusMenuIdBase);
+    }
+
+    if (!proteusMenu && QIFStreamB::FileExist("assets\\ui\\openposeidon_logo.paa"))
     {
         for (int i = 0; i < _controlsForeground.Size(); ++i)
         {
@@ -244,7 +395,7 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
     // row. idc=119 dispatches through GameModuleRegistry (DisplayMain::OnButtonClicked)
     // to the Mods screen, so wiring it is automatic. Heuristic finds Quit by its
     // standard class name; extend as more community menus are tested.
-    if (GetCtrl(IDC_MAIN_MODS) == nullptr && GameModuleRegistry::FindByIDC(IDC_MAIN_MODS) != nullptr)
+    if (!proteusMenu && GetCtrl(IDC_MAIN_MODS) == nullptr && GameModuleRegistry::FindByIDC(IDC_MAIN_MODS) != nullptr)
     {
         Control* quit = dynamic_cast<Control*>(GetCtrl(IDC_MAIN_QUIT));
         ParamEntry* quitCls = Res.FindEntry(mainRsc) ? (Res >> mainRsc).FindEntry("Quit") : nullptr;
@@ -285,7 +436,7 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
     }
 
     // Local content browser is a normal main-menu entry and does not require --dev.
-    if (Control* quit = dynamic_cast<Control*>(GetCtrl(IDC_MAIN_QUIT)))
+    if (Control* quit = dynamic_cast<Control*>(GetCtrl(IDC_MAIN_QUIT)); quit && !proteusMenu)
     {
         ParamEntry* source = Res.FindEntry(mainRsc) ? (Res >> mainRsc).FindEntry("Quit") : nullptr;
         if (source && source->IsClass())
@@ -2244,6 +2395,8 @@ void DisplayModDownload::OnSimulate(EntityAI* vehicle)
 
 void DisplayMain::OnButtonClicked(int idc)
 {
+    if (idc >= kProteusMenuIdBase && idc < kProteusMenuIdBase + static_cast<int>(sizeof(kProteusMenuItems) / sizeof(kProteusMenuItems[0])))
+        idc = kProteusMenuItems[idc - kProteusMenuIdBase].target;
     if (idc == LocalMapsMenuId) { CreateChild(CreateLocalMapsDisplay(this)); return; }
     // Dispatch registered game module buttons via registry
     if (auto* mod = GameModuleRegistry::FindByIDC(idc))
