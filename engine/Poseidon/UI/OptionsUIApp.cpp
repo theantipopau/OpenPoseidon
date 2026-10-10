@@ -551,8 +551,53 @@ bool DisplayMain::DoKeyDown(unsigned nChar, unsigned nRepCnt, unsigned nFlags)
     return Display::DoKeyDown(nChar, nRepCnt, nFlags);
 }
 
+// Proteus menu button: transparent until focused. Focus (mouse or keyboard) shows a cyan wash,
+// a 3px cyan accent on the left edge, and slides the label 4px right. The label and the click
+// action are CButton's, unchanged.
+class ProteusMenuButton : public CButton
+{
+public:
+    using CButton::CButton;
+
+    void OnDraw(float alpha) override
+    {
+        const int screenW = GLOB_ENGINE->Width2D();
+        const int screenH = GLOB_ENGINE->Height2D();
+        const float xx = static_cast<int>(_x * screenW) + 0.5f;
+        const float yy = static_cast<int>(_y * screenH) + 0.5f;
+        const float ww = static_cast<int>(_w * screenW);
+        const float hh = static_cast<int>(_h * screenH);
+        const bool hot = IsFocused();
+        const bool pushed = IsEnabled() && _state;
+
+        if (hot)
+        {
+            Texture* white = GLOB_SCENE->Preloaded(TextureWhite);
+            MipInfo wash = GLOB_ENGINE->TextBank()->UseMipmap(white, 0, 0);
+            const float washAlpha = (pushed ? 0.25f : 0.12f) * alpha;
+            GLOB_ENGINE->Draw2D(wash, PackedColor(Color(0.0f, 0.737f, 0.831f, washAlpha)),
+                                Rect2DPixel(xx, yy, ww, hh));
+            MipInfo bar = GLOB_ENGINE->TextBank()->UseMipmap(white, 0, 0);
+            GLOB_ENGINE->Draw2D(bar, PackedColor(Color(0.0f, 0.737f, 0.831f, alpha)),
+                                Rect2DPixel(xx, yy, 3.0f, hh));
+        }
+
+        const float padding = 12.0f / screenW;
+        const float slide = hot ? 4.0f / screenW : 0.0f;
+        const float left = _x + padding + slide;
+        const float top = _y + 0.5f * (_h - _size);
+        const Color textColor = hot ? Color(1.0f, 1.0f, 1.0f, alpha) : Color(0.784f, 0.824f, 0.863f, 0.85f * alpha);
+        GLOB_ENGINE->DrawText(Point2DFloat(left, top), _size, Rect2DFloat(_x, _y, _w, _h), _font,
+                              PackedColor(textColor), _text);
+    }
+};
+
 Control* DisplayMain::OnCreateCtrl(int type, int idc, const ParamEntry& cls)
 {
+    if (type == CT_BUTTON && idc >= kProteusMenuIdBase
+        && idc < kProteusMenuIdBase + static_cast<int>(sizeof(kProteusMenuItems) / sizeof(kProteusMenuItems[0])))
+        return new ProteusMenuButton(this, idc, cls);
+
     switch (idc)
     {
         case IDC_MAIN_VERSION:
