@@ -341,7 +341,7 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
         ParamClass* logo = addClass("ProteusLogo", kProteusMenuIdBase + 92, nullptr);
         logo->Add("type", CT_STATIC);
         logo->Add("style", ST_PICTURE);
-        logo->Add("text", ProteusArtPath("proteus_logo.paa"));
+        logo->Add("text", ProteusArtPath("logo.png"));
         logo->Add("x", (headerW - logoW) * 0.5f);
         logo->Add("y", 24.0f / 639.0f);
         logo->Add("w", logoW);
