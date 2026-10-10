@@ -44,11 +44,10 @@ std::vector<std::string> FontSystem::RequiredFonts()
 std::vector<std::string> FontSystem::RequiredFontsMissing()
 {
     std::vector<std::string> missing;
+    // Same resolver the renderer uses to open the face, so an enabled mod's Fonts\ copy counts.
     for (const char* path : kSlot0FontPaths)
     {
-        QIFStreamB stream;
-        stream.AutoOpen(path);
-        if (stream.rest() <= 0)
+        if (ResolveMappedFontPath(path).empty())
             missing.emplace_back(path);
     }
     return missing;
