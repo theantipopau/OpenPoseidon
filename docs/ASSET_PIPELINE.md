@@ -65,3 +65,37 @@ Decision needed from Matt before Phase 2.3 integration proceeds: confirm that lo
 ## Blender addon (Phase 2.4)
 
 `apps/tools/BlenderAddon/` is documented here and not modified. A P3D re-exporter is needed for Phase 4.1.
+
+## Game data source (CWA)
+
+Local development use of a legally owned Arma: Cold War Assault install is the working assumption. Matt has confirmed ownership.
+
+**Correction to an earlier premise.** The continuation brief stated that Bohemia released CWA as freeware, so its data could be hosted server-side. Checking that against public sources does not support it:
+
+- CWA is a commercial release. Bohemia has run free giveaways before, including a 20th-anniversary offer on GOG. That is not a standing freeware release. ([overclock3d](https://overclock3d.net/news/software/arma-cold-war-assault-is-currently-available-for-free-on-gog/))
+- Steam offers a free Remastered demo. The full data and campaigns are paid. ([Steam store](https://store.steampowered.com/app/65790/?cc=ar), [GamingOnLinux](https://www.gamingonlinux.com/2026/06/arma-cold-war-assault-remastered-out-with-a-demo-and-its-open-source/))
+- Bohemia's installer notice limits use to people with a valid licence or CD key for a qualifying title. ([BI store](https://store.bistudio.com/products/arma-cold-war-assault-mac-linux-digital-steam-key))
+- Reporting describes the engine as GPL-3.0-or-later and the game assets as APL-SA. The asset terms still restrict redistribution. ([GamingOnLinux](https://www.gamingonlinux.com/2026/06/arma-cold-war-assault-remastered-out-with-a-demo-and-its-open-source/))
+
+Conclusion: serving the retail data from a public web server is redistribution and is **not authorised**. Do not implement it, and do not describe the data as freeware in any doc. The version "1.99" in the brief is unverified and not recorded here.
+
+## Web build target (Phase 5, proposal only)
+
+Goal: a browser-playable build. Hosting is the open question. Options, with the decision still with Matt:
+
+1. A WASM engine that loads data the user supplies from their own legal install. Nothing is redistributed. This is the default that needs no licence decision.
+2. Server-hosted data. Blocked until the asset licence is clarified in writing.
+
+```
+Web host
+├── /engine/        WASM build of the engine
+├── /assets/        Supplied at runtime, or hosted only after licence clearance
+└── /index.html     Shell and loading screen
+```
+
+Design rules for every phase from now on (see [FORK_ROADMAP.md](FORK_ROADMAP.md#phase-5-web-build)):
+
+- No hardcoded Windows paths. Use the engine's virtual file system.
+- No platform-specific file I/O outside the abstraction layer.
+- New asset loading should work with HTTP range-request streaming, not only local disk reads.
+- Log every WASM-incompatible API in [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
