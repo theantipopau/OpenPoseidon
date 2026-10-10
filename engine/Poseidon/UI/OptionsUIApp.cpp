@@ -319,17 +319,29 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
         addColour(logo, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
         LoadControl(*logo);
 
-        // Darker column behind the buttons.
+        // Glass sidebar on the left edge: 32% of the window, dark navy at 82% opacity, with a
+        // 3px cyan border on its left edge. Sized for the 816x639 menu; 3px is 0.0037 of 816.
         ParamClass* panel = addClass("ProteusPanel", kProteusMenuIdBase + 93, "");
         panel->Add("type", CT_STATIC);
         panel->Add("style", ST_LEFT);
-        panel->Add("x", 0.60f);
+        panel->Add("x", 0.0f);
         panel->Add("y", 0.0f);
-        panel->Add("w", 0.40f);
+        panel->Add("w", 0.32f);
         panel->Add("h", 1.0f);
-        addColour(panel, "colorBackground", 0.02f, 0.03f, 0.05f, 0.55f);
+        addColour(panel, "colorBackground", 0.031f, 0.055f, 0.078f, 0.82f);
         addColour(panel, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
         LoadControl(*panel);
+
+        ParamClass* accent = addClass("ProteusAccent", kProteusMenuIdBase + 97, "");
+        accent->Add("type", CT_STATIC);
+        accent->Add("style", ST_LEFT);
+        accent->Add("x", 0.0f);
+        accent->Add("y", 0.0f);
+        accent->Add("w", 0.0037f);
+        accent->Add("h", 1.0f);
+        addColour(accent, "colorBackground", 0.0f, 0.737f, 0.831f, 0.9f);
+        addColour(accent, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
+        LoadControl(*accent);
 
         ParamClass* version = addClass("ProteusVersion", kProteusMenuIdBase + 94, nullptr);
         version->Add("type", CT_STATIC);
@@ -366,10 +378,11 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
             button->Add("style", ST_CENTER);
             button->Add("font", RString("cwrbody"));
             button->Add("sizeEx", 0.034f);
-            button->Add("x", 0.64f);
-            button->Add("y", 0.30f + 0.064f * i);
-            button->Add("w", 0.28f);
-            button->Add("h", 0.052f);
+            // Inside the sidebar: 24px side padding, 42px buttons, 6px gaps (816x639 menu).
+            button->Add("x", 0.0294f);
+            button->Add("y", 0.27f + 0.0751f * i);
+            button->Add("w", 0.261f);
+            button->Add("h", 0.0657f);
             addColour(button, "colorBackground", 0.12f, 0.19f, 0.27f, 0.90f);
             addColour(button, "colorText", 0.90f, 0.94f, 0.98f, 1.0f);
             LoadControl(*button);
