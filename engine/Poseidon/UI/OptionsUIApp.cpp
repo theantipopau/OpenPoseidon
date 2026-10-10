@@ -293,6 +293,14 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
         addFullScreen(art, 0.0f);
         LoadControl(*art);
 
+        // Dark edge vignette over the art, for readability. Transparent in the centre.
+        ParamClass* vignette = addClass("ProteusVignette", kProteusMenuIdBase + 96, nullptr);
+        vignette->Add("type", CT_STATIC);
+        vignette->Add("style", ST_PICTURE);
+        vignette->Add("text", ProteusArtPath("vignette.paa"));
+        addFullScreen(vignette, 0.0f);
+        LoadControl(*vignette);
+
         ParamClass* wash = addClass("ProteusWash", kProteusMenuIdBase + 91, "");
         wash->Add("type", CT_STATIC);
         wash->Add("style", ST_LEFT);
