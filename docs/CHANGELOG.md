@@ -14,3 +14,5 @@ Running log of changes made by agents on this fork. Newest first.
 - Corrected the freeware premise for CWA. The web architecture is recorded as a proposal, not an authorised plan.
 - Elevated the PBO extractor (P4.3) to P1.5. Added a Phase 5 proposal section.
 - Re-attributed the docs commit to the `theantipopau` identity.
+- Built `PoseidonGame` (`win-x64-clang-rwdi`): green. Output in `dist/x64-win-rwdi/`.
+- Launch probe against the local OFP Evos folder: binary runs, window launch aborts on missing Remastered fonts. Mod mounting not yet verified. See KNOWN_ISSUES.

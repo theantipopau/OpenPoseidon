@@ -11,13 +11,13 @@ Fork: `theantipopau/OpenPoseidon`, upstream `koosoli/OpenPoseidon`. Working bran
 | Fork and clone | done | `origin` = fork, `upstream` = `koosoli/OpenPoseidon` |
 | Create `dev/matt-fork-main` | done | Branched from `main` |
 | Configure `win-x64-clang-rwdi` | done | Passes with the workarounds in [KNOWN_ISSUES.md](KNOWN_ISSUES.md) |
-| Build `PoseidonGame` | in progress | Direct `cmake --build` running. Earlier wrapper run failed; see KNOWN_ISSUES |
-| Engine launches, dev panel opens | blocked | Needs a green build and a retail install the registry can find |
+| Build `PoseidonGame` | done | Green (`EXIT=0`) via direct `cmake --build`. Earlier wrapper run failed; see KNOWN_ISSUES. Produces `dist/x64-win-rwdi/OpenPoseidon.exe` |
+| Engine launches, dev panel opens | blocked | Binary runs (`--help` exits 0). Window launch aborts: Remastered fonts missing. Needs Steam retail and Demo installs (see KNOWN_ISSUES) |
 | Docs structure | done | This folder |
 | Asset audit | done | [ASSET_PIPELINE.md](ASSET_PIPELINE.md); full PBO list kept outside repo |
 | Mod load order assessed | done | See P1.1 |
 
-Phase 1 closes when the build is green. Phase 2 starts then.
+Phase 1 is green on build. The launch item stays open, so the Phase 2 checkpoint is still blocked on the installs.
 
 ## Phase 2: Asset integration
 

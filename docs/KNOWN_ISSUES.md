@@ -30,4 +30,7 @@ Build and runtime issues found during setup. Each entry notes whether it is fixe
 
 ## Runtime
 
-Not yet tested. The engine launch and dev-panel check needs a green build and a retail install the launcher can find.
+- **Window launch aborts on missing Remastered fonts.** `OpenPoseidon.exe -C <dir> --window` exits 1 with `FontSystem: required font missing: Fonts\cwr_{title,body,mono,serif,hand}.ttf`. The probe used the local OFP Evos folder as the data directory, and it lacks the Remastered files. Those come from `scripts/Install.ps1`, which copies `fonts`, `dtaExt`, `AddOns\cwr_logo.pbo` and `BIN` from the Steam **Demo** install into the retail install. Both installs must be found, and the registry lookup finds neither. Not fixed in repo; blocked on the install paths.
+- **Mod mounting not verified.** The probe aborted before `ModSystem::SetModPath` logged `Mod path set` / `Loaded mod`. Retest once the installs are in place.
+- **Build warnings.** The `PoseidonGame` build logged 763 `warning:` lines (clang-cl and the Rust crate). No errors. Not triaged.
+- **Engine config is written to the user profile.** First run created `%APPDATA%\CWR\audio.cfg`. Expected; noted so it isn't mistaken for repo state.
