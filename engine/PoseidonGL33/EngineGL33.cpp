@@ -269,7 +269,7 @@ EngineGL33::EngineGL33(int width, int height, bool windowed, int bpp)
 
     auto& engineCfg = GApp->GetConfig().GetEngineConfig();
     SdlGameWindowDesc wd;
-    wd.title = "Poseidon [GL33]";
+    wd.title = "Proteus [GL33]";
     wd.width = _w;
     wd.height = _h;
     // --window forces Windowed regardless of saved displayMode (dev / testing

@@ -1610,7 +1610,7 @@ EngineWgpu::EngineWgpu(const GraphicsEngineParams& params) : _windowed(params.us
     _curMaterial.forcedDiffuse = HBlack;
 
     SdlGameWindowDesc wd;
-    wd.title = "Poseidon [WGPU]";
+    wd.title = "Proteus [WGPU]";
     wd.width = params.width;
     wd.height = params.height;
     wd.useWindow = params.useWindow;
