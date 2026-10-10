@@ -1,3 +1,6 @@
+#include <filesystem>
+#include <windows.h>
+
 #include <Poseidon/Core/Application.hpp>
 #include <Poseidon/Foundation/Platform/AppConfig.hpp>
 
@@ -44,6 +47,9 @@ namespace Poseidon
 // letterSpacing) is editable live via the F8 ImGui tuner; commit values from
 // triFontDump back into this table when satisfied.
 static FreeTypeFontMapping s_fontTable[] = {
+    // Proteus menu faces (Barlow Condensed, OFL), shipped in assets\fonts beside the executable.
+    {"barlowsemibold", "assets\\fonts\\BarlowCondensed-SemiBold.ttf", 12, 10, 1.000f, false, 0.0f, 0.0f, 0.0f},
+    {"barlowregular", "assets\\fonts\\BarlowCondensed-Regular.ttf", 12, 10, 1.000f, false, 0.0f, 0.0f, 0.0f},
     {"cwrtitle", "Fonts\\cwr_title.ttf", 59, 46, 0.628f, false, -6.0f, -1.5f, 0.0f},
     {"cwrbody", "Fonts\\cwr_body.ttf", 12, 10, 1.000f, false, 0.0f, 0.0f, 0.0f},
     {"cwrmono", "Fonts\\cwr_mono.ttf", 29, 28, 0.800f, false, 0.0f, -0.6f, 0.0f},
@@ -194,6 +200,15 @@ std::string ResolveMappedFontPath(const char* ttfPath)
     std::string modPath = ResolveModOverride(ttfPath);
     if (!modPath.empty())
         return modPath;
+
+    // Faces shipped beside the executable (assets\fonts\...) for the Proteus menu.
+    char exe[MAX_PATH] = {};
+    if (GetModuleFileNameA(nullptr, exe, MAX_PATH))
+    {
+        const std::filesystem::path beside = std::filesystem::path(exe).parent_path() / ttfPath;
+        if (std::filesystem::exists(beside))
+            return beside.string();
+    }
 
     QIFStreamB stream;
     stream.AutoOpen(ttfPath);

@@ -346,7 +346,7 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
         ParamClass* version = addClass("ProteusVersion", kProteusMenuIdBase + 94, nullptr);
         version->Add("type", CT_STATIC);
         version->Add("style", ST_LEFT);
-        version->Add("font", RString("cwrbody"));
+        version->Add("font", RString("barlowregular"));
         version->Add("sizeEx", 0.028f);
         version->Add("text", _version);
         version->Add("x", 0.07f);
@@ -360,7 +360,7 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
         ParamClass* footer = addClass("ProteusFooter", kProteusMenuIdBase + 95, "PROTEUS  -  OpenPoseidon engine");
         footer->Add("type", CT_STATIC);
         footer->Add("style", ST_LEFT);
-        footer->Add("font", RString("cwrbody"));
+        footer->Add("font", RString("barlowregular"));
         footer->Add("sizeEx", 0.024f);
         footer->Add("x", 0.07f);
         footer->Add("y", 0.92f);
@@ -376,7 +376,7 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
                 addClass("ProteusButton", kProteusMenuIdBase + i, kProteusMenuItems[i].label);
             button->Add("type", CT_BUTTON);
             button->Add("style", ST_CENTER);
-            button->Add("font", RString("cwrbody"));
+            button->Add("font", RString("barlowsemibold"));
             button->Add("sizeEx", 0.034f);
             // Inside the sidebar: 24px side padding, 42px buttons, 6px gaps (816x639 menu).
             button->Add("x", 0.0294f);
