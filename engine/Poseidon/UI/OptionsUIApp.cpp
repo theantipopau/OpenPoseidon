@@ -307,17 +307,6 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
         addFullScreen(wash, 0.30f);
         LoadControl(*wash);
 
-        ParamClass* logo = addClass("ProteusLogo", kProteusMenuIdBase + 92, nullptr);
-        logo->Add("type", CT_STATIC);
-        logo->Add("style", ST_PICTURE);
-        logo->Add("text", ProteusArtPath("proteus_logo.paa"));
-        logo->Add("x", 0.05f);
-        logo->Add("y", 0.04f);
-        logo->Add("w", 0.26f);
-        logo->Add("h", 0.332f); // square in pixels at the 816x639 menu size
-        addColour(logo, "colorBackground", 0.0f, 0.0f, 0.0f, 0.0f);
-        addColour(logo, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
-        LoadControl(*logo);
 
         // Glass sidebar on the left edge: 32% of the window, dark navy at 82% opacity, with a
         // 3px cyan border on its left edge. Sized for the 816x639 menu; 3px is 0.0037 of 816.
@@ -342,6 +331,48 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
         addColour(accent, "colorBackground", 0.0f, 0.737f, 0.831f, 0.9f);
         addColour(accent, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
         LoadControl(*accent);
+
+        // Sidebar header: 80x80 logo centred, title beneath, thin cyan separator. Sizes are
+        // pixels at the 816x639 menu size, converted to screen fractions. Created after the
+        // panel so the panel does not cover them.
+        const float headerW = 0.32f;
+        const float logoW = 80.0f / 816.0f;
+        const float logoH = 80.0f / 639.0f;
+        ParamClass* logo = addClass("ProteusLogo", kProteusMenuIdBase + 92, nullptr);
+        logo->Add("type", CT_STATIC);
+        logo->Add("style", ST_PICTURE);
+        logo->Add("text", ProteusArtPath("proteus_logo.paa"));
+        logo->Add("x", (headerW - logoW) * 0.5f);
+        logo->Add("y", 24.0f / 639.0f);
+        logo->Add("w", logoW);
+        logo->Add("h", logoH);
+        addColour(logo, "colorBackground", 0.0f, 0.0f, 0.0f, 0.0f);
+        addColour(logo, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
+        LoadControl(*logo);
+
+        ParamClass* title = addClass("ProteusTitle", kProteusMenuIdBase + 98, "PROTEUS");
+        title->Add("type", CT_STATIC);
+        title->Add("style", ST_CENTER);
+        title->Add("font", RString("barlowsemibold"));
+        title->Add("sizeEx", 0.05f);
+        title->Add("x", 0.0f);
+        title->Add("y", 112.0f / 639.0f);
+        title->Add("w", headerW);
+        title->Add("h", 40.0f / 639.0f);
+        addColour(title, "colorBackground", 0.0f, 0.0f, 0.0f, 0.0f);
+        addColour(title, "colorText", 0.784f, 0.863f, 0.925f, 1.0f);
+        LoadControl(*title);
+
+        ParamClass* separator = addClass("ProteusSeparator", kProteusMenuIdBase + 99, "");
+        separator->Add("type", CT_STATIC);
+        separator->Add("style", ST_LEFT);
+        separator->Add("x", 24.0f / 816.0f);
+        separator->Add("y", 160.0f / 639.0f);
+        separator->Add("w", headerW - 2.0f * 24.0f / 816.0f);
+        separator->Add("h", 1.0f / 639.0f);
+        addColour(separator, "colorBackground", 0.0f, 0.737f, 0.831f, 0.31f);
+        addColour(separator, "colorText", 1.0f, 1.0f, 1.0f, 1.0f);
+        LoadControl(*separator);
 
         ParamClass* version = addClass("ProteusVersion", kProteusMenuIdBase + 94, nullptr);
         version->Add("type", CT_STATIC);
@@ -380,7 +411,7 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
             button->Add("sizeEx", 0.034f);
             // Inside the sidebar: 24px side padding, 42px buttons, 6px gaps (816x639 menu).
             button->Add("x", 0.0294f);
-            button->Add("y", 0.27f + 0.0751f * i);
+            button->Add("y", 176.0f / 639.0f + 0.0751f * i); // 16px below the separator
             button->Add("w", 0.261f);
             button->Add("h", 0.0657f);
             addColour(button, "colorBackground", 0.12f, 0.19f, 0.27f, 0.90f);
