@@ -12,10 +12,10 @@ The engine's UI is a `Display` tree built on `ControlsContainer` (`engine/Poseid
 | Campaign Select | `DisplayCampaignLoad` | `engine/Poseidon/UI/OptionsUIImpl.cpp` (`RscDisplayCampaignLoad`) | Resource | Pending |
 | Single Missions | `DisplaySingleMission` | `engine/Poseidon/UI/OptionsUIImpl.cpp` (`RscDisplaySingleMission`) | Resource | Pending |
 | Multiplayer | `DisplayMultiplayer` | `engine/Poseidon/UI/DisplayUIMultiplayer.cpp` (`RscDisplayMultiplayer`) | Resource | Pending |
-| Local Maps | `LocalMapsDisplay` | `engine/Poseidon/UI/LocalMapsDisplay.cpp` / `.hpp` | Code (`AddControl`) | Pending |
+| Local Maps | `LocalMapsDisplay` | `engine/Poseidon/UI/LocalMapsDisplay.cpp` / `.hpp` | Code (`AddControl`) | Removed from the main menu. Crashes when opened: `ScanLocalVehicles` throws |
 | Mission Editor (launcher) | `DisplaySelectIsland` | `engine/Poseidon/UI/DisplayUI.cpp` / `DisplayUI.hpp` | Resource | Pending. Editor UI itself is out of scope |
-| Mods | `DisplayMods` | `engine/Poseidon/UI/OptionsUIApp.cpp` (`RscDisplayMods`) | Resource | Pending |
-| Options | `DisplayOptions` | `engine/Poseidon/UI/OptionsUIImpl.cpp` (`RscDisplayOptions`); pages in `engine/Poseidon/UI/Options/` | Resource + pages | Pending |
+| Mods | `DisplayMods` | `engine/Poseidon/UI/OptionsUIApp.cpp` (`RscDisplayMods`) | Resource | Removed from the main menu. Not reachable |
+| Options | `DisplayOptions` | `engine/Poseidon/UI/OptionsUIImpl.cpp` (`RscDisplayOptions`); pages in `engine/Poseidon/UI/Options/` | Resource + pages | Main page done (`997c441`). Video, Audio, Controls and Difficulty pages still use the retail look |
 
 ## Other full-window displays found
 

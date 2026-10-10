@@ -31,3 +31,9 @@ Running log of changes made by agents on this fork. Newest first.
   - Letter-spacing is not applied; the engine has no tracking.
   - The font files are committed (OFL allows it), so no download script is needed.
 - Engine changes made for the overhaul: `FindPicture` accepts absolute paths to existing files, and the font resolver finds faces beside the executable. The required-font check accepts mod fonts.
+- Sub-screen pass, started:
+  - Shared `ProteusTheme` module (`engine/Poseidon/UI/ProteusTheme.*`). A screen opts in with `ControlsContainer::EnableProteusTheme()`. Its buttons become the themed button, and its retail background frames load hidden.
+  - Main menu now uses the shared builders. MODS and LOCAL MAPS are removed from it. LOCAL MAPS crashes in `ScanLocalVehicles`, and MODS goes nowhere.
+  - Options main page restyled as a centred panel with a cyan top border. The 3D laptop is hidden. Its links are Proteus items routed to the same handlers. BACK and Escape exit to the main menu.
+  - Options sub-pages (Video, Audio, Controls, Difficulty) are not restyled yet.
+  - Still pending: Campaign Select, Single Missions, Multiplayer, Mission Editor launcher, and the resolution tiers. `docs/UI_SCREENS.md` has the full table.
