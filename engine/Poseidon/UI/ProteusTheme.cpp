@@ -5,9 +5,11 @@
 #include <Poseidon/Foundation/Common/Win.h>
 #include <Poseidon/Graphics/Core/Engine.hpp>
 #include <Poseidon/Graphics/Textures/TexturePreload.hpp>
+#include <Poseidon/Graphics/Textures/TextureBank.hpp>
 #include <Poseidon/World/World.hpp>
 
 #include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <string>
 
@@ -33,6 +35,13 @@ RString ArtPath(const char* file)
     if (!std::filesystem::exists(path))
         return RString();
     return RString(path.string().c_str());
+}
+
+// Empty when the file is missing; GlobLoadTexture is not called with an empty name.
+Ref<Texture> LoadArt(const char* file)
+{
+    const RString path = ArtPath(file);
+    return path.GetLength() > 0 ? GlobLoadTexture(path) : Ref<Texture>();
 }
 
 void SetColour(ParamClass* cls, const char* name, Rgba c)
@@ -84,6 +93,39 @@ Metrics MetricsFor(float screenW, float screenH)
         m.fontScale = 1.1f;
     }
     return m;
+}
+
+void DrawBackdropArt()
+{
+    // Loading starts before the renderer and its texture bank exist; nothing is drawn until they do.
+    if (!GLOB_ENGINE || !GLOB_ENGINE->TextBank())
+        return;
+    static Ref<Texture> background = LoadArt("proteus_background.paa");
+    static Ref<Texture> vignette = LoadArt("vignette.paa");
+    const float w = GLOB_ENGINE->Width2D();
+    const float h = GLOB_ENGINE->Height2D();
+    if (background)
+    {
+        MipInfo mip = GLOB_ENGINE->TextBank()->UseMipmap(background, 0, 0);
+        GLOB_ENGINE->Draw2D(mip, PackedWhite, Rect2DPixel(0, 0, w, h));
+    }
+    if (vignette)
+    {
+        MipInfo mip = GLOB_ENGINE->TextBank()->UseMipmap(vignette, 0, 0);
+        GLOB_ENGINE->Draw2D(mip, PackedWhite, Rect2DPixel(0, 0, w, h));
+    }
+    // The same light wash as the menu backdrop, so text reads over the art.
+    Texture* white = GLOB_SCENE->Preloaded(TextureWhite);
+    MipInfo washMip = GLOB_ENGINE->TextBank()->UseMipmap(white, 0, 0);
+    GLOB_ENGINE->Draw2D(washMip, PackedColor(Color(0.02f, 0.03f, 0.05f, 0.30f)), Rect2DPixel(0, 0, w, h));
+}
+
+RString Upper(RString text)
+{
+    std::string s = (const char*)text;
+    for (char& c : s)
+        c = static_cast<char>(toupper(static_cast<unsigned char>(c)));
+    return RString(s.c_str());
 }
 
 void MenuButton::OnDraw(float alpha)

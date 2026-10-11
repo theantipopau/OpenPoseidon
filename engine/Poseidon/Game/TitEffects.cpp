@@ -7,6 +7,7 @@
 #include <Poseidon/World/Terrain/Landscape.hpp>
 #include <Poseidon/UI/Controls/UIControls.hpp>
 #include <Poseidon/UI/Settings/AspectRatio.hpp>
+#include <Poseidon/UI/ProteusTheme.hpp>
 #include <Poseidon/UI/Locale/Stringtable/CodepageTranscode.hpp>
 #include <Poseidon/UI/Locale/Stringtable/Stringtable.hpp>
 #include <Poseidon/Graphics/Textures/TexturePreload.hpp>
@@ -258,20 +259,12 @@ TitleShadowOffset SubtitleShadowOffset(int width2D, int height2D)
 
 void TitleEffectBasic::Init(RString text)
 {
-    text = DecodeLegacyTextToRString(text, GLanguage);
+    // Proteus titles: the Barlow face, upper case, like the menus. Applies to the loading and startup titles.
+    text = ProteusTheme::Upper(DecodeLegacyTextToRString(text, GLanguage));
     SplitTitleLines(text, _texts);
 
-    const ParamEntry& cls = Res >> "RscTitlesText";
-    _textFont = GLOB_ENGINE->LoadFont(GetFontID(cls >> "fontBasic"));
-    const ParamEntry* entry = cls.FindEntry("sizeBasic");
-    if (entry)
-    {
-        _textSize = (float)(*entry) * _textFont->Height();
-    }
-    else
-    {
-        _textSize = cls >> "sizeExBasic";
-    }
+    _textFont = GLOB_ENGINE->LoadFont(GetFontID("barlowsemibold"));
+    _textSize = 0.09f;
     _textYOffset = 0;
 }
 

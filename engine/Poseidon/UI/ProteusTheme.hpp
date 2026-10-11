@@ -72,6 +72,13 @@ void AddSidebarHeader(ControlsContainer* parent, ParamFile& cfg, int idcBase);
 // Muted version line at the bottom of the sidebar, "PROTEUS  v<build>". Owns idcBase+8.
 void AddSidebarFooter(ControlsContainer* parent, ParamFile& cfg, int idcBase, const RString& version);
 
+// Full-window backdrop: the Proteus art and edge vignette, for states with no menu of their own, such as the
+// loading screen. Draws nothing for a missing file.
+void DrawBackdropArt();
+
+// Upper-case copy of text, as Proteus headings are shown.
+RString Upper(RString text);
+
 // Top edge and height of sidebar button `index` in screen fractions (16px below the separator).
 float SidebarButtonTop(int index, float screenH);
 float SidebarButtonHeight(float screenW, float screenH);

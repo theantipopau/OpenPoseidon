@@ -12,6 +12,7 @@
 #include <Poseidon/Network/NetworkConfig.hpp>
 #include <Poseidon/Dev/Debug/DebugTrap.hpp>
 #include <Poseidon/UI/OptionsUI.hpp>
+#include <Poseidon/UI/ProteusTheme.hpp>
 #include <Poseidon/IO/ParamFileExt.hpp>
 #include <Poseidon/World/World.hpp>
 #include <Poseidon/Graphics/Textures/TexturePreload.hpp>
@@ -260,6 +261,7 @@ void ProgressSystem::Draw()
     else
     {
         // draw activity indicator
+        ProteusTheme::DrawBackdropArt();
 
         if (_progressTitle.GetLength() > 0 && GEngine->TextBank())
         {
@@ -283,7 +285,8 @@ void ProgressSystem::Draw()
                 {
                     factor = 2 - factor;
                 }
-                static PackedColor color(Color(0.1, 0.1, 0.05));
+                static PackedColor color(Color(ProteusTheme::ACCENT.r, ProteusTheme::ACCENT.g, ProteusTheme::ACCENT.b,
+                                               ProteusTheme::ACCENT.a));
                 Rect2DPixel rectA(x + (w - ww) * factor, y, ww, h);
                 pars.SetColor(color);
                 GEngine->Draw2D(pars, rectA);
@@ -291,9 +294,11 @@ void ProgressSystem::Draw()
 
             GDebugger.NextAliveExpected(15 * 60 * 1000); // no alive expected
             PoseidonAssert(_progressFont);
-            float textW = GEngine->GetTextWidth(_progressFontSize, _progressFont, _progressTitle);
+            const RString title = ProteusTheme::Upper(_progressTitle);
+            const ProteusTheme::Rgba titleInk = ProteusTheme::TITLE_TEXT;
+            float textW = GEngine->GetTextWidth(_progressFontSize, _progressFont, title);
             GEngine->DrawText(Point2DFloat(0.5 - textW * 0.5, 0.5), _progressFontSize, _progressFont,
-                              PackedColor((unsigned)-1), _progressTitle);
+                              PackedColor(Color(titleInk.r, titleInk.g, titleInk.b, titleInk.a)), title);
             Draw2DPars pars;
             if (GEngine->TextBank() && _progressTot > 0)
             {
@@ -312,8 +317,10 @@ void ProgressSystem::Draw()
                 _progressDrawn = factor;
 
                 Rect2DPixel rect(x, y, w, h);
-                static PackedColor white(Color(1, 1, 1));
-                static PackedColor gray(Color(0.1, 0.1, 0.1));
+                static PackedColor white(Color(ProteusTheme::ACCENT.r, ProteusTheme::ACCENT.g, ProteusTheme::ACCENT.b,
+                                               ProteusTheme::ACCENT.a));
+                static PackedColor gray(Color(ProteusTheme::ACCENT_DIM.r, ProteusTheme::ACCENT_DIM.g,
+                                              ProteusTheme::ACCENT_DIM.b, ProteusTheme::ACCENT_DIM.a));
                 pars.SetColor(gray);
                 GEngine->Draw2D(pars, rect);
 
@@ -427,12 +434,12 @@ void ProgressSystem::Start(RString title, RString format, Ref<Font> font, float 
     }
     else
     {
-        const ParamEntry& fontPars = Pars >> "CfgInGameUI" >> "ProgressFont";
-        _progressFont = GEngine->LoadFont(GetFontID(fontPars >> "font"));
+        // The Proteus face, so the loading title matches the menus.
+        _progressFont = GEngine->LoadFont(GetFontID("barlowsemibold"));
     }
     if (size < 0)
     {
-        _progressFontSize = 0.75 * 0.05;
+        _progressFontSize = 0.075;
     }
     else
     {
