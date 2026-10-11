@@ -132,6 +132,7 @@ class EngineWgpu : public EngineDummy
     bool IsValid() const { return _renderer != nullptr; }
     RString GetDebugName() const override;
     RString GetRendererName() const override;
+    void ListMonitors(FindArray<MonitorInfo>& ret) override;
 
     void HandleEvents() override { _eventWindow.HandleEvents(); }
     bool IsOpen() const override { return _eventWindow.IsOpen(); }

@@ -2424,6 +2424,29 @@ RString EngineWgpu::GetDebugName() const
     return "Wgpu";
 }
 
+void EngineWgpu::ListMonitors(FindArray<MonitorInfo>& ret)
+{
+    // The live display list from SDL, as the GL backend reports it. Geometry is the desktop mode.
+    ret.Clear();
+    int count = 0;
+    SDL_DisplayID* displays = SDL_GetDisplays(&count);
+    if (!displays)
+        return;
+    for (int i = 0; i < count; ++i)
+    {
+        const SDL_DisplayMode* mode = SDL_GetDesktopDisplayMode(displays[i]);
+        const char* name = SDL_GetDisplayName(displays[i]);
+        MonitorInfo info;
+        info.index = i;
+        info.name = name ? name : "Unknown";
+        info.w = mode ? mode->w : 0;
+        info.h = mode ? mode->h : 0;
+        info.refresh = mode ? (int)(mode->refresh_rate + 0.5f) : 0;
+        ret.Add(info);
+    }
+    SDL_free(displays);
+}
+
 RString EngineWgpu::GetRendererName() const
 {
     return "WGPU (Rust / wgpu)";

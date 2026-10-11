@@ -46,6 +46,10 @@
 #include <Poseidon/Foundation/Strings/StrFormat.hpp>
 #include <Poseidon/UI/OptionsUICommon.hpp>
 #include <Poseidon/UI/Options/GraphicsPage.hpp>
+#include <Poseidon/UI/Options/DisplayPage.hpp>
+#include <Poseidon/Foundation/Time/Time.hpp>
+#include <functional>
+#include <string>
 #include <Poseidon/UI/ProteusTheme.hpp>
 
 // Defined at global scope in World/World.cpp.
@@ -111,6 +115,7 @@ namespace
 // Proteus Video page ids: one button per graphics row, then BACK and the note.
 constexpr int kVideoRowIdBase = 9950;
 constexpr int kVideoBackIdc = 9980;
+constexpr int kVideoDisplayIdc = 9982;
 
 // "LABEL: VALUE" for a graphics row, in the Proteus upper-case style.
 RString VideoRowText(const GraphicsPage& page, int row)
@@ -168,6 +173,8 @@ DisplayOptionsVideo::DisplayOptionsVideo(ControlsContainer* parent, bool enableS
                                           leftX, 0.775f, 0.8f, 0.04f, ProteusTheme::TEXT_MUTED));
     LoadControl(*ProteusTheme::NewControl(cfg, "ProteusVideoBack", kVideoBackIdc, CT_BUTTON, "BACK", 0.034f, leftX,
                                           0.84f, 0.16f, 42.0f / 639.0f, ProteusTheme::TEXT_PRIMARY));
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusVideoDisplay", kVideoDisplayIdc, CT_BUTTON, "DISPLAY", 0.034f,
+                                          0.28f, 0.84f, 0.22f, 42.0f / 639.0f, ProteusTheme::TEXT_PRIMARY));
 
     FocusCtrl(kVideoRowIdBase);
 }
@@ -180,6 +187,209 @@ void DisplayOptionsVideo::UpdateRow(int row)
     if (button)
         button->SetText(VideoRowText(*_graphics, row));
 }
+
+namespace
+{
+// Proteus Display page ids: one button per settings row (the Apply row is the last), then BACK.
+constexpr int kDisplayRowIdBase = 9960;
+constexpr int kDisplayBackIdc = 9970;
+// Keep-or-revert prompt ids.
+constexpr int kRevertKeepIdc = 9990;
+constexpr int kRevertRevertIdc = 9991;
+constexpr DWORD kRevertMs = 15000;
+
+// "LABEL: VALUE" for a settings row, in the Proteus upper-case style.
+RString DisplayRowText(const DisplayPage& page, int row)
+{
+    const std::string text = page.StandaloneLabel(row) + ": " + page.StandaloneValueText(row);
+    return ProteusTheme::Upper(RString(text.c_str()));
+}
+
+// Shown after Apply. KEEP makes the change permanent. REVERT, or the countdown running out, restores the
+// settings that were in force before Apply.
+class DisplayRevertPrompt : public Display
+{
+public:
+    DisplayRevertPrompt(ControlsContainer* parent, std::function<void()> onKeep, std::function<void()> onRevert)
+        : Display(parent), _onKeep(std::move(onKeep)), _onRevert(std::move(onRevert))
+    {
+        EnableProteusTheme();
+        static ParamFile cfg;
+        cfg.Clear();
+        ProteusTheme::AddArtBackdrop(this, cfg, 9790);
+        ProteusTheme::AddCentredPanel(this, cfg, 9793, 0.25f, 0.30f, 0.50f, 0.36f);
+        LoadControl(*ProteusTheme::NewControl(cfg, "ProteusRevertHeading", 9795, CT_STATIC,
+                                              "KEEP THESE DISPLAY SETTINGS?", 0.040f, 0.27f, 0.36f, 0.46f, 0.07f,
+                                              ProteusTheme::TITLE_TEXT));
+        LoadControl(*ProteusTheme::NewRule(cfg, "ProteusRevertRule", 9796, 0.27f, 0.45f, 0.46f));
+        LoadControl(*ProteusTheme::NewControl(cfg, "ProteusRevertBody", 9797, CT_STATIC,
+                                              "THEY REVERT IN 15 SECONDS UNLESS KEPT.", 0.028f, 0.27f, 0.48f, 0.46f,
+                                              0.06f, ProteusTheme::TEXT_PRIMARY));
+        LoadControl(*ProteusTheme::NewControl(cfg, "ProteusRevertKeep", kRevertKeepIdc, CT_BUTTON, "KEEP", 0.034f,
+                                              0.27f, 0.56f, 0.20f, 42.0f / 639.0f, ProteusTheme::TEXT_PRIMARY));
+        LoadControl(*ProteusTheme::NewControl(cfg, "ProteusRevertRevert", kRevertRevertIdc, CT_BUTTON, "REVERT", 0.034f,
+                                              0.53f, 0.56f, 0.20f, 42.0f / 639.0f, ProteusTheme::TEXT_PRIMARY));
+        _start = Poseidon::Foundation::GlobalTickCount();
+        FocusCtrl(kRevertKeepIdc);
+    }
+
+    void OnSimulate(EntityAI* vehicle) override
+    {
+        Display::OnSimulate(vehicle);
+        if (_done)
+            return;
+        const DWORD elapsed = Poseidon::Foundation::GlobalTickCount() - _start;
+        if (elapsed >= kRevertMs)
+        {
+            Revert();
+            return;
+        }
+        const int seconds = static_cast<int>((kRevertMs - elapsed + 999) / 1000);
+        if (seconds != _shownSeconds)
+        {
+            _shownSeconds = seconds;
+            if (CButton* keep = dynamic_cast<CButton*>(GetCtrl(kRevertKeepIdc)))
+                keep->SetText(RString(("KEEP (" + std::to_string(seconds) + ")").c_str()));
+        }
+    }
+
+    void OnButtonClicked(int idc) override
+    {
+        if (idc == kRevertKeepIdc)
+            Keep();
+        else if (idc == kRevertRevertIdc || idc == IDC_CANCEL)
+            Revert();
+        else
+            Display::OnButtonClicked(idc);
+    }
+
+private:
+    void Keep()
+    {
+        if (_done)
+            return;
+        _done = true;
+        _onKeep();
+        Exit(kRevertKeepIdc);
+    }
+
+    void Revert()
+    {
+        if (_done)
+            return;
+        _done = true;
+        _onRevert();
+        Exit(IDC_CANCEL);
+    }
+
+    std::function<void()> _onKeep;
+    std::function<void()> _onRevert;
+    DWORD _start = 0;
+    int _shownSeconds = -1;
+    bool _done = false;
+};
+
+// Display settings on the Proteus layout. The rows, values and writes are the shell's Display page. Apply makes
+// the change, then asks the player to keep it; see DisplayRevertPrompt.
+class DisplayOptionsDisplay : public Display
+{
+public:
+    DisplayOptionsDisplay(ControlsContainer* parent, bool enableSimulation) : Display(parent)
+    {
+        _enableSimulation = enableSimulation;
+        EnableProteusTheme();
+        _page = std::make_unique<DisplayPage>();
+        _page->LoadStandalone();
+
+        static ParamFile cfg;
+        cfg.Clear();
+        const float panelX = 0.06f, panelY = 0.11f, panelW = 0.88f, panelH = 0.82f;
+        const float leftX = panelX + 0.04f, rowW = 0.56f;
+        const float rowPitch = 0.052f, rowH = 0.046f;
+        const float topY = 0.24f;
+        ProteusTheme::AddArtBackdrop(this, cfg, 9790);
+        ProteusTheme::AddCentredPanel(this, cfg, 9793, panelX, panelY, panelW, panelH);
+        LoadControl(*ProteusTheme::NewControl(cfg, "ProteusDisplayHeading", 9795, CT_STATIC, "DISPLAY", 0.05f, leftX,
+                                              0.135f, 0.5f, 0.07f, ProteusTheme::TITLE_TEXT));
+        LoadControl(*ProteusTheme::NewRule(cfg, "ProteusDisplayRule", 9796, leftX, 0.215f, panelW - 0.08f));
+
+        for (int row = 0; row < DisplayPage::kStandaloneRowCount; ++row)
+        {
+            const std::string name = "ProteusDisplayRow" + std::to_string(row);
+            const int idc = kDisplayRowIdBase + row;
+            const float y = topY + row * rowPitch;
+            const RString text = row == DisplayPage::kStandaloneApplyRow ? RString("APPLY")
+                                                                         : DisplayRowText(*_page, row);
+            LoadControl(*ProteusTheme::NewControl(cfg, name.c_str(), idc, CT_BUTTON, text, 0.030f, leftX, y, rowW,
+                                                  rowH, ProteusTheme::TEXT_PRIMARY));
+        }
+
+        LoadControl(*ProteusTheme::NewControl(cfg, "ProteusDisplayNote", 9981, CT_STATIC,
+                                              "APPLY ASKS YOU TO KEEP THE CHANGE. OTHERWISE IT REVERTS IN 15 SECONDS.",
+                                              0.024f, leftX, 0.775f, 0.8f, 0.04f, ProteusTheme::TEXT_MUTED));
+        LoadControl(*ProteusTheme::NewControl(cfg, "ProteusDisplayBack", kDisplayBackIdc, CT_BUTTON, "BACK", 0.034f,
+                                              leftX, 0.84f, 0.16f, 42.0f / 639.0f, ProteusTheme::TEXT_PRIMARY));
+
+        FocusCtrl(kDisplayRowIdBase);
+    }
+
+    ~DisplayOptionsDisplay() override = default;
+
+    void OnButtonClicked(int idc) override
+    {
+        // Pending changes that were not applied are dropped with the page, as the shell does on leaving.
+        if (idc == kDisplayBackIdc || idc == IDC_CANCEL)
+        {
+            Exit(idc);
+            return;
+        }
+        const int row = idc - kDisplayRowIdBase;
+        if (row < 0 || row >= DisplayPage::kStandaloneRowCount)
+        {
+            Display::OnButtonClicked(idc);
+            return;
+        }
+        if (row == DisplayPage::kStandaloneApplyRow)
+        {
+            Apply();
+            return;
+        }
+        _page->StandaloneCycle(row);
+        UpdateRow(row);
+    }
+
+    void OnChildDestroyed(int idd, int exit) override
+    {
+        Display::OnChildDestroyed(idd, exit);
+        // The prompt may have restored the previous settings, so every row is read again.
+        for (int row = 0; row < DisplayPage::kStandaloneApplyRow; ++row)
+            UpdateRow(row);
+    }
+
+private:
+    void Apply()
+    {
+        if (!DisplayPage::HasPendingChanges(_page->StandalonePending(), _page->StandaloneApplied()))
+            return;
+        DisplayPage* page = _page.get();
+        const DisplayConfig snapshot = page->StandaloneApplied();
+        page->StandaloneApply();
+        CreateChild(new DisplayRevertPrompt(
+            this, [page]() { page->StandaloneKeep(); }, [page, snapshot]() { page->StandaloneRestore(snapshot); }));
+    }
+
+    void UpdateRow(int row)
+    {
+        if (row == DisplayPage::kStandaloneApplyRow)
+            return;
+        CButton* button = dynamic_cast<CButton*>(GetCtrl(kDisplayRowIdBase + row));
+        if (button)
+            button->SetText(DisplayRowText(*_page, row));
+    }
+
+    std::unique_ptr<DisplayPage> _page;
+};
+} // namespace
 
 struct TerrainInterpolationInfo
 {
@@ -350,6 +560,11 @@ void DisplayOptionsVideo::OnButtonClicked(int idc)
         {
             _graphics->SaveStandalone();
             Exit(idc);
+            return;
+        }
+        if (idc == kVideoDisplayIdc)
+        {
+            CreateChild(new DisplayOptionsDisplay(this, _enableSimulation));
             return;
         }
         const int row = idc - kVideoRowIdBase;

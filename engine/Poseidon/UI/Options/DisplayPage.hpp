@@ -59,6 +59,23 @@ public:
 	void OnReshown(OptionsShell& shell) override;
 	void Unmount(OptionsShell& shell) override;
 
+	// Standalone use, for the Proteus Display page. The rows, values and writes are the same as on the shell
+	// page. Apply pushes the pending settings to the engine; the caller then Keeps them or Restores the state it
+	// took before applying, as the shell's confirm prompt does.
+	static constexpr int kStandaloneRowCount = 7; // six settings rows, then Apply
+	static constexpr int kStandaloneApplyRow = 6;
+	void LoadStandalone();
+	std::string StandaloneLabel(int row) const;
+	std::string StandaloneValueText(int row) const;
+	bool StandaloneIsStepper(int row) const;
+	bool StandaloneIsDisabled(int row) const;
+	void StandaloneCycle(int row);
+	DisplayConfig StandaloneApplied() const { return m_applied; }
+	DisplayConfig StandalonePending() const { return m_pending; }
+	void StandaloneApply();
+	void StandaloneKeep();
+	void StandaloneRestore(const DisplayConfig& cfg);
+
 protected:
 	OptionsScrollList::Provider& ProviderRef() override { return m_provider; }
 

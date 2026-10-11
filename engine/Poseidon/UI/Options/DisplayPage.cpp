@@ -178,7 +178,10 @@ const char* DisplayPage::DisplayProvider::RowLabel(int row) const
 {
     static_assert(sizeof(kRows) / sizeof(kRows[0]) == kRowCount, "DisplayPage row table out of sync with kRowCount");
     if (row >= 0 && row < kRowCount)
-        return LocalizeString(kRows[row].label);
+        {
+        static const char* const kEnglish[] = {"Monitor", "Window Mode", "Resolution", "Refresh Rate", "Aspect Handling", "HUD Width Limit", "Apply"};
+        return LocalizeStringWithFallback(kRows[row].label, kEnglish[row]);
+        }
     return "";
 }
 
@@ -516,10 +519,10 @@ void DisplayPage::RebuildLists()
     {
         const auto& m = m_monitors[i];
         char buf[160];
-        const char* monitorName = LocalizeString("STR_DISP_MAIN_OPT_DISPLAY_MONITOR_FALLBACK");
+        const char* monitorName = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_DISPLAY_MONITOR_FALLBACK", "Monitor");
         if (m.name.GetLength())
             monitorName = m.name.Data();
-        snprintf(buf, sizeof(buf), LocalizeString("STR_DISP_MAIN_OPT_DISPLAY_MONITOR_ENTRY_FORMAT"), monitorName, m.w,
+        snprintf(buf, sizeof(buf), LocalizeStringWithFallback("STR_DISP_MAIN_OPT_DISPLAY_MONITOR_ENTRY_FORMAT", "%s (%dx%d)"), monitorName, m.w,
                  m.h);
         m_monitorLabels.emplace_back(buf);
     }
@@ -578,7 +581,7 @@ void DisplayPage::RebuildLists()
         }
         // Engine's ListResolutions can include duplicates at different bpp;
         // we only care about unique (w, h) pairs.
-        m_resolutionLabels.emplace_back(LocalizeString("STR_DISP_MAIN_OPT_DISPLAY_NATIVE"));
+        m_resolutionLabels.emplace_back(LocalizeStringWithFallback("STR_DISP_MAIN_OPT_DISPLAY_NATIVE", "Native"));
         for (int i = 0; i < res.Size(); ++i)
         {
             std::pair<int, int> wh{res[i].w, res[i].h};
@@ -631,7 +634,7 @@ void DisplayPage::RebuildLists()
                 SDL_free(modes);
             }
         }
-        m_refreshLabels.emplace_back(LocalizeString("STR_DISP_MAIN_OPT_SYSTEM_DEFAULT"));
+        m_refreshLabels.emplace_back(LocalizeStringWithFallback("STR_DISP_MAIN_OPT_SYSTEM_DEFAULT", "System default"));
         for (int i = 0; i < rates.Size(); ++i)
         {
             int hz = rates[i];
@@ -646,7 +649,7 @@ void DisplayPage::RebuildLists()
                 continue;
             m_refreshRates.push_back(hz);
             char buf[16];
-            snprintf(buf, sizeof(buf), LocalizeString("STR_DISP_MAIN_OPT_DISPLAY_REFRESH_RATE_FORMAT"), hz);
+            snprintf(buf, sizeof(buf), LocalizeStringWithFallback("STR_DISP_MAIN_OPT_DISPLAY_REFRESH_RATE_FORMAT", "%d Hz"), hz);
             m_refreshLabels.emplace_back(buf);
         }
     }
@@ -656,20 +659,20 @@ void DisplayPage::RebuildLists()
 
 void DisplayPage::RefreshLocalizedChoices()
 {
-    m_windowModeLabels[0] = LocalizeString("STR_DISP_MAIN_OPT_DISPLAY_FULLSCREEN");
-    m_windowModeLabels[1] = LocalizeString("STR_DISP_MAIN_OPT_DISPLAY_BORDERLESS");
-    m_windowModeLabels[2] = LocalizeString("STR_DISP_MAIN_OPT_DISPLAY_WINDOWED");
+    m_windowModeLabels[0] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_DISPLAY_FULLSCREEN", "Fullscreen");
+    m_windowModeLabels[1] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_DISPLAY_BORDERLESS", "Exclusive Fullscreen");
+    m_windowModeLabels[2] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_DISPLAY_WINDOWED", "Window");
     for (size_t i = 0; i < m_windowModeLabels.size(); ++i)
         m_windowModeCStrs[i] = m_windowModeLabels[i].c_str();
 
-    m_styleLabels[0] = LocalizeString("STR_DISP_MAIN_OPT_DISPLAY_STYLE_MODERN");
-    m_styleLabels[1] = LocalizeString("STR_DISP_MAIN_OPT_DISPLAY_STYLE_CLASSIC");
+    m_styleLabels[0] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_DISPLAY_STYLE_MODERN", "Modern");
+    m_styleLabels[1] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_DISPLAY_STYLE_CLASSIC", "Classic");
     for (size_t i = 0; i < m_styleLabels.size(); ++i)
         m_styleCStrs[i] = m_styleLabels[i].c_str();
 
-    m_clampLabels[0] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_OFF");
-    m_clampLabels[1] = LocalizeString("STR_DISP_MAIN_OPT_DISPLAY_CLAMP_21X9");
-    m_clampLabels[2] = LocalizeString("STR_DISP_MAIN_OPT_DISPLAY_CLAMP_16X9");
+    m_clampLabels[0] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_OFF", "Off");
+    m_clampLabels[1] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_DISPLAY_CLAMP_21X9", "21:9");
+    m_clampLabels[2] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_DISPLAY_CLAMP_16X9", "16:9");
     for (size_t i = 0; i < m_clampLabels.size(); ++i)
         m_clampCStrs[i] = m_clampLabels[i].c_str();
 }
@@ -723,6 +726,71 @@ void DisplayPage::SaveToCfg() const
         LOG_DEBUG(Graphics, "DisplayPage::SaveToCfg: wrote '{}'", path);
     if (GEngine)
         GEngine->SaveConfig();
+}
+
+// Standalone rows, for the Proteus Display page. The rows, values and writes come from the same provider the
+// shell page uses, and Apply, Keep and Restore run the same engine calls.
+static_assert(DisplayPage::kStandaloneRowCount == 7, "standalone row count out of sync with DisplayProvider");
+
+void DisplayPage::LoadStandalone()
+{
+    m_display.SetPage(this);
+    RefreshLocalizedChoices();
+    CaptureEngineState();
+}
+
+std::string DisplayPage::StandaloneLabel(int row) const
+{
+    return m_display.RowLabel(row);
+}
+
+bool DisplayPage::StandaloneIsStepper(int row) const
+{
+    return row >= 0 && row < kStandaloneApplyRow;
+}
+
+std::string DisplayPage::StandaloneValueText(int row) const
+{
+    if (!StandaloneIsStepper(row))
+        return std::string();
+    const OptionsScrollList::RowDef def = m_display.RowFor(row);
+    const int v = m_display.RowValue(row);
+    if (def.options && v >= 0 && v < def.count)
+        return def.options[v];
+    return std::string();
+}
+
+bool DisplayPage::StandaloneIsDisabled(int row) const
+{
+    return m_display.IsDisabled(row);
+}
+
+void DisplayPage::StandaloneCycle(int row)
+{
+    if (!StandaloneIsStepper(row) || StandaloneIsDisabled(row))
+        return;
+    const int count = m_display.RowFor(row).count;
+    if (count <= 0)
+        return;
+    m_display.SetRowValue(row, (m_display.RowValue(row) + 1) % count);
+}
+
+void DisplayPage::StandaloneApply()
+{
+    ApplyToEngine(m_pending);
+}
+
+void DisplayPage::StandaloneKeep()
+{
+    m_applied = m_pending;
+    SaveToCfg();
+}
+
+void DisplayPage::StandaloneRestore(const DisplayConfig& cfg)
+{
+    ApplyToEngine(cfg);
+    m_pending = cfg;
+    m_applied = cfg;
 }
 
 } // namespace Poseidon
