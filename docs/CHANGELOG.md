@@ -37,4 +37,6 @@ Running log of changes made by agents on this fork. Newest first.
   - Options main page restyled as a centred panel with a cyan top border. The 3D laptop is hidden. Its links are Proteus items routed to the same handlers. BACK and Escape exit to the main menu.
   - Options sub-pages (Video, Audio, Controls, Difficulty) are not restyled yet.
   - Campaign Select restyled. Every campaign is listed on the left and scrolls. Selecting one shows its name and overview on the right, with the mission history beneath. BACK, DIFFICULTY, REPLAY and BEGIN run along the bottom. The retail 3D book is not loaded, so the page is built from 2D controls. Overviews are each campaign's own HTML, so some show only a picture. The statistics block is not shown in this layout.
-  - Still pending: Single Missions, Multiplayer, Mission Editor launcher, and the resolution tiers. `docs/UI_SCREENS.md` has the full table.
+  - Single Missions restyled, on the same pattern as the campaign page. The mission list is on the left, and folders open in place with `..` to go back. The selected mission's overview is on the right. BACK, DIFFICULTY, RESUME (when a save exists) and PLAY run along the bottom. Escape returns to the main menu. Play is not yet tested in this pass.
+  - The campaign and single-mission pages share their layout helpers (`ProteusControl`, `ProteusColour`, `ProteusRule`, `AddHtmlStyles`) in `OptionsUIImpl.cpp`.
+  - Still pending: Multiplayer, Mission Editor launcher, and the resolution tiers. `docs/UI_SCREENS.md` has the full table.

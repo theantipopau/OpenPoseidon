@@ -81,14 +81,125 @@ RString DecodeUserFacingLegacyText(RString text)
 }
 } // namespace
 
-// Single mission display
+// Proteus page helpers, shared by the Single Missions and Campaign pages. A control is described in screen
+// fractions of the 816x639 design canvas, left-aligned in the Proteus font, on a transparent background. The
+// caller adds any extra keys, then calls LoadControl.
+const ProteusTheme::Rgba kProteusSelectInk{8.0f / 255.0f, 14.0f / 255.0f, 20.0f / 255.0f, 1.0f};
+
+void ProteusColour(ParamClass* c, const char* name, ProteusTheme::Rgba v)
+{
+    ParamEntry* arr = c->AddArray(name);
+    arr->AddValue(v.r);
+    arr->AddValue(v.g);
+    arr->AddValue(v.b);
+    arr->AddValue(v.a);
+}
+
+ParamClass* ProteusControl(ParamFile& cfg, const char* name, int idc, int type, const char* text, float size, float x,
+                           float y, float w, float h, ProteusTheme::Rgba ink)
+{
+    ParamClass* cls = cfg.AddClass(name);
+    cls->Add("idc", idc);
+    cls->Add("type", type);
+    cls->Add("text", RString(text));
+    cls->Add("style", ST_LEFT);
+    cls->Add("font", RString("barlowsemibold"));
+    cls->Add("sizeEx", size);
+    cls->Add("x", x);
+    cls->Add("y", y);
+    cls->Add("w", w);
+    cls->Add("h", h);
+    ProteusColour(cls, "colorBackground", ProteusTheme::Rgba{0.0f, 0.0f, 0.0f, 0.0f});
+    ProteusColour(cls, "colorText", ink);
+    return cls;
+}
+
+// A 1px cyan rule, drawn as a control with no text.
+ParamClass* ProteusRule(ParamFile& cfg, const char* name, int idc, float x, float y, float w)
+{
+    ParamClass* rule = cfg.AddClass(name);
+    rule->Add("idc", idc);
+    rule->Add("text", RString(""));
+    rule->Add("type", CT_STATIC);
+    rule->Add("style", ST_LEFT);
+    rule->Add("x", x);
+    rule->Add("y", y);
+    rule->Add("w", w);
+    rule->Add("h", 1.0f / 639.0f);
+    ProteusColour(rule, "colorBackground", ProteusTheme::ACCENT_DIM);
+    ProteusColour(rule, "colorText", ProteusTheme::TEXT_PRIMARY);
+    return rule;
+}
+
+// The overview is HTML; the control reads these heading and body styles.
+void AddHtmlStyles(ParamClass* html)
+{
+    struct Style
+    {
+        const char* tag;
+        float size;
+    };
+    const Style styles[] = {{"H1", 0.040f}, {"H2", 0.038f}, {"H3", 0.036f}, {"H4", 0.034f},
+                            {"H5", 0.032f}, {"H6", 0.032f}, {"P", 0.030f}};
+    for (const Style& s : styles)
+    {
+        ParamClass* cls = html->AddClass(s.tag);
+        cls->Add("font", RString("barlowregular"));
+        cls->Add("fontBold", RString("barlowsemibold"));
+        cls->Add("sizeEx", s.size);
+    }
+}
+
+// Single mission page. The mission list sits on the left and the selected mission's overview on the right,
+// with the actions along the bottom. Built in code, as the campaign page is, so the retail book is not loaded.
 DisplaySingleMission::DisplaySingleMission(ControlsContainer* parent) : Display(parent)
 {
-    Load("RscDisplaySingleMission");
+    EnableProteusTheme();
+
+    static ParamFile cfg;
+    cfg.Clear();
+    const float panelX = 0.06f, panelY = 0.11f, panelW = 0.88f, panelH = 0.82f;
+    const float leftX = panelX + 0.04f, leftW = 0.36f;
+    const float rightX = 0.50f, rightW = 0.40f;
+    const float rowH = 42.0f / 639.0f;
+    const float bottomY = 0.84f;
+    ProteusTheme::AddArtBackdrop(this, cfg, 9790);
+    ProteusTheme::AddCentredPanel(this, cfg, 9793, panelX, panelY, panelW, panelH);
+
+    LoadControl(*ProteusControl(cfg, "ProteusSingleHeading", 9795, CT_STATIC, "SINGLE MISSIONS", 0.05f, leftX, 0.135f,
+                                0.5f, 0.07f, ProteusTheme::TITLE_TEXT));
+    LoadControl(*ProteusRule(cfg, "ProteusSingleRule", 9796, leftX, 0.215f, panelW - 0.08f));
+
+    ParamClass* list = ProteusControl(cfg, "ProteusSingleList", IDC_SINGLE_MISSION, CT_LISTBOX, "", 0.032f, leftX,
+                                      0.24f, leftW, 0.57f, ProteusTheme::ACCENT);
+    list->Add("rowHeight", rowH);
+    ProteusColour(list, "colorSelect", kProteusSelectInk);
+    LoadControl(*list);
+
+    ParamClass* html = ProteusControl(cfg, "ProteusSingleOverview", IDC_SINGLE_OVERVIEW, CT_HTML, "", 0.030f, rightX,
+                                      0.24f, rightW, 0.57f, ProteusTheme::TEXT_PRIMARY);
+    ProteusColour(html, "colorBold", ProteusTheme::TITLE_TEXT);
+    ProteusColour(html, "colorLink", ProteusTheme::ACCENT);
+    ProteusColour(html, "colorLinkActive", ProteusTheme::TITLE_TEXT);
+    AddHtmlStyles(html);
+    LoadControl(*html);
+
+    // Bottom row: BACK, the difficulty toggle, RESUME (shown when the mission has a save) and PLAY. Labels are
+    // set by the handlers below.
+    LoadControl(*ProteusControl(cfg, "ProteusSingleBack", IDC_CANCEL, CT_BUTTON, "BACK", 0.034f, leftX, bottomY,
+                                0.16f, rowH, ProteusTheme::TEXT_PRIMARY));
+    LoadControl(*ProteusControl(cfg, "ProteusSingleDiff", IDC_SINGLE_DIFF, CT_BUTTON, "", 0.034f, 0.28f, bottomY,
+                                0.22f, rowH, ProteusTheme::TEXT_PRIMARY));
+    LoadControl(*ProteusControl(cfg, "ProteusSingleResume", IDC_SINGLE_LOAD, CT_BUTTON, "", 0.034f, 0.52f, bottomY,
+                                0.18f, rowH, ProteusTheme::TEXT_PRIMARY));
+    LoadControl(*ProteusControl(cfg, "ProteusSinglePlay", IDC_OK, CT_BUTTON, "PLAY", 0.034f, 0.72f, bottomY, 0.18f,
+                                rowH, ProteusTheme::TEXT_PRIMARY));
+
     LoadDirectory();
     OnChangeMission();
     LoadParams();
     OnChangeDifficulty();
+    FocusCtrl(IDC_SINGLE_MISSION);
     _exitWhenClose = -1;
     _langCbToken = RegisterLanguageChangedCallback([this]() { RefreshLanguage(); });
 }
@@ -279,7 +390,7 @@ RString ResolveSPMissionSubdir(RString subDir, RString mission)
 void DisplaySingleMission::LoadDirectory()
 {
     ProgressStart(LocalizeString(IDS_LOAD_WORLD));
-    C3DListBox* lbox = dynamic_cast<C3DListBox*>(GetCtrl(IDC_SINGLE_MISSION));
+    CListBox* lbox = dynamic_cast<CListBox*>(GetCtrl(IDC_SINGLE_MISSION));
     if (!lbox)
     {
         return;
@@ -305,7 +416,7 @@ void DisplaySingleMission::LoadDirectory()
     ProgressFinish();
 }
 
-void DisplaySingleMission::ScanMissionDirectory(const RString& dir, C3DListBox* lbox, std::set<std::string>& seen)
+void DisplaySingleMission::ScanMissionDirectory(const RString& dir, CListBox* lbox, std::set<std::string>& seen)
 {
     const char* searchStr = "briefingName";
     int searchLen = strlen(searchStr);
@@ -561,7 +672,7 @@ RString GetOverviewFile(RString dir)
     return FindLocalizedMissionHtmlFile(dir, "overview");
 }
 
-void LoadMissionPreviewHtml(C3DHTML* html, RString filename, const MissionLanguageDetector::MissionPreviewInfo& info)
+void LoadMissionPreviewHtml(CHTML* html, RString filename, const MissionLanguageDetector::MissionPreviewInfo& info)
 {
     RString overviewUtf8 = LoadLocalizedMissionHtmlUtf8(filename);
     RString combined = MissionLanguageDetector::BuildPreviewHtml(info, overviewUtf8);
@@ -634,7 +745,7 @@ DisplaySingleMission::MissionBlock DisplaySingleMission::BlockedMissionReason(RS
 
 void DisplaySingleMission::OnChangeMission()
 {
-    C3DHTML* html = dynamic_cast<C3DHTML*>(GetCtrl(IDC_SINGLE_OVERVIEW));
+    CHTML* html = dynamic_cast<CHTML*>(GetCtrl(IDC_SINGLE_OVERVIEW));
     if (!html)
     {
         return;
@@ -645,7 +756,7 @@ void DisplaySingleMission::OnChangeMission()
         _overviewTextColor = html->GetTextColor();
     }
     html->SetTextColor(*_overviewTextColor);
-    C3DListBox* lbox = dynamic_cast<C3DListBox*>(GetCtrl(IDC_SINGLE_MISSION));
+    CListBox* lbox = dynamic_cast<CListBox*>(GetCtrl(IDC_SINGLE_MISSION));
     if (!lbox)
     {
         return;
@@ -671,12 +782,12 @@ void DisplaySingleMission::OnChangeMission()
             }
         }
 
-        CActiveText* ctrl = static_cast<CActiveText*>(GetCtrl(IDC_OK));
+        CButton* ctrl = static_cast<CButton*>(GetCtrl(IDC_OK));
         if (ctrl)
         {
             ctrl->SetText(LocalizeString(kSingleOpenKey));
         }
-        ctrl = static_cast<CActiveText*>(GetCtrl(IDC_SINGLE_LOAD));
+        ctrl = static_cast<CButton*>(GetCtrl(IDC_SINGLE_LOAD));
         if (ctrl)
         {
             ctrl->ShowCtrl(false);
@@ -726,12 +837,12 @@ void DisplaySingleMission::OnChangeMission()
     RString save = dir + RString("continue.fps");
     if (QIFStream::FileExists(save))
     {
-        CActiveText* ctrl = static_cast<CActiveText*>(GetCtrl(IDC_OK));
+        CButton* ctrl = static_cast<CButton*>(GetCtrl(IDC_OK));
         if (ctrl)
         {
             ctrl->SetText(LocalizeString(kSingleRestartKey));
         }
-        ctrl = static_cast<CActiveText*>(GetCtrl(IDC_SINGLE_LOAD));
+        ctrl = static_cast<CButton*>(GetCtrl(IDC_SINGLE_LOAD));
         if (ctrl)
         {
             int day, month, year, hour, minute;
@@ -746,12 +857,12 @@ void DisplaySingleMission::OnChangeMission()
     }
     else
     {
-        CActiveText* ctrl = static_cast<CActiveText*>(GetCtrl(IDC_OK));
+        CButton* ctrl = static_cast<CButton*>(GetCtrl(IDC_OK));
         if (ctrl)
         {
             ctrl->SetText(LocalizeString(kSinglePlayKey));
         }
-        ctrl = static_cast<CActiveText*>(GetCtrl(IDC_SINGLE_LOAD));
+        ctrl = static_cast<CButton*>(GetCtrl(IDC_SINGLE_LOAD));
         if (ctrl)
         {
             ctrl->ShowCtrl(false);
@@ -761,7 +872,7 @@ void DisplaySingleMission::OnChangeMission()
 
 void DisplaySingleMission::OnChangeDifficulty()
 {
-    CActiveText* ctrl = dynamic_cast<CActiveText*>(GetCtrl(IDC_SINGLE_DIFF));
+    CButton* ctrl = dynamic_cast<CButton*>(GetCtrl(IDC_SINGLE_DIFF));
     if (!ctrl)
     {
         return;
@@ -775,24 +886,24 @@ void DisplaySingleMission::OnChangeDifficulty()
     {
         text = LocalizeString(kDisplayVeteranKey);
     }
-    ctrl->SetText(text);
+    ctrl->SetText(RString("DIFFICULTY: ") + text);
 }
 
 void DisplaySingleMission::RefreshLanguage()
 {
     // Mission names are localized once at LoadDirectory() time and cached in the
-    // C3DListBox; on a runtime language switch we have to repopulate so
+    // CListBox; on a runtime language switch we have to repopulate so
     // briefingName="@STRN_…" / "$STR_…" entries resolve in the new language.
     // Preserve the current selection so the preview pane updates in lock-step.
     int prevSel = -1;
-    if (auto* lb = dynamic_cast<C3DListBox*>(GetCtrl(IDC_SINGLE_MISSION)))
+    if (auto* lb = dynamic_cast<CListBox*>(GetCtrl(IDC_SINGLE_MISSION)))
         prevSel = lb->GetCurSel();
 
     LoadDirectory();
 
     if (prevSel >= 0)
     {
-        if (auto* lb = dynamic_cast<C3DListBox*>(GetCtrl(IDC_SINGLE_MISSION)))
+        if (auto* lb = dynamic_cast<CListBox*>(GetCtrl(IDC_SINGLE_MISSION)))
             lb->SetCurSel(prevSel, false);
     }
     OnChangeMission();
@@ -805,7 +916,7 @@ void DisplaySingleMission::OnButtonClicked(int idc)
     {
         case IDC_OK:
         {
-            C3DListBox* lbox = dynamic_cast<C3DListBox*>(GetCtrl(IDC_SINGLE_MISSION));
+            CListBox* lbox = dynamic_cast<CListBox*>(GetCtrl(IDC_SINGLE_MISSION));
             if (!lbox)
             {
                 return;
@@ -866,6 +977,10 @@ void DisplaySingleMission::OnButtonClicked(int idc)
             {
                 ctrl->Close();
             }
+            else
+            {
+                Exit(idc);
+            }
         }
         break;
         case IDC_SINGLE_LOAD:
@@ -911,24 +1026,6 @@ RString CampaignTitle(const RString& campaignName)
     return name.GetLength() > 0 ? name : campaignName;
 }
 
-// The overview is HTML; the control reads these heading and body styles.
-void AddHtmlStyles(ParamClass* html)
-{
-    struct Style
-    {
-        const char* tag;
-        float size;
-    };
-    const Style styles[] = {{"H1", 0.040f}, {"H2", 0.038f}, {"H3", 0.036f}, {"H4", 0.034f},
-                            {"H5", 0.032f}, {"H6", 0.032f}, {"P", 0.030f}};
-    for (const Style& s : styles)
-    {
-        ParamClass* cls = html->AddClass(s.tag);
-        cls->Add("font", RString("barlowregular"));
-        cls->Add("fontBold", RString("barlowsemibold"));
-        cls->Add("sizeEx", s.size);
-    }
-}
 } // namespace
 
 DisplayCampaignLoad::DisplayCampaignLoad(ControlsContainer* parent) : Display(parent)
@@ -947,40 +1044,8 @@ DisplayCampaignLoad::DisplayCampaignLoad(ControlsContainer* parent) : Display(pa
     ProteusTheme::AddArtBackdrop(this, cfg, 9790);
     ProteusTheme::AddCentredPanel(this, cfg, 9793, panelX, panelY, panelW, panelH);
 
-    auto colour = [](ParamClass* c, const char* name, ProteusTheme::Rgba v)
-    {
-        ParamEntry* arr = c->AddArray(name);
-        arr->AddValue(v.r);
-        arr->AddValue(v.g);
-        arr->AddValue(v.b);
-        arr->AddValue(v.a);
-    };
-    const ProteusTheme::Rgba clear{0.0f, 0.0f, 0.0f, 0.0f};
-    const ProteusTheme::Rgba selectInk{8.0f / 255.0f, 14.0f / 255.0f, 20.0f / 255.0f, 1.0f};
-
-    // A control of the given type, left-aligned in the Proteus font, positioned in screen fractions.
-    // The caller adds any extra keys, then calls LoadControl.
-    auto make = [&colour, &clear](const char* name, int idc, int type, const char* text, float size,
-                                        float x, float y, float w, float h, ProteusTheme::Rgba ink)
-    {
-        ParamClass* cls = cfg.AddClass(name);
-        cls->Add("idc", idc);
-        cls->Add("type", type);
-        cls->Add("text", RString(text));
-        cls->Add("style", ST_LEFT);
-        cls->Add("font", RString("barlowsemibold"));
-        cls->Add("sizeEx", size);
-        cls->Add("x", x);
-        cls->Add("y", y);
-        cls->Add("w", w);
-        cls->Add("h", h);
-        colour(cls, "colorBackground", clear);
-        colour(cls, "colorText", ink);
-        return cls;
-    };
-
     // Heading, then a 1px cyan rule beneath it.
-    LoadControl(*make("ProteusCampaignHeading", 9795, CT_STATIC, "CAMPAIGNS", 0.05f, leftX, 0.135f, 0.5f, 0.07f,
+    LoadControl(*ProteusControl(cfg, "ProteusCampaignHeading", 9795, CT_STATIC, "CAMPAIGNS", 0.05f, leftX, 0.135f, 0.5f, 0.07f,
                       ProteusTheme::TITLE_TEXT));
     ParamClass* rule = cfg.AddClass("ProteusCampaignRule");
     rule->Add("idc", 9796);
@@ -991,44 +1056,44 @@ DisplayCampaignLoad::DisplayCampaignLoad(ControlsContainer* parent) : Display(pa
     rule->Add("y", 0.215f);
     rule->Add("w", panelW - 0.08f);
     rule->Add("h", 1.0f / 639.0f);
-    colour(rule, "colorBackground", ProteusTheme::ACCENT_DIM);
-    colour(rule, "colorText", ProteusTheme::TEXT_PRIMARY);
+    ProteusColour(rule, "colorBackground", ProteusTheme::ACCENT_DIM);
+    ProteusColour(rule, "colorText", ProteusTheme::TEXT_PRIMARY);
     LoadControl(*rule);
 
     // Campaign list, scrolls when there are more campaigns than rows. Selecting a row loads that campaign.
-    ParamClass* list = make("ProteusCampaignList", kProteusCampaignListIdc, CT_LISTBOX, "", 0.032f, leftX, 0.24f,
+    ParamClass* list = ProteusControl(cfg, "ProteusCampaignList", kProteusCampaignListIdc, CT_LISTBOX, "", 0.032f, leftX, 0.24f,
                             leftW, 0.57f, ProteusTheme::ACCENT);
     list->Add("rowHeight", rowH);
-    colour(list, "colorSelect", selectInk);
+    ProteusColour(list, "colorSelect", kProteusSelectInk);
     LoadControl(*list);
 
     // Right column: campaign name, mission name (when a mission is picked), overview, then the history list.
-    LoadControl(*make("ProteusCampaignName", IDC_CAMPAIGN_CAMPAIGN, CT_STATIC, "", 0.042f, rightX, 0.235f, rightW,
+    LoadControl(*ProteusControl(cfg, "ProteusCampaignName", IDC_CAMPAIGN_CAMPAIGN, CT_STATIC, "", 0.042f, rightX, 0.235f, rightW,
                       0.06f, ProteusTheme::TITLE_TEXT));
-    LoadControl(*make("ProteusMissionName", IDC_CAMPAIGN_MISSION, CT_STATIC, "", 0.030f, rightX, 0.295f, rightW,
+    LoadControl(*ProteusControl(cfg, "ProteusMissionName", IDC_CAMPAIGN_MISSION, CT_STATIC, "", 0.030f, rightX, 0.295f, rightW,
                       0.04f, ProteusTheme::ACCENT));
     // The overview is a picture with a line of text beneath it, so the box is tall enough for both.
-    ParamClass* html = make("ProteusCampaignDescription", IDC_CAMPAIGN_DESCRIPTION, CT_HTML, "", 0.030f, rightX,
+    ParamClass* html = ProteusControl(cfg, "ProteusCampaignDescription", IDC_CAMPAIGN_DESCRIPTION, CT_HTML, "", 0.030f, rightX,
                             0.34f, rightW, 0.29f, ProteusTheme::TEXT_PRIMARY);
-    colour(html, "colorBold", ProteusTheme::TITLE_TEXT);
-    colour(html, "colorLink", ProteusTheme::ACCENT);
-    colour(html, "colorLinkActive", ProteusTheme::TITLE_TEXT);
+    ProteusColour(html, "colorBold", ProteusTheme::TITLE_TEXT);
+    ProteusColour(html, "colorLink", ProteusTheme::ACCENT);
+    ProteusColour(html, "colorLinkActive", ProteusTheme::TITLE_TEXT);
     AddHtmlStyles(html);
     LoadControl(*html);
-    ParamClass* history = make("ProteusMissionHistory", IDC_CAMPAIGN_HISTORY, CT_LISTBOX, "", 0.032f, rightX, 0.645f,
+    ParamClass* history = ProteusControl(cfg, "ProteusMissionHistory", IDC_CAMPAIGN_HISTORY, CT_LISTBOX, "", 0.032f, rightX, 0.645f,
                                rightW, 0.165f, ProteusTheme::ACCENT);
     history->Add("rowHeight", rowH);
-    colour(history, "colorSelect", selectInk);
+    ProteusColour(history, "colorSelect", kProteusSelectInk);
     LoadControl(*history);
 
     // Bottom row: BACK, then the difficulty toggle, REPLAY and BEGIN. Labels are set by the handlers below.
-    LoadControl(*make("ProteusCampaignBack", IDC_CANCEL, CT_BUTTON, "BACK", 0.034f, leftX, bottomY, 0.16f, rowH,
+    LoadControl(*ProteusControl(cfg, "ProteusCampaignBack", IDC_CANCEL, CT_BUTTON, "BACK", 0.034f, leftX, bottomY, 0.16f, rowH,
                       ProteusTheme::TEXT_PRIMARY));
-    LoadControl(*make("ProteusCampaignDiff", IDC_CAMPAIGN_DIFF, CT_BUTTON, "", 0.034f, 0.28f, bottomY, 0.22f, rowH,
+    LoadControl(*ProteusControl(cfg, "ProteusCampaignDiff", IDC_CAMPAIGN_DIFF, CT_BUTTON, "", 0.034f, 0.28f, bottomY, 0.22f, rowH,
                       ProteusTheme::TEXT_PRIMARY));
-    LoadControl(*make("ProteusCampaignReplay", IDC_CAMPAIGN_REPLAY, CT_BUTTON, "REPLAY", 0.034f, 0.52f, bottomY,
+    LoadControl(*ProteusControl(cfg, "ProteusCampaignReplay", IDC_CAMPAIGN_REPLAY, CT_BUTTON, "REPLAY", 0.034f, 0.52f, bottomY,
                       0.18f, rowH, ProteusTheme::TEXT_PRIMARY));
-    LoadControl(*make("ProteusCampaignBegin", IDC_OK, CT_BUTTON, "BEGIN", 0.034f, 0.72f, bottomY, 0.18f, rowH,
+    LoadControl(*ProteusControl(cfg, "ProteusCampaignBegin", IDC_OK, CT_BUTTON, "BEGIN", 0.034f, 0.72f, bottomY, 0.18f, rowH,
                       ProteusTheme::TEXT_PRIMARY));
 
     CListBox* campaignList = dynamic_cast<CListBox*>(GetCtrl(kProteusCampaignListIdc));

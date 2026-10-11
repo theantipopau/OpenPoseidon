@@ -842,7 +842,7 @@ void DisplayMain::OnChildDestroyed(int idd, int exit)
                     GWorld->UI()->Init();
                 }
 
-                C3DListBox* lbox = dynamic_cast<C3DListBox*>(_child->GetCtrl(IDC_SINGLE_MISSION));
+                CListBox* lbox = dynamic_cast<CListBox*>(_child->GetCtrl(IDC_SINGLE_MISSION));
                 int sel = lbox->GetCurSel();
                 if (sel < 0)
                 {
@@ -905,7 +905,7 @@ void DisplayMain::OnChildDestroyed(int idd, int exit)
             }
             else if (exit == IDC_SINGLE_LOAD)
             {
-                C3DListBox* lbox = dynamic_cast<C3DListBox*>(_child->GetCtrl(IDC_SINGLE_MISSION));
+                CListBox* lbox = dynamic_cast<CListBox*>(_child->GetCtrl(IDC_SINGLE_MISSION));
                 int sel = lbox->GetCurSel();
                 PoseidonAssert(sel >= 0);
 

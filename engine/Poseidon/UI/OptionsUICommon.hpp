@@ -164,7 +164,7 @@ class DisplaySingleMission : public Display
     void LoadParams();
     void SaveParams();
     void LoadDirectory();
-    void ScanMissionDirectory(const RString& dir, C3DListBox* lbox, std::set<std::string>& seen);
+    void ScanMissionDirectory(const RString& dir, CListBox* lbox, std::set<std::string>& seen);
     RString MissionDirectory(RString mission, int missionType) const;
     MissionBlock BlockedMissionReason(RString mission, int missionType);
     void RefreshLanguage();

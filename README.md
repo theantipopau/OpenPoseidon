@@ -31,7 +31,8 @@ and replaces the original menus with a streamlined, resolution-aware design.
   | Main menu | Done |
   | Options (main page) | Done. Video, Audio, Controls and Difficulty pages are still the original look |
   | Campaign select | Done. Campaign list on the left, overview and mission history on the right |
-  | Single missions, Multiplayer, Mission Editor launcher | Planned |
+  | Single missions | Done. Mission list on the left, overview on the right |
+  | Multiplayer, Mission Editor launcher | Planned |
 
 - **Fonts and art.** Barlow Condensed (SIL Open Font License, included in `assets/fonts`)
   and the Proteus artwork in `assets/ui`.
