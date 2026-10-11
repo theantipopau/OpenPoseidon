@@ -4,6 +4,7 @@
 #include <Poseidon/Network/Network.hpp>
 #include <Poseidon/Game/Chat.hpp>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
@@ -320,13 +321,19 @@ class DisplayOptionsVideo : public Display
 
     bool _initializingControls = false;
 
+    // The Proteus Video page shows the graphics rows of the shell's Graphics page. The retail
+    // resolution, refresh and window controls are not on it.
+    std::unique_ptr<class GraphicsPage> _graphics;
+
     DisplayOptionsVideo(ControlsContainer* parent, bool enableSimulation);
+    ~DisplayOptionsVideo() override;
     Control* OnCreateCtrl(int type, int idc, const ParamEntry& cls) override;
     void OnButtonClicked(int idc) override;
     void OnSliderPosChanged(int idc, float pos) override;
     void OnLBSelChanged(int idc, int curSel) override;
 
   protected:
+    void UpdateRow(int row);
     int InitResolutions();
     void UpdateRefreshRates(int res);
     void UpdateTerrainGrids();

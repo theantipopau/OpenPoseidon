@@ -45,6 +45,8 @@
 #include <Poseidon/Game/Commands/GameStateExt.hpp>
 #include <Poseidon/Foundation/Strings/StrFormat.hpp>
 #include <Poseidon/UI/OptionsUICommon.hpp>
+#include <Poseidon/UI/Options/GraphicsPage.hpp>
+#include <Poseidon/UI/ProteusTheme.hpp>
 
 // Defined at global scope in World/World.cpp.
 void ShowCinemaBorder(bool show);
@@ -104,94 +106,79 @@ static void SetToggleText(Display* page, int idc, const char* what, bool on)
 
 // Video options display
 
+namespace
+{
+// Proteus Video page ids: one button per graphics row, then BACK and the note.
+constexpr int kVideoRowIdBase = 9950;
+constexpr int kVideoBackIdc = 9980;
+
+// "LABEL: VALUE" for a graphics row, in the Proteus upper-case style.
+RString VideoRowText(const GraphicsPage& page, int row)
+{
+    const std::string text = page.StandaloneLabel(row) + ": " + page.StandaloneValueText(row);
+    return ProteusTheme::Upper(RString(text.c_str()));
+}
+} // namespace
+
+// Video options display, as a Proteus page. Quality rows are on the left and the advanced rows on the right.
+// Every change applies as it is made, through the same graphics settings the shell's Graphics page uses.
 DisplayOptionsVideo::DisplayOptionsVideo(ControlsContainer* parent, bool enableSimulation) : Display(parent)
 {
     _enableSimulation = enableSimulation;
-    Load("RscDisplayOptionsVideo");
+    EnableProteusTheme();
+    _graphics = std::make_unique<GraphicsPage>();
+    _graphics->LoadStandalone();
 
-    _oldBright = GEngine->GetBrightness();
-    _oldGamma = GEngine->GetGamma();
-    _oldFrameRate = GScene->GetFrameRateSettings();
-    _oldQuality = GScene->GetQualitySettings();
+    static ParamFile cfg;
+    cfg.Clear();
+    const float panelX = 0.06f, panelY = 0.11f, panelW = 0.88f, panelH = 0.82f;
+    const float leftX = panelX + 0.04f, colW = 0.38f;
+    const float rightX = 0.52f;
+    const float rowPitch = 0.052f, rowH = 0.046f;
+    const float topY = 0.24f;
+    ProteusTheme::AddArtBackdrop(this, cfg, 9790);
+    ProteusTheme::AddCentredPanel(this, cfg, 9793, panelX, panelY, panelW, panelH);
 
-    _oldResX = GEngine->Width();
-    _oldResY = GEngine->Height();
-    _oldBpp = GEngine->PixelSize();
-    _oldWindowed = GEngine->IsWindowed();
-    _oldRefreshRate = GEngine->RefreshRate();
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusVideoHeading", 9795, CT_STATIC, "VIDEO", 0.05f, leftX, 0.135f,
+                                          0.5f, 0.07f, ProteusTheme::TITLE_TEXT));
+    LoadControl(*ProteusTheme::NewRule(cfg, "ProteusVideoRule", 9796, leftX, 0.215f, panelW - 0.08f));
 
-    _oldObjShadows = GScene->GetObjectShadows();
-    _oldVehShadows = GScene->GetVehicleShadows();
-    _oldSmokes = GScene->GetCloudlets();
-    //_oldOcclusions;
-
-    _oldBlood = ENGINE_CONFIG.blood;
-
-    _oldHWTL = ENGINE_CONFIG.enableHWTL;
-    _oldMultitexturing = GEngine->IsMultitexturing();
-
-    _oldWBuffer = GEngine->IsWBuffer();
-
-    _oldVisibility = GScene->GetPreferredViewDistance();
-
-    _oldTerrain = GScene->GetPreferredTerrainGrid();
-
+    // Quality rows: 0..9 down the left. Row 10 is the ADVANCED heading, and rows 11..16 sit under it on the right.
+    for (int row = 0; row < GraphicsPage::kStandaloneRowCount; ++row)
     {
-        C3DSlider* ctrl = dynamic_cast<C3DSlider*>(GetCtrl(IDC_OPTIONS_BRIGHT_SLIDER));
-        if (ctrl)
+        const std::string name = "ProteusVideoRow" + std::to_string(row);
+        const int idc = kVideoRowIdBase + row;
+        if (_graphics->StandaloneIsHeader(row))
         {
-            OnSliderPosChanged(ctrl->IDC(), ctrl->GetThumbPos());
+            const std::string heading = ProteusTheme::Upper(RString(_graphics->StandaloneLabel(row).c_str())).Data();
+            LoadControl(*ProteusTheme::NewControl(cfg, name.c_str(), idc, CT_STATIC, heading.c_str(), 0.030f, rightX,
+                                                  topY, colW, rowH, ProteusTheme::ACCENT));
+            continue;
         }
-        ctrl = dynamic_cast<C3DSlider*>(GetCtrl(IDC_OPTIONS_GAMMA_SLIDER));
-        if (ctrl)
-        {
-            OnSliderPosChanged(ctrl->IDC(), ctrl->GetThumbPos());
-        }
-        ctrl = dynamic_cast<C3DSlider*>(GetCtrl(IDC_OPTIONS_RATE_SLIDER));
-        if (ctrl)
-        {
-            OnSliderPosChanged(ctrl->IDC(), ctrl->GetThumbPos());
-        }
-        ctrl = dynamic_cast<C3DSlider*>(GetCtrl(IDC_OPTIONS_QUALITY_SLIDER));
-        if (ctrl)
-        {
-            OnSliderPosChanged(ctrl->IDC(), ctrl->GetThumbPos());
-        }
-        ctrl = dynamic_cast<C3DSlider*>(GetCtrl(IDC_OPTIONS_VISIBILITY_SLIDER));
-        if (ctrl)
-        {
-            OnSliderPosChanged(ctrl->IDC(), ctrl->GetThumbPos());
-        }
-    }
-    {
-        SetToggleText(this, IDC_OPTIONS_OBJSHADOWS, "OBJSHADOWS", _oldObjShadows);
-
-        SetToggleText(this, IDC_OPTIONS_VEHSHADOWS, "VEHSHADOWS", _oldVehShadows);
-
-        SetToggleText(this, IDC_OPTIONS_CLOUDLETS, "CLOUDLETS", _oldSmokes);
-
-        SetToggleText(this, IDC_OPTIONS_BLOOD, "BLOOD", _oldBlood);
-
-        SetToggleText(this, IDC_OPTIONS_HWTL, "HWTL", _oldHWTL);
-
-        SetToggleText(this, IDC_OPTIONS_MULTITEXTURING, "MULTITEXTURING", _oldMultitexturing);
-
-        SetToggleText(this, IDC_OPTIONS_WBUFFER, "WBUFFER", _oldWBuffer);
-        // W-buffering is a fixed-function D3D feature no modern backend offers, so this control
-        // is the likeliest of the lot to be absent from a config.
-        if (C3DActiveText* wbuf = OptionalActiveText(this, IDC_OPTIONS_WBUFFER, "WBUFFER"))
-        {
-            wbuf->EnableCtrl(GEngine->CanWBuffer());
-        }
+        const bool right = row > 10;
+        const float x = right ? rightX : leftX;
+        const float y = right ? topY + (row - 10) * rowPitch : topY + row * rowPitch;
+        const RString text = VideoRowText(*_graphics, row);
+        LoadControl(*ProteusTheme::NewControl(cfg, name.c_str(), idc, CT_BUTTON, text, 0.030f, x, y, colW, rowH,
+                                              ProteusTheme::TEXT_PRIMARY));
     }
 
-    _initializingControls = true;
-    int res = InitResolutions();
-    if (res >= 0)
-    {
-        UpdateRefreshRates(res);
-    }
-    _initializingControls = false;
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusVideoNote", 9981, CT_STATIC,
+                                          "CHANGES APPLY AS YOU MAKE THEM. MSAA TAKES EFFECT AT THE NEXT LAUNCH.", 0.024f,
+                                          leftX, 0.775f, 0.8f, 0.04f, ProteusTheme::TEXT_MUTED));
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusVideoBack", kVideoBackIdc, CT_BUTTON, "BACK", 0.034f, leftX,
+                                          0.84f, 0.16f, 42.0f / 639.0f, ProteusTheme::TEXT_PRIMARY));
+
+    FocusCtrl(kVideoRowIdBase);
+}
+
+DisplayOptionsVideo::~DisplayOptionsVideo() = default;
+
+void DisplayOptionsVideo::UpdateRow(int row)
+{
+    CButton* button = dynamic_cast<CButton*>(GetCtrl(kVideoRowIdBase + row));
+    if (button)
+        button->SetText(VideoRowText(*_graphics, row));
 }
 
 struct TerrainInterpolationInfo
@@ -356,6 +343,23 @@ void DisplayOptionsVideo::OnSliderPosChanged(int idc, float pos)
 
 void DisplayOptionsVideo::OnButtonClicked(int idc)
 {
+    if (ProteusThemeEnabled())
+    {
+        // BACK and Escape keep what was applied. Nothing reverts, as the rows already took effect when changed.
+        if (idc == kVideoBackIdc || idc == IDC_CANCEL)
+        {
+            _graphics->SaveStandalone();
+            Exit(idc);
+            return;
+        }
+        const int row = idc - kVideoRowIdBase;
+        if (row >= 0 && row < GraphicsPage::kStandaloneRowCount && !_graphics->StandaloneIsHeader(row))
+        {
+            _graphics->StandaloneCycle(row);
+            UpdateRow(row);
+            return;
+        }
+    }
     switch (idc)
     {
         case IDC_OK:

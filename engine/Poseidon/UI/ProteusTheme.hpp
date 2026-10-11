@@ -79,6 +79,23 @@ void DrawBackdropArt();
 // Upper-case copy of text, as Proteus headings are shown.
 RString Upper(RString text);
 
+// Dark text for a selected list row, drawn on the accent fill.
+constexpr Rgba SELECT_INK{8.0f / 255.0f, 14.0f / 255.0f, 20.0f / 255.0f, 1.0f};
+
+// Sets a colour array on a control class.
+void Colour(ParamClass* cls, const char* name, Rgba v);
+
+// A control described in screen fractions of the 816x639 design canvas, left-aligned in the Proteus font on a
+// transparent background. The caller adds any extra keys, then calls LoadControl.
+ParamClass* NewControl(ParamFile& cfg, const char* name, int idc, int type, const char* text, float size, float x,
+                       float y, float w, float h, Rgba ink);
+
+// A 1px accent rule, drawn as a control with no text.
+ParamClass* NewRule(ParamFile& cfg, const char* name, int idc, float x, float y, float w);
+
+// Heading and body styles for an HTML overview control.
+void AddHtmlStyles(ParamClass* html);
+
 // Top edge and height of sidebar button `index` in screen fractions (16px below the separator).
 float SidebarButtonTop(int index, float screenH);
 float SidebarButtonHeight(float screenW, float screenH);

@@ -228,7 +228,7 @@ OptionsScrollList::RowDef GraphicsPage::GraphicsProvider::RowFor(int row) const
         case kRowObjectLod:
             return {522, m_page->m_tierFourCStrs.data(), 4};
         case kRowShadow:
-            return {532, m_page->m_shadowCStrs.data(), 4};
+            return {532, m_page->m_shadowCStrs.data(), 5};
         case kRowParticles:
             return {542, m_page->m_particlesCStrs.data(), 3};
         case kRowGrass:
@@ -382,8 +382,7 @@ void GraphicsPage::GraphicsProvider::SetRowValue(int row, int v)
             }
             break;
         case kRowShadow:
-            // Index 0..3 → TierOff..TierHigh.
-            if (v >= 0 && v < 4)
+            if (v >= 0 && v < 5)
             {
                 c.shadowQuality = static_cast<GraphicsConfig::Tier>(v);
                 tierTouched = true;
@@ -491,58 +490,59 @@ void GraphicsPage::OnReshown(OptionsShell& shell)
 
 void GraphicsPage::RefreshLocalizedChoices()
 {
-    m_presetLabels[0] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_LOW");
-    m_presetLabels[1] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_MEDIUM");
-    m_presetLabels[2] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_HIGH");
-    m_presetLabels[3] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_ULTRA");
-    m_presetLabels[4] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_CUSTOM");
+    m_presetLabels[0] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_LOW", "Low");
+    m_presetLabels[1] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_MEDIUM", "Medium");
+    m_presetLabels[2] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_HIGH", "High");
+    m_presetLabels[3] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_ULTRA", "Ultra");
+    m_presetLabels[4] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_CUSTOM", "Custom");
     for (size_t i = 0; i < m_presetLabels.size(); ++i)
         m_presetCStrs[i] = m_presetLabels[i].c_str();
 
-    m_terrainLabels[0] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_LOW");
-    m_terrainLabels[1] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_MEDIUM");
-    m_terrainLabels[2] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_HIGH");
-    m_terrainLabels[3] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_ULTRA");
-    m_terrainLabels[4] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_EXTREME");
+    m_terrainLabels[0] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_LOW", "Low");
+    m_terrainLabels[1] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_MEDIUM", "Medium");
+    m_terrainLabels[2] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_HIGH", "High");
+    m_terrainLabels[3] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_ULTRA", "Ultra");
+    m_terrainLabels[4] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_EXTREME", "Extreme");
     for (size_t i = 0; i < m_terrainLabels.size(); ++i)
         m_terrainCStrs[i] = m_terrainLabels[i].c_str();
 
-    m_tierFourLabels[0] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_LOW");
-    m_tierFourLabels[1] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_MEDIUM");
-    m_tierFourLabels[2] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_HIGH");
-    m_tierFourLabels[3] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_ULTRA");
+    m_tierFourLabels[0] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_LOW", "Low");
+    m_tierFourLabels[1] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_MEDIUM", "Medium");
+    m_tierFourLabels[2] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_HIGH", "High");
+    m_tierFourLabels[3] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_ULTRA", "Ultra");
     for (size_t i = 0; i < m_tierFourLabels.size(); ++i)
         m_tierFourCStrs[i] = m_tierFourLabels[i].c_str();
 
-    m_shadowLabels[0] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_OFF");
-    m_shadowLabels[1] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_LOW");
-    m_shadowLabels[2] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_MEDIUM");
-    m_shadowLabels[3] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_HIGH");
+    m_shadowLabels[0] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_OFF", "Off");
+    m_shadowLabels[1] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_LOW", "Low");
+    m_shadowLabels[2] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_MEDIUM", "Medium");
+    m_shadowLabels[3] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_HIGH", "High");
+    m_shadowLabels[4] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_ULTRA", "Ultra");
     for (size_t i = 0; i < m_shadowLabels.size(); ++i)
         m_shadowCStrs[i] = m_shadowLabels[i].c_str();
 
-    m_particlesLabels[0] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_OFF");
-    m_particlesLabels[1] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_LOW");
-    m_particlesLabels[2] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_HIGH");
+    m_particlesLabels[0] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_OFF", "Off");
+    m_particlesLabels[1] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_LOW", "Low");
+    m_particlesLabels[2] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_HIGH", "High");
     for (size_t i = 0; i < m_particlesLabels.size(); ++i)
         m_particlesCStrs[i] = m_particlesLabels[i].c_str();
 
-    m_grassLabels[0] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_OFF");
-    m_grassLabels[1] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_LOW");
-    m_grassLabels[2] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_MEDIUM");
-    m_grassLabels[3] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_HIGH");
-    m_grassLabels[4] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_ULTRA");
+    m_grassLabels[0] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_OFF", "Off");
+    m_grassLabels[1] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_LOW", "Low");
+    m_grassLabels[2] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_MEDIUM", "Medium");
+    m_grassLabels[3] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_HIGH", "High");
+    m_grassLabels[4] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_ULTRA", "Ultra");
     for (size_t i = 0; i < m_grassLabels.size(); ++i)
         m_grassCStrs[i] = m_grassLabels[i].c_str();
 
-    m_msaaLabels[0] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_OFF");
+    m_msaaLabels[0] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_OFF", "Off");
     m_msaaLabels[1] = "2x";
     m_msaaLabels[2] = "4x";
     m_msaaLabels[3] = "8x";
     for (size_t i = 0; i < m_msaaLabels.size(); ++i)
         m_msaaCStrs[i] = m_msaaLabels[i].c_str();
 
-    m_renderScaleLabels[0] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_OFF");
+    m_renderScaleLabels[0] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_OFF", "Off");
     m_renderScaleLabels[1] = "125%";
     m_renderScaleLabels[2] = "150%";
     m_renderScaleLabels[3] = "175%";
@@ -555,7 +555,7 @@ void GraphicsPage::RefreshLocalizedChoices()
     // easy to miss).
     const std::string dlssVer = DlssRuntimeVersionString();
     m_upscalerLabels[0] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_AUTO", "Auto");
-    m_upscalerLabels[1] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_OFF");
+    m_upscalerLabels[1] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_OFF", "Off");
     m_upscalerLabels[2] = dlssVer.empty() ? std::string("DLSS (not found)") : "DLSS " + dlssVer;
     m_upscalerLabels[3] = "FSR 1.0";
     for (size_t i = 0; i < m_upscalerLabels.size(); ++i)
@@ -568,18 +568,18 @@ void GraphicsPage::RefreshLocalizedChoices()
     for (size_t i = 0; i < m_upscalerQualityLabels.size(); ++i)
         m_upscalerQualityCStrs[i] = m_upscalerQualityLabels[i].c_str();
 
-    m_offOnLabels[0] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_OFF");
-    m_offOnLabels[1] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_ON");
+    m_offOnLabels[0] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_OFF", "Off");
+    m_offOnLabels[1] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_ON", "On");
     for (size_t i = 0; i < m_offOnLabels.size(); ++i)
         m_offOnCStrs[i] = m_offOnLabels[i].c_str();
 
-    m_vsyncLabels[0] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_OFF");
-    m_vsyncLabels[1] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_ON");
-    m_vsyncLabels[2] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_ADAPTIVE");
+    m_vsyncLabels[0] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_OFF", "Off");
+    m_vsyncLabels[1] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_ON", "On");
+    m_vsyncLabels[2] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_ADAPTIVE", "Adaptive");
     for (size_t i = 0; i < m_vsyncLabels.size(); ++i)
         m_vsyncCStrs[i] = m_vsyncLabels[i].c_str();
 
-    m_fpsCapLabels[0] = LocalizeString("STR_DISP_MAIN_OPT_VALUE_UNLIMITED");
+    m_fpsCapLabels[0] = LocalizeStringWithFallback("STR_DISP_MAIN_OPT_VALUE_UNLIMITED", "Unlimited");
     m_fpsCapLabels[1] = "30";
     m_fpsCapLabels[2] = "60";
     m_fpsCapLabels[3] = "90";
@@ -605,6 +605,78 @@ void GraphicsPage::Unmount(OptionsShell& shell)
         GEngine->SaveConfig();
 
     ScrollListPage::Unmount(shell);
+}
+
+// Standalone rows, for the Proteus Video page. The rows, labels, values and writes all come from the same
+// provider the shell page uses, so the two pages cannot disagree.
+static_assert(GraphicsPage::kStandaloneRowCount == 17, "standalone row count out of sync with GraphicsProvider");
+
+void GraphicsPage::LoadStandalone()
+{
+    if (!m_cfg.Load(GraphicsCfgPath()))
+        m_cfg.LoadDefaults();
+    m_cfg.qualityPreset = m_cfg.DerivePresetFromTiers();
+    RefreshLocalizedChoices();
+}
+
+void GraphicsPage::SaveStandalone()
+{
+    if (!m_cfg.Save(GraphicsCfgPath()))
+        LOG_WARN(Graphics, "GraphicsPage::SaveStandalone: failed to write graphics.cfg");
+    if (GEngine)
+        GEngine->SaveConfig();
+}
+
+bool GraphicsPage::StandaloneIsHeader(int row) const
+{
+    return m_graphics.RowKind(row) == OptionsScrollList::KindHeader;
+}
+
+bool GraphicsPage::StandaloneIsSlider(int row) const
+{
+    return m_graphics.RowFor(row).count < 0;
+}
+
+std::string GraphicsPage::StandaloneLabel(int row) const
+{
+    return m_graphics.RowLabel(row);
+}
+
+std::string GraphicsPage::StandaloneValueText(int row) const
+{
+    if (StandaloneIsHeader(row))
+        return std::string();
+    if (StandaloneIsSlider(row))
+    {
+        const char* text = m_graphics.SliderValueText(row);
+        return text ? std::string(text) : std::string();
+    }
+    const OptionsScrollList::RowDef def = m_graphics.RowFor(row);
+    const int v = m_graphics.RowValue(row);
+    if (def.options && v >= 0 && v < def.count)
+        return def.options[v];
+    return std::string();
+}
+
+void GraphicsPage::StandaloneCycle(int row)
+{
+    if (StandaloneIsHeader(row))
+        return;
+    if (StandaloneIsSlider(row))
+    {
+        // Slider rows step through 0..100 in twenties and wrap back to the start.
+        int next = m_graphics.RowValue(row) + 20;
+        if (next > 100)
+            next = 0;
+        m_graphics.SetRowValue(row, next);
+        return;
+    }
+    const int count = m_graphics.RowFor(row).count;
+    int next = (m_graphics.RowValue(row) + 1) % count;
+    // Custom is derived from the tiers, never chosen, so the preset row steps over it.
+    if (row == 0 && next == GraphicsConfig::PresetCustom)
+        next = 0;
+    m_graphics.SetRowValue(row, next);
 }
 
 } // namespace Poseidon

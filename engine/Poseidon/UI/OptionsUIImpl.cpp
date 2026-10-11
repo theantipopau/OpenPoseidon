@@ -81,75 +81,6 @@ RString DecodeUserFacingLegacyText(RString text)
 }
 } // namespace
 
-// Proteus page helpers, shared by the Single Missions and Campaign pages. A control is described in screen
-// fractions of the 816x639 design canvas, left-aligned in the Proteus font, on a transparent background. The
-// caller adds any extra keys, then calls LoadControl.
-const ProteusTheme::Rgba kProteusSelectInk{8.0f / 255.0f, 14.0f / 255.0f, 20.0f / 255.0f, 1.0f};
-
-void ProteusColour(ParamClass* c, const char* name, ProteusTheme::Rgba v)
-{
-    ParamEntry* arr = c->AddArray(name);
-    arr->AddValue(v.r);
-    arr->AddValue(v.g);
-    arr->AddValue(v.b);
-    arr->AddValue(v.a);
-}
-
-ParamClass* ProteusControl(ParamFile& cfg, const char* name, int idc, int type, const char* text, float size, float x,
-                           float y, float w, float h, ProteusTheme::Rgba ink)
-{
-    ParamClass* cls = cfg.AddClass(name);
-    cls->Add("idc", idc);
-    cls->Add("type", type);
-    cls->Add("text", RString(text));
-    cls->Add("style", ST_LEFT);
-    cls->Add("font", RString("barlowsemibold"));
-    cls->Add("sizeEx", size);
-    cls->Add("x", x);
-    cls->Add("y", y);
-    cls->Add("w", w);
-    cls->Add("h", h);
-    ProteusColour(cls, "colorBackground", ProteusTheme::Rgba{0.0f, 0.0f, 0.0f, 0.0f});
-    ProteusColour(cls, "colorText", ink);
-    return cls;
-}
-
-// A 1px cyan rule, drawn as a control with no text.
-ParamClass* ProteusRule(ParamFile& cfg, const char* name, int idc, float x, float y, float w)
-{
-    ParamClass* rule = cfg.AddClass(name);
-    rule->Add("idc", idc);
-    rule->Add("text", RString(""));
-    rule->Add("type", CT_STATIC);
-    rule->Add("style", ST_LEFT);
-    rule->Add("x", x);
-    rule->Add("y", y);
-    rule->Add("w", w);
-    rule->Add("h", 1.0f / 639.0f);
-    ProteusColour(rule, "colorBackground", ProteusTheme::ACCENT_DIM);
-    ProteusColour(rule, "colorText", ProteusTheme::TEXT_PRIMARY);
-    return rule;
-}
-
-// The overview is HTML; the control reads these heading and body styles.
-void AddHtmlStyles(ParamClass* html)
-{
-    struct Style
-    {
-        const char* tag;
-        float size;
-    };
-    const Style styles[] = {{"H1", 0.040f}, {"H2", 0.038f}, {"H3", 0.036f}, {"H4", 0.034f},
-                            {"H5", 0.032f}, {"H6", 0.032f}, {"P", 0.030f}};
-    for (const Style& s : styles)
-    {
-        ParamClass* cls = html->AddClass(s.tag);
-        cls->Add("font", RString("barlowregular"));
-        cls->Add("fontBold", RString("barlowsemibold"));
-        cls->Add("sizeEx", s.size);
-    }
-}
-
 // Single mission page. The mission list sits on the left and the selected mission's overview on the right,
 // with the actions along the bottom. Built in code, as the campaign page is, so the retail book is not loaded.
 DisplaySingleMission::DisplaySingleMission(ControlsContainer* parent) : Display(parent)
@@ -166,33 +97,33 @@ DisplaySingleMission::DisplaySingleMission(ControlsContainer* parent) : Display(
     ProteusTheme::AddArtBackdrop(this, cfg, 9790);
     ProteusTheme::AddCentredPanel(this, cfg, 9793, panelX, panelY, panelW, panelH);
 
-    LoadControl(*ProteusControl(cfg, "ProteusSingleHeading", 9795, CT_STATIC, "SINGLE MISSIONS", 0.05f, leftX, 0.135f,
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusSingleHeading", 9795, CT_STATIC, "SINGLE MISSIONS", 0.05f, leftX, 0.135f,
                                 0.5f, 0.07f, ProteusTheme::TITLE_TEXT));
-    LoadControl(*ProteusRule(cfg, "ProteusSingleRule", 9796, leftX, 0.215f, panelW - 0.08f));
+    LoadControl(*ProteusTheme::NewRule(cfg, "ProteusSingleRule", 9796, leftX, 0.215f, panelW - 0.08f));
 
-    ParamClass* list = ProteusControl(cfg, "ProteusSingleList", IDC_SINGLE_MISSION, CT_LISTBOX, "", 0.032f, leftX,
+    ParamClass* list = ProteusTheme::NewControl(cfg, "ProteusSingleList", IDC_SINGLE_MISSION, CT_LISTBOX, "", 0.032f, leftX,
                                       0.24f, leftW, 0.57f, ProteusTheme::ACCENT);
     list->Add("rowHeight", rowH);
-    ProteusColour(list, "colorSelect", kProteusSelectInk);
+    ProteusTheme::Colour(list, "colorSelect", ProteusTheme::SELECT_INK);
     LoadControl(*list);
 
-    ParamClass* html = ProteusControl(cfg, "ProteusSingleOverview", IDC_SINGLE_OVERVIEW, CT_HTML, "", 0.030f, rightX,
+    ParamClass* html = ProteusTheme::NewControl(cfg, "ProteusSingleOverview", IDC_SINGLE_OVERVIEW, CT_HTML, "", 0.030f, rightX,
                                       0.24f, rightW, 0.57f, ProteusTheme::TEXT_PRIMARY);
-    ProteusColour(html, "colorBold", ProteusTheme::TITLE_TEXT);
-    ProteusColour(html, "colorLink", ProteusTheme::ACCENT);
-    ProteusColour(html, "colorLinkActive", ProteusTheme::TITLE_TEXT);
-    AddHtmlStyles(html);
+    ProteusTheme::Colour(html, "colorBold", ProteusTheme::TITLE_TEXT);
+    ProteusTheme::Colour(html, "colorLink", ProteusTheme::ACCENT);
+    ProteusTheme::Colour(html, "colorLinkActive", ProteusTheme::TITLE_TEXT);
+    ProteusTheme::AddHtmlStyles(html);
     LoadControl(*html);
 
     // Bottom row: BACK, the difficulty toggle, RESUME (shown when the mission has a save) and PLAY. Labels are
     // set by the handlers below.
-    LoadControl(*ProteusControl(cfg, "ProteusSingleBack", IDC_CANCEL, CT_BUTTON, "BACK", 0.034f, leftX, bottomY,
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusSingleBack", IDC_CANCEL, CT_BUTTON, "BACK", 0.034f, leftX, bottomY,
                                 0.16f, rowH, ProteusTheme::TEXT_PRIMARY));
-    LoadControl(*ProteusControl(cfg, "ProteusSingleDiff", IDC_SINGLE_DIFF, CT_BUTTON, "", 0.034f, 0.28f, bottomY,
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusSingleDiff", IDC_SINGLE_DIFF, CT_BUTTON, "", 0.034f, 0.28f, bottomY,
                                 0.22f, rowH, ProteusTheme::TEXT_PRIMARY));
-    LoadControl(*ProteusControl(cfg, "ProteusSingleResume", IDC_SINGLE_LOAD, CT_BUTTON, "", 0.034f, 0.52f, bottomY,
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusSingleResume", IDC_SINGLE_LOAD, CT_BUTTON, "", 0.034f, 0.52f, bottomY,
                                 0.18f, rowH, ProteusTheme::TEXT_PRIMARY));
-    LoadControl(*ProteusControl(cfg, "ProteusSinglePlay", IDC_OK, CT_BUTTON, "PLAY", 0.034f, 0.72f, bottomY, 0.18f,
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusSinglePlay", IDC_OK, CT_BUTTON, "PLAY", 0.034f, 0.72f, bottomY, 0.18f,
                                 rowH, ProteusTheme::TEXT_PRIMARY));
 
     LoadDirectory();
@@ -1045,7 +976,7 @@ DisplayCampaignLoad::DisplayCampaignLoad(ControlsContainer* parent) : Display(pa
     ProteusTheme::AddCentredPanel(this, cfg, 9793, panelX, panelY, panelW, panelH);
 
     // Heading, then a 1px cyan rule beneath it.
-    LoadControl(*ProteusControl(cfg, "ProteusCampaignHeading", 9795, CT_STATIC, "CAMPAIGNS", 0.05f, leftX, 0.135f, 0.5f, 0.07f,
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusCampaignHeading", 9795, CT_STATIC, "CAMPAIGNS", 0.05f, leftX, 0.135f, 0.5f, 0.07f,
                       ProteusTheme::TITLE_TEXT));
     ParamClass* rule = cfg.AddClass("ProteusCampaignRule");
     rule->Add("idc", 9796);
@@ -1056,44 +987,44 @@ DisplayCampaignLoad::DisplayCampaignLoad(ControlsContainer* parent) : Display(pa
     rule->Add("y", 0.215f);
     rule->Add("w", panelW - 0.08f);
     rule->Add("h", 1.0f / 639.0f);
-    ProteusColour(rule, "colorBackground", ProteusTheme::ACCENT_DIM);
-    ProteusColour(rule, "colorText", ProteusTheme::TEXT_PRIMARY);
+    ProteusTheme::Colour(rule, "colorBackground", ProteusTheme::ACCENT_DIM);
+    ProteusTheme::Colour(rule, "colorText", ProteusTheme::TEXT_PRIMARY);
     LoadControl(*rule);
 
     // Campaign list, scrolls when there are more campaigns than rows. Selecting a row loads that campaign.
-    ParamClass* list = ProteusControl(cfg, "ProteusCampaignList", kProteusCampaignListIdc, CT_LISTBOX, "", 0.032f, leftX, 0.24f,
+    ParamClass* list = ProteusTheme::NewControl(cfg, "ProteusCampaignList", kProteusCampaignListIdc, CT_LISTBOX, "", 0.032f, leftX, 0.24f,
                             leftW, 0.57f, ProteusTheme::ACCENT);
     list->Add("rowHeight", rowH);
-    ProteusColour(list, "colorSelect", kProteusSelectInk);
+    ProteusTheme::Colour(list, "colorSelect", ProteusTheme::SELECT_INK);
     LoadControl(*list);
 
     // Right column: campaign name, mission name (when a mission is picked), overview, then the history list.
-    LoadControl(*ProteusControl(cfg, "ProteusCampaignName", IDC_CAMPAIGN_CAMPAIGN, CT_STATIC, "", 0.042f, rightX, 0.235f, rightW,
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusCampaignName", IDC_CAMPAIGN_CAMPAIGN, CT_STATIC, "", 0.042f, rightX, 0.235f, rightW,
                       0.06f, ProteusTheme::TITLE_TEXT));
-    LoadControl(*ProteusControl(cfg, "ProteusMissionName", IDC_CAMPAIGN_MISSION, CT_STATIC, "", 0.030f, rightX, 0.295f, rightW,
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusMissionName", IDC_CAMPAIGN_MISSION, CT_STATIC, "", 0.030f, rightX, 0.295f, rightW,
                       0.04f, ProteusTheme::ACCENT));
     // The overview is a picture with a line of text beneath it, so the box is tall enough for both.
-    ParamClass* html = ProteusControl(cfg, "ProteusCampaignDescription", IDC_CAMPAIGN_DESCRIPTION, CT_HTML, "", 0.030f, rightX,
+    ParamClass* html = ProteusTheme::NewControl(cfg, "ProteusCampaignDescription", IDC_CAMPAIGN_DESCRIPTION, CT_HTML, "", 0.030f, rightX,
                             0.34f, rightW, 0.29f, ProteusTheme::TEXT_PRIMARY);
-    ProteusColour(html, "colorBold", ProteusTheme::TITLE_TEXT);
-    ProteusColour(html, "colorLink", ProteusTheme::ACCENT);
-    ProteusColour(html, "colorLinkActive", ProteusTheme::TITLE_TEXT);
-    AddHtmlStyles(html);
+    ProteusTheme::Colour(html, "colorBold", ProteusTheme::TITLE_TEXT);
+    ProteusTheme::Colour(html, "colorLink", ProteusTheme::ACCENT);
+    ProteusTheme::Colour(html, "colorLinkActive", ProteusTheme::TITLE_TEXT);
+    ProteusTheme::AddHtmlStyles(html);
     LoadControl(*html);
-    ParamClass* history = ProteusControl(cfg, "ProteusMissionHistory", IDC_CAMPAIGN_HISTORY, CT_LISTBOX, "", 0.032f, rightX, 0.645f,
+    ParamClass* history = ProteusTheme::NewControl(cfg, "ProteusMissionHistory", IDC_CAMPAIGN_HISTORY, CT_LISTBOX, "", 0.032f, rightX, 0.645f,
                                rightW, 0.165f, ProteusTheme::ACCENT);
     history->Add("rowHeight", rowH);
-    ProteusColour(history, "colorSelect", kProteusSelectInk);
+    ProteusTheme::Colour(history, "colorSelect", ProteusTheme::SELECT_INK);
     LoadControl(*history);
 
     // Bottom row: BACK, then the difficulty toggle, REPLAY and BEGIN. Labels are set by the handlers below.
-    LoadControl(*ProteusControl(cfg, "ProteusCampaignBack", IDC_CANCEL, CT_BUTTON, "BACK", 0.034f, leftX, bottomY, 0.16f, rowH,
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusCampaignBack", IDC_CANCEL, CT_BUTTON, "BACK", 0.034f, leftX, bottomY, 0.16f, rowH,
                       ProteusTheme::TEXT_PRIMARY));
-    LoadControl(*ProteusControl(cfg, "ProteusCampaignDiff", IDC_CAMPAIGN_DIFF, CT_BUTTON, "", 0.034f, 0.28f, bottomY, 0.22f, rowH,
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusCampaignDiff", IDC_CAMPAIGN_DIFF, CT_BUTTON, "", 0.034f, 0.28f, bottomY, 0.22f, rowH,
                       ProteusTheme::TEXT_PRIMARY));
-    LoadControl(*ProteusControl(cfg, "ProteusCampaignReplay", IDC_CAMPAIGN_REPLAY, CT_BUTTON, "REPLAY", 0.034f, 0.52f, bottomY,
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusCampaignReplay", IDC_CAMPAIGN_REPLAY, CT_BUTTON, "REPLAY", 0.034f, 0.52f, bottomY,
                       0.18f, rowH, ProteusTheme::TEXT_PRIMARY));
-    LoadControl(*ProteusControl(cfg, "ProteusCampaignBegin", IDC_OK, CT_BUTTON, "BEGIN", 0.034f, 0.72f, bottomY, 0.18f, rowH,
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusCampaignBegin", IDC_OK, CT_BUTTON, "BEGIN", 0.034f, 0.72f, bottomY, 0.18f, rowH,
                       ProteusTheme::TEXT_PRIMARY));
 
     CListBox* campaignList = dynamic_cast<CListBox*>(GetCtrl(kProteusCampaignListIdc));

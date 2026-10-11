@@ -95,6 +95,68 @@ Metrics MetricsFor(float screenW, float screenH)
     return m;
 }
 
+void Colour(ParamClass* cls, const char* name, Rgba v)
+{
+    ParamEntry* arr = cls->AddArray(name);
+    arr->AddValue(v.r);
+    arr->AddValue(v.g);
+    arr->AddValue(v.b);
+    arr->AddValue(v.a);
+}
+
+ParamClass* NewControl(ParamFile& cfg, const char* name, int idc, int type, const char* text, float size, float x,
+                       float y, float w, float h, Rgba ink)
+{
+    ParamClass* cls = cfg.AddClass(name);
+    cls->Add("idc", idc);
+    cls->Add("type", type);
+    cls->Add("text", RString(text));
+    cls->Add("style", ST_LEFT);
+    cls->Add("font", RString("barlowsemibold"));
+    cls->Add("sizeEx", size);
+    cls->Add("x", x);
+    cls->Add("y", y);
+    cls->Add("w", w);
+    cls->Add("h", h);
+    Colour(cls, "colorBackground", Rgba{0.0f, 0.0f, 0.0f, 0.0f});
+    Colour(cls, "colorText", ink);
+    return cls;
+}
+
+ParamClass* NewRule(ParamFile& cfg, const char* name, int idc, float x, float y, float w)
+{
+    ParamClass* rule = cfg.AddClass(name);
+    rule->Add("idc", idc);
+    rule->Add("text", RString(""));
+    rule->Add("type", CT_STATIC);
+    rule->Add("style", ST_LEFT);
+    rule->Add("x", x);
+    rule->Add("y", y);
+    rule->Add("w", w);
+    rule->Add("h", 1.0f / 639.0f);
+    Colour(rule, "colorBackground", ACCENT_DIM);
+    Colour(rule, "colorText", TEXT_PRIMARY);
+    return rule;
+}
+
+void AddHtmlStyles(ParamClass* html)
+{
+    struct Style
+    {
+        const char* tag;
+        float size;
+    };
+    const Style styles[] = {{"H1", 0.040f}, {"H2", 0.038f}, {"H3", 0.036f}, {"H4", 0.034f},
+                            {"H5", 0.032f}, {"H6", 0.032f}, {"P", 0.030f}};
+    for (const Style& s : styles)
+    {
+        ParamClass* cls = html->AddClass(s.tag);
+        cls->Add("font", RString("barlowregular"));
+        cls->Add("fontBold", RString("barlowsemibold"));
+        cls->Add("sizeEx", s.size);
+    }
+}
+
 void DrawBackdropArt()
 {
     // Loading starts before the renderer and its texture bank exist; nothing is drawn until they do.

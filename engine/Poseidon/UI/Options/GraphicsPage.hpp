@@ -46,6 +46,17 @@ public:
 	void OnReshown(OptionsShell& shell) override;
 	void Unmount(OptionsShell& shell) override;
 
+	// Standalone use, for a page that draws these rows itself (the Proteus Video page). The rows, their
+	// labels, values and writes are the same as on the shell page. Load and Save mirror Mount and Unmount.
+	static constexpr int kStandaloneRowCount = 17;
+	void LoadStandalone();
+	void SaveStandalone();
+	bool StandaloneIsHeader(int row) const;
+	bool StandaloneIsSlider(int row) const;
+	std::string StandaloneLabel(int row) const;
+	std::string StandaloneValueText(int row) const;
+	void StandaloneCycle(int row);
+
 protected:
 	OptionsScrollList::Provider& ProviderRef() override { return m_provider; }
 
@@ -106,8 +117,8 @@ private:
 	std::array<const char*, 5>      m_terrainCStrs{};
 	std::array<std::string, 4>      m_tierFourLabels;
 	std::array<const char*, 4>      m_tierFourCStrs{};
-	std::array<std::string, 4>      m_shadowLabels;
-	std::array<const char*, 4>      m_shadowCStrs{};
+	std::array<std::string, 5>      m_shadowLabels;
+	std::array<const char*, 5>      m_shadowCStrs{};
 	std::array<std::string, 3>      m_particlesLabels;
 	std::array<const char*, 3>      m_particlesCStrs{};
 	// Off / Low / Medium / High / Ultra — the only tier row that offers both Off
