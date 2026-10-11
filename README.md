@@ -1,140 +1,98 @@
-# Open Poseidon Engine
+<h1 align="center">Proteus</h1>
 
 <p align="center">
-  <img src="screenshots/OpenPoseidonEngine.png" alt="Open Poseidon Engine logo" width="360">
+  <img src="assets/ui/logo.png" alt="Proteus logo" width="180">
 </p>
 
-Open Poseidon Engine brings modern engine features to Operation Flashpoint / Arma:
-Cold War Assault: WGPU/Vulkan rendering, optional DLSS upscaling, multithreading,
-GTAO and probe-based global illumination (GI), volumetric fog, clouds and smoke,
-and Box3D physics with articulated ragdolls. It is a community continuation of
-the original engine, with expanded gameplay, terrain editing and content support.
-It requires your own game data and is not a complete game or an official
-Bohemia Interactive product.
+<p align="center">
+  <b>A modern front end and engine for Operation Flashpoint: Cold War Crisis, built on OpenPoseidon.</b>
+</p>
 
-[![Sponsor on GitHub](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/koosoli)
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-ffdd00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/koosoli)
+Proteus is a fork of [Open Poseidon Engine](https://github.com/koosoli/OpenPoseidon), the
+community continuation of the Poseidon engine behind Operation Flashpoint: Cold War Crisis
+and Arma: Cold War Assault. The fork keeps the engine, the data formats and the missions,
+and replaces the original menus with a streamlined, resolution-aware design.
 
-## Engine features
+<p align="center">
+  <img src="screenshots/proteus/main-menu.png" alt="Proteus main menu" width="720">
+</p>
 
-- **Vulkan rendering through WGPU:** Vulkan support on Windows and Linux,
-  alongside Direct3D 12 on Windows. The active API depends on the platform,
-  GPU and driver.
-- **Physical inventory (single player):** open with **O** for vicinity cargo,
-  drag/drop, equipped slots and weight/volume budgets; **K** opens inventory
-  settings, including optional bearing callouts, a bearing readout and
-  grenade-launcher ground-range estimates. Includes 17 original realistic
-  equipment icons; addon pictures and
-  labelled tiles remain fallbacks.
-  Multiplayer keeps classic Gear; Dev Tools and Zeus are disabled in multiplayer.
-- **Box3D physics and articulated ragdolls:** jointed character bodies, death and
-  explosion reactions, and bullet reactivation of supported runtime corpses.
-  Automatic ragdolls default to on, with a Physics developer-tab toggle.
-- **Layered volumetric fog:** adjustable lower/upper heights, density, patchiness,
-  valley/mountain presets, live controls, reset and a legacy-fog option. Local
-  light scattering supports night lights and the player's torch.
-- **GTAO:** screen-space ambient occlusion and bent-normal ambient shading,
-  with live developer controls and diagnostic views.
-- **Global illumination (GI):** a local irradiance probe grid combines indirect
-  sky lighting with coloured sunlight bounced from nearby surfaces.
-- **Lighting and shadows:** dynamic sun/local-light shadows, contact shadows,
-  muzzle illumination and atmospheric light scattering.
-- **Volumetric smoke:** buoyancy, wind response, room/portal-aware wall, floor
-  and ceiling containment, doorway flow, self-shadowing and scene shadows.
-  Containment depends on the building geometry/topology available to the engine.
-- **Volumetric clouds and procedural sky:** overcast controls shared with Zeus,
-  stars and cloud shadows affecting terrain, objects, grass and water.
-- **Tidewater ocean:** FFT waves, shoreline wetness, reflections, foam, wakes,
-  spray, underwater rendering and caustics; projectile/explosion and helicopter
-  interactions, with supported boats following the drawn water surface.
-- **Procedural grass:** travelling gust fronts, spatial wind variation,
-  configurable coverage and player/vehicle/explosion/downwash interactions.
-- **Weather and soft ground:** rain accumulation/drainage, puddle ripples,
-  wet-ground/clothing shading, surface snow and terrain contact depressions.
-  Stock Jeep and Truck5t wet-mud ruts/rolling resistance are enabled; boot-sole
-  normal/parallax relief remains an opt-in prototype.
-- **Snow depth and deformation:** compressed foot/vehicle tracks and projectile
-  marks in depth-bearing ground snow, alongside roof and vegetation snow cover.
-- **Destructible terrain and editor:** explosion craters, brush deformation,
-  small cuts, horizontal caves/tunnels, straight and tank
-  trenches, and excavation selection/rotation/deletion. This extends terrain
-  holes; it is not a general voxel-world simulation.
-- **Combat effects:** revised muzzle flashes with local illumination, snow
-  projectile marks and helicopter ground downwash particles.
-- **Firing from vehicles (FFV):** personal-rifle fire from configured passenger
-  seats, aiming arcs, reload and action-menu Ready/Stow controls. Stock Jeep
-  coverage is validated; other seats, weapon families and multiplayer are limited.
-- **Satellite terrain textures (satmaps):** authored satellite layers and an
-  automatic classic-world far-colour bake incorporating static roofs/vegetation.
-  This is a ground colour representation, not a replacement for live object LODs.
-- **Local content browser and editor:** terrain discovery for installed Arma
-  1/2/3, DayZ and Reforger content, partial format conversion and selected vehicle
-  bridges. Imported terrain opens in the native OFP mission editor with OFP units.
-- **Streaming and developer tools:** geometry/residency work, GPU timings,
-  debug views, test harnesses and Zeus freefly/unit placement.
-- **Multithreading:** enkiTS worker jobs for selected terrain/cache, texture
-  conversion and audio work, plus asynchronous streaming. This does not imply
-  that every simulation/rendering operation runs on its own thread.
-- **Upscaling:** AMD FSR 1 and an optional local NVIDIA DLSS integration.
-  The proprietary NGX SDK/runtime is not bundled; distributable builds disable
-  DLSS. Its availability depends on build configuration and compatible hardware.
-- **Improved AI:** gunfire hearing/reporting, immediate orders and near-miss
-  suppression, plus optional gradual spotting and cover/flank/search behavior.
-  Behavior switches are configuration-dependent; this is not a universal new
-  navigation system or complete replacement AI.
-- **Swimming:** swimmer movement and boat-route/boarding support.
+## What is different in Proteus
 
-## Development screenshots
+- **A new main menu.** A full-bleed Proteus backdrop, a sidebar with the logo, and six
+  items: Campaign, Single Missions, Multiplayer, Mission Editor, Options and Quit.
+- **A shared design system.** Colours, sizes, the themed button and the backdrop
+  pieces live in one module (`engine/Poseidon/UI/ProteusTheme.*`). A screen opts in
+  with one call.
+- **Restyled screens.**
 
-These captures illustrate development builds using locally installed game
-content. Imported maps/assets are not included with the engine source.
+  | Screen | Status |
+  | --- | --- |
+  | Main menu | Done |
+  | Options (main page) | Done. Video, Audio, Controls and Difficulty pages are still the original look |
+  | Campaign select | Done. Campaign list on the left, overview and mission history on the right |
+  | Single missions, Multiplayer, Mission Editor launcher | Planned |
 
-| Tidewater ocean | Wind-driven procedural grass |
-| --- | --- |
-| ![Tidewater ocean waves and shoreline](screenshots/newocean.png) | ![Procedural grass across a rolling meadow](screenshots/newgrass.png) |
-| **Layered volumetric fog** | **Rainwater and reflective puddles** |
-| ![Low fog layers across island valleys](screenshots/volumetricfog.png) | ![Reflective rainwater across village ground](screenshots/puddles.png) |
-| **Snow depth and vehicle tracks** | **Destructible terrain and craters** |
-| ![Snow cover with compressed vehicle tracks](screenshots/volumetricsnow.png) | ![Deep terrain deformation near a village road](screenshots/destrucableterrain.jpg) |
-| **GTAO and interior shading** | **Night lighting and shadows** |
-| ![Ambient occlusion and directional light inside a building](screenshots/GTAO.png) | ![Village lights and shadows in rainy night conditions](screenshots/newshadowsystem.png) |
-| **Box3D physics test scene** | **Local Reforger terrain compatibility** |
-| ![Box3D wall and rigid-body test scene](screenshots/box3d.png) | ![Locally loaded Reforger town with buildings and vegetation](screenshots/armareforger.png) |
+- **Fonts and art.** Barlow Condensed (SIL Open Font License, included in `assets/fonts`)
+  and the Proteus artwork in `assets/ui`.
+- **Cleaner options.** The Mods and Local Maps entries are removed from the main menu for
+  now. Local Maps crashes when opened and Mods has no working route yet.
 
-## Precompiled builds
+Gameplay, the in-game HUD, the renderer and the mission scripting are unchanged in this
+fork. The restyling covers menus only.
 
-Prefer to play without compiling? Official precompiled Windows builds are available
-in our [private downloads repository](https://github.com/OpenPoseidon/OpenPoseidon-Builds/releases).
-For access, we ask for a small monthly contribution through
-[GitHub Sponsors](https://github.com/sponsors/koosoli), helping fund continued
-development, testing and build distribution. You can build the engine yourself
-without a sponsorship; your rights under the software licences remain unchanged.
+<p align="center">
+  <img src="screenshots/proteus/options.png" alt="Proteus options page" width="48%">
+  <img src="screenshots/proteus/campaign.png" alt="Proteus campaign select" width="48%">
+</p>
 
-## Current limitations
+## Requirements
 
-Features are at different stages of acceptance. Dense/aerial fog can still show
-patterns. Ragdoll tests cover
-37 locally present stock models; two Camel pilot models retain post-hit settling
-issues. Posture, saved-corpse reactivation, network ownership and physics budgets
-also limit ragdoll admission. Arbitrary addon rigs are not universally supported.
-Weather materials and modern-game material/LOD conversion still need refinement.
-Soft-ground prototypes do not provide general soft-body vehicle physics.
+- Your own legal copy of Operation Flashpoint: Cold War Crisis or Arma: Cold War Assault.
+  Proteus does not include any game data (`Dta`, `Res`, `Addons`, `Campaigns`, `MPMissions`,
+  or the mods themselves). Point the launcher at your install.
+- Windows 10 or 11. Proteus has only been built and tested on Windows.
 
-## Content and building
+## Building
 
-To play Cold War Assault, use your own legally acquired installation. Game
-archives, maps, models, textures, sounds and animation addons are not supplied
-by this source release. Included project artwork and omitted binary test fixtures
-are documented in [ASSETS.md](ASSETS.md). Original-game and modern-game compatibility remains
-subject to the limitations in [COMPATIBILITY.md](COMPATIBILITY.md).
+Follow the upstream build guide in [`BUILDING.md`](BUILDING.md). The short version, from
+the repository root in PowerShell:
 
-See [BUILDING.md](BUILDING.md) for the Windows build procedure and
-[CONTRIBUTING.md](CONTRIBUTING.md) for contributions. The current Windows WGPU
-path is the primary development target. Other platform presets exist but are
-not a promise of equivalent runtime support.
+```powershell
+$env:VCPKG_ROOT = 'C:\dev\vcpkg'
+.\scripts\Build.ps1 -Preset win-x64-clang-rwdi -Target PoseidonGame
+```
 
-The source is governed by [LICENSE](LICENSE), including its additional terms.
-Third-party components retain their own licenses and notices. See
-[CREDITS.md](CREDITS.md), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and
-the notices shipped with individual components. Source availability does not
-grant rights to proprietary game content or trademarks.
+The build writes to `dist/x64-win-rwdi`.
+
+## Running
+
+Copy `mods.example.json` to `mods.json` (it is gitignored) and point it at your game
+folder and mods. Then start the game:
+
+```powershell
+.\scripts\Start.ps1
+```
+
+Use `-Fullscreen` for fullscreen. `-LogFile` writes the engine log to a file.
+
+## Documentation
+
+- [`docs/UI_SCREENS.md`](docs/UI_SCREENS.md): every full-window screen and its Proteus status.
+- [`docs/CHANGELOG.md`](docs/CHANGELOG.md): what changed in the fork, newest first.
+- [`docs/FORK_ROADMAP.md`](docs/FORK_ROADMAP.md): planned work.
+- [`docs/ASSET_PIPELINE.md`](docs/ASSET_PIPELINE.md): how game assets and licences are handled.
+- [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md): open problems and workarounds.
+- [`docs/UPSTREAM_README.md`](docs/UPSTREAM_README.md): the original Open Poseidon Engine README, with its engine feature list.
+
+## Credits and licence
+
+- **Open Poseidon Engine** is by [koosoli](https://github.com/koosoli) and contributors. See
+  [`CREDITS.md`](CREDITS.md) and [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+- **Bohemia Interactive** developed Operation Flashpoint and released the Cold War Assault
+  source code under the GNU General Public License v3.0 or later, with the additional terms
+  in [`LICENSE`](LICENSE).
+- **Barlow Condensed** by Jeremy Tribby, under the SIL Open Font License 1.1
+  ([`assets/fonts/OFL.txt`](assets/fonts/OFL.txt)).
+
+Proteus is a community project. It is not affiliated with or endorsed by Bohemia Interactive.
