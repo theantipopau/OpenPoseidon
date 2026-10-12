@@ -10,7 +10,7 @@ if (!$env:LOCK_OWNER) {
  } finally {Remove-Item Env:LOCK_OWNER}
  return
 }
-if (Get-Process OpenPoseidon -ErrorAction SilentlyContinue) {throw 'Game already running'}
+if (Get-Process ProteusGame -ErrorAction SilentlyContinue) {throw 'Game already running'}
 $root=Split-Path $PSScriptRoot -Parent
 $out=Join-Path $root ('build/stream-residency/dayz-cold-logical-'+(Get-Date -Format yyyyMMdd-HHmmss))
 $env:POSEIDON_USER_DIR=Join-Path $out 'user'
@@ -29,12 +29,12 @@ $world=(Resolve-Path -LiteralPath (Join-Path $root '../../../packages/dayz-compa
 $mission=Join-Path $root 'tests/perf/missions/perf_field.eden'
 $log=Join-Path $out 'engine.log'
 $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
-@{scriptSha256=(Get-FileHash $PSCommandPath).Hash;head=(& git -C $root rev-parse HEAD);installed=(Get-Content (Join-Path $GameDir 'DEPLOYED-FROM.txt'));hashes=@(Get-FileHash (Join-Path $GameDir 'OpenPoseidon.exe'),(Join-Path $GameDir 'wgpu_renderer.dll'));scope='Cold explicit script identity and fire geometry, then visual promotion. Not automatic simulation demand or performance acceptance.'} | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $out 'provenance.json')
+@{scriptSha256=(Get-FileHash $PSCommandPath).Hash;head=(& git -C $root rev-parse HEAD);installed=(Get-Content (Join-Path $GameDir 'DEPLOYED-FROM.txt'));hashes=@(Get-FileHash (Join-Path $GameDir 'ProteusGame.exe'),(Join-Path $GameDir 'wgpu_renderer.dll'));scope='Cold explicit script identity and fire geometry, then visual promotion. Not automatic simulation demand or performance acceptance.'} | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $out 'provenance.json')
 $p=$null;$client=$null
 try {
  # The freefly launcher also grounds the player at the requested x/z. Use
  # inland coordinates; a sea origin ends the mission when that player drowns.
- $p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList @('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','2000','--harness',"$port",'--test-world-freefly','10000','10000','450','45','-10','--test-mission',('"'+$mission+'"'),'--test-world',('"'+$world+'"'),'--addon-root','"D:\SteamLibrary\steamapps\common\DayZ\Addons"','--test-world-hour','10','--log-file',('"'+$log+'"'))
+ $p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList @('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','2000','--harness',"$port",'--test-world-freefly','10000','10000','450','45','-10','--test-mission',('"'+$mission+'"'),'--test-world',('"'+$world+'"'),'--addon-root','"D:\SteamLibrary\steamapps\common\DayZ\Addons"','--test-world-hour','10','--log-file',('"'+$log+'"'))
  $null=$p.Handle;$client=[Net.Sockets.TcpClient]::new();$deadline=[DateTime]::UtcNow.AddSeconds(90)
  while (!$client.Connected) {try {$client.Connect('127.0.0.1',$port)} catch {if ($p.HasExited -or [DateTime]::UtcNow -gt $deadline) {throw};Start-Sleep -Milliseconds 250}}
  $stream=$client.GetStream();$stream.ReadTimeout=60000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true

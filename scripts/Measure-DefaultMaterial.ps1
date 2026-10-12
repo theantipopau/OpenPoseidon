@@ -170,7 +170,7 @@ if ($SandView -ne 'Legacy') {
             -ExpectedManifest (Join-Path $root 'content/default-packs/visual/material-overrides.json') `
             -ToolsExe $ToolsExe -EvidenceDirectory (Join-Path $out 'material-preflight')
     }
-    foreach ($file in @('DEPLOYED-FROM.txt','OpenPoseidon.exe','wgpu_renderer.dll','Mods/@OP_VisualUpgrade/AddOns/op_ground_materials.pbo','BIN/CONFIG.BIN',$site.archive)) {
+    foreach ($file in @('DEPLOYED-FROM.txt','ProteusGame.exe','wgpu_renderer.dll','Mods/@OP_VisualUpgrade/AddOns/op_ground_materials.pbo','BIN/CONFIG.BIN',$site.archive)) {
         $proofBefore[$file] = (Get-FileHash -LiteralPath (Join-Path $gameDir $file) -Algorithm SHA256).Hash
     }
     # Own only this bounded source/camera/stock-actor fixture job; farfield-bench owns game lifecycle.

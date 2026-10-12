@@ -18,7 +18,7 @@ param(
 )
 $ErrorActionPreference='Stop'
 if (!$env:LOCK_OWNER) { throw 'Run through scripts/with-game-lock.sh.' }
-if (Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Game already running; refusing shared ownership.' }
+if (Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Game already running; refusing shared ownership.' }
 $culture=[Globalization.CultureInfo]::InvariantCulture
 function Require([bool]$condition,[string]$message) { if (!$condition) { throw $message } }
 function Finite-MudNumber($value) {
@@ -77,7 +77,7 @@ function Parse-MudStep([string]$line) {
 function Assert-MudPair($before,$after) {
     Require ([bool]$before.deployedFrom -and $before.deployedFrom -ceq $after.deployedFrom -and $before.files.Count -eq 2 -and $after.files.Count -eq 2) 'Installed pair stamp changed.'
     for ($i=0;$i -lt 2;++$i) {
-        Require ($before.files[$i].name -ceq @('OpenPoseidon.exe','wgpu_renderer.dll')[$i] -and $before.files[$i].sha256 -match '^[A-Fa-f0-9]{64}$' -and $before.files[$i].bytes -gt 0) 'Installed pair identity or hash is missing.'
+        Require ($before.files[$i].name -ceq @('ProteusGame.exe','wgpu_renderer.dll')[$i] -and $before.files[$i].sha256 -match '^[A-Fa-f0-9]{64}$' -and $before.files[$i].bytes -gt 0) 'Installed pair identity or hash is missing.'
         foreach ($field in @('name','path','sha256','bytes','writtenUtc')) { Require ($before.files[$i][$field] -ceq $after.files[$i][$field]) 'Installed EXE/DLL provenance changed.' }
     }
 }
@@ -89,7 +89,7 @@ function Decode-Eval([string]$display) {
 function Installed-State {
     # First installed file read precedes every EXE/DLL access.
     $stamp=[IO.File]::ReadAllText((Join-Path $GameDir 'DEPLOYED-FROM.txt')).Trim(); Require ([bool]$stamp) 'Empty installed provenance.'
-    $files=@('OpenPoseidon.exe','wgpu_renderer.dll') | ForEach-Object {
+    $files=@('ProteusGame.exe','wgpu_renderer.dll') | ForEach-Object {
         $file=Get-Item -LiteralPath (Join-Path $GameDir $_)
         @{name=$_;path=$file.FullName;sha256=(Get-FileHash -LiteralPath $file.FullName).Hash;bytes=$file.Length;writtenUtc=$file.LastWriteTimeUtc.ToString('o')}
     }
@@ -210,7 +210,7 @@ try {
     $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
     $arguments=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','2000','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','16','--test-world-freefly','4975','4675','28','0','-70','--log-file',('"'+$log+'"'))
     $result.arguments=$arguments
-    $p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $arguments -RedirectStandardOutput (Join-Path $output 'stdout.txt') -RedirectStandardError (Join-Path $output 'stderr.txt')
+    $p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $arguments -RedirectStandardOutput (Join-Path $output 'stdout.txt') -RedirectStandardError (Join-Path $output 'stderr.txt')
     $null=$p.Handle;$result.pid=$p.Id;$until=[DateTime]::UtcNow.AddSeconds(120)
     do {
         Assert-RunHealth;$client=[Net.Sockets.TcpClient]::new()

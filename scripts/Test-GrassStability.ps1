@@ -14,7 +14,7 @@ $ErrorActionPreference = 'Stop'
 if (!$env:LOCK_OWNER) { throw 'Run through scripts/with-game-lock.sh.' }
 $root = Split-Path $PSScriptRoot -Parent
 $game = 'D:\SteamLibrary\steamapps\common\ARMA Cold War Assault'
-if (Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Game already running' }
+if (Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Game already running' }
 $out = Join-Path $root ("build/grass-stability/$Tag-$View-$Filter-" + (Get-Date -Format yyyyMMdd-HHmmss))
 $profile = Join-Path $out 'user'
 New-Item -ItemType Directory -Force $profile | Out-Null
@@ -23,7 +23,7 @@ $env:WGR_GRASS_FILTER_SUBPIXEL = $Filter
 $env:WGR_GRASS_MEDIUM_LIGHTING = $MediumLighting
 if ($WindWaves) { $env:POSEIDON_WIND_OVERRIDE = '8 220 0.7' }
 [IO.File]::WriteAllText((Join-Path $profile 'graphics.cfg'), "qualityPreset=3;`nmsaaSamples=$Msaa;`ndlssMode=0;`nvsync=0;`nfpsCap=60;`n")
-$exe = Join-Path $game 'OpenPoseidon.exe'
+$exe = Join-Path $game 'ProteusGame.exe'
 $dll = Join-Path $game 'wgpu_renderer.dll'
 $mission = Join-Path $game 'dev-missions/devtest-dawn.abel'
 if ($View -eq 'OwnerEveron') { $mission = Join-Path $root 'tests/perf/missions/perf_field.eden' }

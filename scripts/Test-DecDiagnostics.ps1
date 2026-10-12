@@ -5,12 +5,12 @@ param(
 )
 $ErrorActionPreference='Stop'
 if(!$env:LOCK_OWNER){throw 'Run through with-game-lock.sh.'}
-if(Get-Process OpenPoseidon -ErrorAction SilentlyContinue){throw 'Existing owner game is preserved.'}
+if(Get-Process ProteusGame -ErrorAction SilentlyContinue){throw 'Existing owner game is preserved.'}
 $taskRoot=Split-Path -Parent $PSScriptRoot
 $taskGame='D:/SteamLibrary/steamapps/common/ARMA Cold War Assault'
 $taskStamp=Get-Content -LiteralPath (Join-Path $taskGame 'DEPLOYED-FROM.txt') -Raw
 if($taskStamp -notmatch [regex]::Escape($ExpectedCommit)){throw 'Installed commit differs.'}
-$taskFiles=@('OpenPoseidon.exe','wgpu_renderer.dll')|ForEach-Object{
+$taskFiles=@('ProteusGame.exe','wgpu_renderer.dll')|ForEach-Object{
  $file=Get-Item -LiteralPath (Join-Path $taskGame $_)
  @{name=$_;sha256=(Get-FileHash -LiteralPath $file.FullName).Hash;bytes=$file.Length;writtenUtc=$file.LastWriteTimeUtc.ToString('o')}
 }
@@ -34,7 +34,7 @@ function Send($command){
 }
 function Eval($code){return (Send @{cmd='eval';code=$code}).result}
 try{
- $taskP=Start-Process -FilePath (Join-Path $taskGame 'OpenPoseidon.exe') -WorkingDirectory $taskGame -WindowStyle Hidden -ArgumentList $taskArgs -PassThru
+ $taskP=Start-Process -FilePath (Join-Path $taskGame 'ProteusGame.exe') -WorkingDirectory $taskGame -WindowStyle Hidden -ArgumentList $taskArgs -PassThru
  $deadline=[DateTime]::UtcNow.AddSeconds(120)
  do{if($taskP.HasExited){throw 'Game exited during startup.'};$taskClient=[Net.Sockets.TcpClient]::new();try{$taskClient.Connect('127.0.0.1',$taskPort)}catch{$taskClient.Dispose();$taskClient=$null};if(!$taskClient){if([DateTime]::UtcNow -gt $deadline){throw 'Startup deadline.'};Start-Sleep -Milliseconds 250}}while(!$taskClient)
  $stream=$taskClient.GetStream();$stream.ReadTimeout=30000;$taskReader=[IO.StreamReader]::new($stream);$taskWriter=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$taskWriter.AutoFlush=$true

@@ -4,7 +4,7 @@ param([Parameter(Mandatory=$true)][ValidatePattern('^[a-fA-F0-9]{8,40}$')][strin
  [string]$GameDir='D:/SteamLibrary/steamapps/common/ARMA Cold War Assault')
 $ErrorActionPreference='Stop'
 if(!$env:LOCK_OWNER){throw 'Run through with-game-lock.sh.'}
-if(Get-Process OpenPoseidon -ErrorAction SilentlyContinue){throw 'Preserving the existing game session.'}
+if(Get-Process ProteusGame -ErrorAction SilentlyContinue){throw 'Preserving the existing game session.'}
 $root=Split-Path -Parent $PSScriptRoot
 $stamp=Get-Content -LiteralPath (Join-Path $GameDir 'DEPLOYED-FROM.txt') -Raw
 if($stamp -notmatch ('\b'+[regex]::Escape($ExpectedCommit)+'[a-fA-F0-9]*\b')){throw 'Installed commit differs.'}
@@ -44,7 +44,7 @@ try{
  $log=Join-Path $output 'engine.log'
  $arguments=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','2000','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world',('"'+$addons+'"'),'--test-world-hour','16','--test-world-freefly','6532','6466','100','0','-30','--log-file',('"'+$log+'"'))
  # The owner requested a visible interactive game.
- $p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Normal -PassThru -ArgumentList $arguments
+ $p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Normal -PassThru -ArgumentList $arguments
  $until=[DateTime]::UtcNow.AddSeconds(120)
  do{
   if($p.HasExited){throw "Game exited: $($p.ExitCode)"}

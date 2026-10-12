@@ -27,7 +27,7 @@ $root = Split-Path $PSScriptRoot -Parent
 $game = 'D:/SteamLibrary/steamapps/common/ARMA Cold War Assault'
 $stamp = (Get-Content (Join-Path $game 'DEPLOYED-FROM.txt') -Raw).Trim()
 if (!$stamp.Contains($ExpectedCommit)) { throw 'Installed source differs from ExpectedCommit' }
-if (Get-Process OpenPoseidon, ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Existing game preserved' }
+if (Get-Process ProteusGame, ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Existing game preserved' }
 $out = Join-Path $root ('build/local-map-editor/' + (Get-Date -Format yyyyMMdd-HHmmss-fff))
 $null = New-Item -ItemType Directory -Path $out -Force
 $receipt = @{ installed = $stamp; passed = $false; entryOnly = [bool]$EntryOnly; phases = @() }
@@ -102,7 +102,7 @@ function Island-Rows {
 
 try {
     $receipt.binaryTimes = @{
-        exe = (Get-Item (Join-Path $game 'OpenPoseidon.exe')).LastWriteTimeUtc.ToString('o')
+        exe = (Get-Item (Join-Path $game 'ProteusGame.exe')).LastWriteTimeUtc.ToString('o')
         dll = (Get-Item (Join-Path $game 'wgpu_renderer.dll')).LastWriteTimeUtc.ToString('o')
     }
     $env:POSEIDON_CACHE_DIR = Join-Path $out 'cache'
@@ -118,7 +118,7 @@ try {
     $log = Join-Path $out 'engine.log'; $stderr = Join-Path $out 'stderr.log'
     $launchArgs = @('--render=wgpu', '--dev', '--width', '1280', '--height', '720', '--harness', "$port", '--lang', 'English', '--log-file', ('"' + $log + '"'))
     if ($Fullscreen) { $launchArgs += @('--display-mode', 'borderless') } else { $launchArgs += '--window' }
-    $p = Start-Process (Join-Path $game 'OpenPoseidon.exe') -WorkingDirectory $game -WindowStyle Hidden -ArgumentList $launchArgs -RedirectStandardOutput (Join-Path $out 'stdout.log') -RedirectStandardError $stderr -PassThru
+    $p = Start-Process (Join-Path $game 'ProteusGame.exe') -WorkingDirectory $game -WindowStyle Hidden -ArgumentList $launchArgs -RedirectStandardOutput (Join-Path $out 'stdout.log') -RedirectStandardError $stderr -PassThru
     $until = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     do {
         Require-Alive

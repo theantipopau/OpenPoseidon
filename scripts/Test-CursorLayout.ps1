@@ -13,7 +13,7 @@ $env:POSEIDON_USER_DIR=$user
 $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0)
 $listener.Start(); $port=$listener.LocalEndpoint.Port; $listener.Stop()
 $log=Join-Path $out 'cursor.log'
-$p=Start-Process -FilePath "$GameDir/OpenPoseidon.exe" -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList @('--render','wgpu','--window','--dev','--width',"$Width",'--height',"$Height",'--harness',"$port",'--log-file',('"'+$log+'"'))
+$p=Start-Process -FilePath "$GameDir/ProteusGame.exe" -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList @('--render','wgpu','--window','--dev','--width',"$Width",'--height',"$Height",'--harness',"$port",'--log-file',('"'+$log+'"'))
 $null=$p.Handle
 $client=[Net.Sockets.TcpClient]::new()
 try {

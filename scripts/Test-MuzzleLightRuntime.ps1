@@ -103,7 +103,7 @@ if($SelfTest) {
     Write-Host 'PASS muzzle runtime camera arithmetic, render-only direction, queue path/label falsifiers, trace, peak/owner admission and SQF decoder helper checks (no game).';return
 }
 Require ([bool]$env:LOCK_OWNER) 'Run through scripts/with-game-lock.sh.'
-Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Preserve the running game.'
+Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Preserve the running game.'
 $root=Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'TerrainPuddleStockRoof.ps1')
 $output=Join-Path $root ('build/muzzle-light/'+$Label+'-'+(Get-Date -Format yyyyMMdd-HHmmss)+'-'+[guid]::NewGuid().ToString('N').Substring(0,6))
@@ -111,7 +111,7 @@ $null=New-Item -ItemType Directory -Force $output
 $result=[ordered]@{status='running';arms=@{};acceptance='captures-only; actual surface illumination requires review';limitations=@('Roof scenario is a lifted stock CampEastC shelter, not an enclosed building.','Before/after animation recoil can change pixels; compare matched On/Off peak ages and material regions, excluding the muzzle sprite.','AI, prone/burst, deletion/unload and arbitrary enclosed interiors require additional runtime cases.')}
 function Pair {
     $stamp=[IO.File]::ReadAllText((Join-Path $GameDir 'DEPLOYED-FROM.txt')).Trim();Require (![string]::IsNullOrWhiteSpace($stamp)) 'Deployment provenance missing.'
-    return @{stamp=$stamp;exe=(Get-FileHash -LiteralPath (Join-Path $GameDir 'OpenPoseidon.exe')).Hash;dll=(Get-FileHash -LiteralPath (Join-Path $GameDir 'wgpu_renderer.dll')).Hash}
+    return @{stamp=$stamp;exe=(Get-FileHash -LiteralPath (Join-Path $GameDir 'ProteusGame.exe')).Hash;dll=(Get-FileHash -LiteralPath (Join-Path $GameDir 'wgpu_renderer.dll')).Hash}
 }
 $result.before=Pair
 $keys=@('WGR_MUZZLE_FLASH_APPEARANCE','POSEIDON_MUZZLE_FLASH_TRACE','POSEIDON_USER_DIR','POSEIDON_MUZZLE_LIGHT','POSEIDON_MUZZLE_LIGHT_TRACE','POSEIDON_REFORGER_WORLD','POSEIDON_REFORGER_OBJECTS','POSEIDON_REFORGER_STREAM','POSEIDON_TEST_RAIN','POSEIDON_SNOW_TEST_DEPTH','POSEIDON_SNOW_TEST_RATE','POSEIDON_SNOW_TEST_FLAKES','POSEIDON_SNOWLINE','WGR_TERRAIN_PUDDLE_WETNESS','WGR_UNIFORM_WET','WGR_OBJECT_SNOW','WGR_TEMPORAL','WGR_AUTO_EXPOSURE','WGR_EXPOSURE','WGR_GRASS','WGR_CLOUD_COVERAGE','POSEIDON_WIND_OVERRIDE')
@@ -188,7 +188,7 @@ try {
     $env:POSEIDON_MUZZLE_LIGHT_TRACE='1';$env:WGR_AUTO_EXPOSURE='0';$env:WGR_EXPOSURE='1';$env:WGR_TEMPORAL='0';$env:WGR_GRASS='0';$env:WGR_CLOUD_COVERAGE='0';$env:POSEIDON_WIND_OVERRIDE='0 90 0';$env:WGR_OBJECT_SNOW='0';$env:POSEIDON_SNOWLINE='off';$env:POSEIDON_SNOW_TEST_DEPTH='0'
     $arms=if($Arm -eq 'Both'){@('On','Off')}else{@($Arm)}
     foreach($name in $arms) {
-        Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Another game started between serial arms.'
+        Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Another game started between serial arms.'
         $armDir=Join-Path $output $name;$profile=Join-Path $armDir 'user';$null=New-Item -ItemType Directory -Force $profile
         $env:TRI_OUTPUT_DIR=$armDir
         $env:POSEIDON_USER_DIR=$profile;$env:POSEIDON_MUZZLE_LIGHT=if($name -eq 'On'){'1'}else{'0'}
@@ -197,7 +197,7 @@ try {
         $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
         $mission=Join-Path $root 'tests/perf/missions/perf_sand.noe'
         $args=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','2000','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','0','--log-file',('"'+$log+'"'))
-        $p=Start-Process (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $args -RedirectStandardOutput (Join-Path $armDir 'stdout.txt') -RedirectStandardError (Join-Path $armDir 'stderr.txt');$null=$p.Handle
+        $p=Start-Process (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $args -RedirectStandardOutput (Join-Path $armDir 'stdout.txt') -RedirectStandardError (Join-Path $armDir 'stderr.txt');$null=$p.Handle
         $until=[DateTime]::UtcNow.AddSeconds(120)
         do{Health;$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port)}catch{$client.Dispose();$client=$null};if(!$client){Require ([DateTime]::UtcNow -lt $until) 'Harness unavailable.';Start-Sleep -Milliseconds 250}}while(!$client)
         $stream=$client.GetStream();$stream.ReadTimeout=30000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true

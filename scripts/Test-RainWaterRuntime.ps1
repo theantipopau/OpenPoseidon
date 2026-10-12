@@ -5,7 +5,7 @@ param([string]$Label='rainwater',[ValidateSet('noe','eden','abel','cain')][strin
       [string]$GameDir='D:/SteamLibrary/steamapps/common/ARMA Cold War Assault')
 $ErrorActionPreference='Stop'
 if (!$env:LOCK_OWNER) { throw 'Run through scripts/with-game-lock.sh.' }
-if (Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Preserve the running game.' }
+if (Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Preserve the running game.' }
 $root=Split-Path -Parent $PSScriptRoot
 $output=Join-Path $root ('build/rain-water-runtime/'+$Label+'-'+(Get-Date -Format yyyyMMdd-HHmmss))
 $profile=Join-Path $output 'user'; New-Item -ItemType Directory -Force $profile | Out-Null
@@ -14,7 +14,7 @@ $result=[ordered]@{status='running';gates=@{};captures=@{};limitations='Actual s
 function Require($condition,[string]$message) { if (!$condition) { throw $message } }
 function Pair {
     $stamp=[IO.File]::ReadAllText((Join-Path $GameDir 'DEPLOYED-FROM.txt')).Trim()
-    return @{stamp=$stamp;exe=(Get-FileHash (Join-Path $GameDir 'OpenPoseidon.exe')).Hash;dll=(Get-FileHash (Join-Path $GameDir 'wgpu_renderer.dll')).Hash}
+    return @{stamp=$stamp;exe=(Get-FileHash (Join-Path $GameDir 'ProteusGame.exe')).Hash;dll=(Get-FileHash (Join-Path $GameDir 'wgpu_renderer.dll')).Hash}
 }
 $result.before=Pair
 $keys=@('POSEIDON_USER_DIR','POSEIDON_PLAYER_GROUND_TRACE','POSEIDON_UNIFORM_WET_TRACE','POSEIDON_SAND_TRACE','POSEIDON_MUD_TRACE','POSEIDON_REFORGER_WORLD','POSEIDON_REFORGER_OBJECTS','POSEIDON_REFORGER_STREAM','POSEIDON_TEST_RAIN','POSEIDON_SNOW_TEST_DEPTH','WGR_TERRAIN_PUDDLE_WETNESS','WGR_UNIFORM_WET','WGR_RAIN_WATER','WGR_RAIN_WATER_TRACE')
@@ -71,7 +71,7 @@ try {
     $mission=Join-Path $output ('field.'+$World);New-Item -ItemType Directory -Force $mission|Out-Null
     Copy-Item -LiteralPath (Join-Path $root 'tests/perf/missions/perf_sand.noe/mission.sqm') -Destination (Join-Path $mission 'mission.sqm')
     $args=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd',"$ViewDistance",'--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','14','--log-file',('"'+$log+'"'))
-    $p=Start-Process (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $args -RedirectStandardOutput (Join-Path $output 'stdout.txt') -RedirectStandardError (Join-Path $output 'stderr.txt');$null=$p.Handle
+    $p=Start-Process (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $args -RedirectStandardOutput (Join-Path $output 'stdout.txt') -RedirectStandardError (Join-Path $output 'stderr.txt');$null=$p.Handle
     $until=[DateTime]::UtcNow.AddSeconds(120)
     do {
         Health;$client=[Net.Sockets.TcpClient]::new()

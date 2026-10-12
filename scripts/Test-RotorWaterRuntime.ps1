@@ -93,12 +93,12 @@ if($SelfTest){
 }
 Require (![string]::IsNullOrWhiteSpace($ExpectedCommit)) 'Expected matched installed commit is required.'
 Require (![string]::IsNullOrWhiteSpace($env:LOCK_OWNER)) 'Run through with-game-lock.sh.'
-Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Preserve the running game.'
+Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Preserve the running game.'
 Require (($Arms|Select-Object -Unique).Count -eq $Arms.Count) 'Duplicate comparison arms.'
 function Pair {
  $stamp=[IO.File]::ReadAllText((Join-Path $GameDir 'DEPLOYED-FROM.txt')).Trim();$parts=$stamp -split '\s+'
  Require ($parts.Count -ge 3 -and ($parts[1].StartsWith($ExpectedCommit) -or $ExpectedCommit.StartsWith($parts[1]))) 'Installed provenance does not match expected candidate.'
- return @{stamp=$stamp;files=@(@('OpenPoseidon.exe','wgpu_renderer.dll')|ForEach-Object {$f=Get-Item -LiteralPath (Join-Path $GameDir $_);@{name=$_;sha256=(Get-FileHash -LiteralPath $f.FullName).Hash;bytes=$f.Length;writtenUtc=$f.LastWriteTimeUtc.ToString('o')}})}
+ return @{stamp=$stamp;files=@(@('ProteusGame.exe','wgpu_renderer.dll')|ForEach-Object {$f=Get-Item -LiteralPath (Join-Path $GameDir $_);@{name=$_;sha256=(Get-FileHash -LiteralPath $f.FullName).Hash;bytes=$f.Length;writtenUtc=$f.LastWriteTimeUtc.ToString('o')}})}
 }
 function Same-Pair($a,$b){Require ($a.stamp -ceq $b.stamp) 'Installed provenance changed.';for($i=0;$i -lt 2;$i++){Require ($a.files[$i].sha256 -ceq $b.files[$i].sha256 -and $a.files[$i].writtenUtc -ceq $b.files[$i].writtenUtc) 'Installed binary pair changed.'}}
 $before=Pair;$output=Join-Path $root ('build/rotor-water/'+$Label+'-'+(Get-Date -Format yyyyMMdd-HHmmss)+'-'+[guid]::NewGuid().ToString('N').Substring(0,6))
@@ -110,7 +110,7 @@ $p=$null;$client=$null;$script:heldLook=$false;$script:heldUp=$false;$script:hel
 function Health {
  Require ($p -and !$p.HasExited) 'Owned game exited unexpectedly.'
  if(([DateTime]::UtcNow-$script:lastOwnershipCheck).TotalSeconds -ge 5){
-  Require (@(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue|Where-Object {$_.Id -ne $p.Id}).Count -eq 0) 'Foreign game appeared; preserve it and fail the comparison.'
+  Require (@(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue|Where-Object {$_.Id -ne $p.Id}).Count -eq 0) 'Foreign game appeared; preserve it and fail the comparison.'
   $script:lastOwnershipCheck=[DateTime]::UtcNow
  }
  if((Test-Path $log) -and (Select-String -LiteralPath $log -Pattern 'Validation Error|panicked at|DeviceLost|UNHANDLED EXCEPTION|Unbekannter Operator' -Quiet)){throw 'Installed validation/script failure.'}
@@ -188,7 +188,7 @@ function Close-Owned {
 }
 try{
  foreach($name in $Arms){
-  Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Preserve a game between comparison arms.';Same-Pair $before (Pair)
+  Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Preserve a game between comparison arms.';Same-Pair $before (Pair)
   foreach($k in $keys){[Environment]::SetEnvironmentVariable($k,$null,'Process')}
   $armDir=Join-Path $output $name;$profile=Join-Path $armDir 'user';New-Item -ItemType Directory -Force $profile|Out-Null
   $log=Join-Path $armDir 'engine.log';$stderr=Join-Path $armDir 'stderr.txt';$harness=Join-Path $armDir 'harness.jsonl';$script:object=$null
@@ -200,7 +200,7 @@ try{
   $mission=Join-Path $root 'tests/perf/missions/perf_sand.noe';Require (Test-Path $mission) 'Original Noe player mission missing.'
   $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
   $args=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','2000','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','16','--log-file',('"'+$log+'"'))
-  $p=Start-Process (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $args -RedirectStandardOutput (Join-Path $armDir 'stdout.txt') -RedirectStandardError $stderr;$null=$p.Handle;$arm.pid=$p.Id
+  $p=Start-Process (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $args -RedirectStandardOutput (Join-Path $armDir 'stdout.txt') -RedirectStandardError $stderr;$null=$p.Handle;$arm.pid=$p.Id
   $until=[DateTime]::UtcNow.AddSeconds(120)
   do{Health;$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port)}catch{$client.Dispose();$client=$null};if(!$client){Require ([DateTime]::UtcNow -lt $until) 'Harness unavailable.';Start-Sleep -Milliseconds 250}}while(!$client)
   $stream=$client.GetStream();$stream.ReadTimeout=30000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true

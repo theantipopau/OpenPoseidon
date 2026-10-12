@@ -13,7 +13,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 if (!$env:LOCK_OWNER) { throw 'Run through scripts/with-game-lock.sh.' }
-if (Get-Process OpenPoseidon -ErrorAction SilentlyContinue) { throw 'Game already running; refusing shared ownership.' }
+if (Get-Process ProteusGame -ErrorAction SilentlyContinue) { throw 'Game already running; refusing shared ownership.' }
 $culture = [Globalization.CultureInfo]::InvariantCulture
 $root = Split-Path -Parent $PSScriptRoot
 function Require([bool]$condition,[string]$message) { if (!$condition) { throw $message } }
@@ -21,7 +21,7 @@ function Installed-State {
     # First installed file read: preserve the stamped EXE/DLL provenance.
     $stamp = [IO.File]::ReadAllText((Join-Path $GameDir 'DEPLOYED-FROM.txt')).Trim()
     Require ([bool]$stamp) 'Installed deployment provenance is empty.'
-    $files = @('OpenPoseidon.exe','wgpu_renderer.dll') | ForEach-Object {
+    $files = @('ProteusGame.exe','wgpu_renderer.dll') | ForEach-Object {
         $file = Get-Item -LiteralPath (Join-Path $GameDir $_)
         @{ name = $_; path = $file.FullName; sha256 = (Get-FileHash -LiteralPath $file.FullName).Hash;
            bytes = $file.Length; writtenUtc = $file.LastWriteTimeUtc.ToString('o') }
@@ -197,7 +197,7 @@ try {
     $arguments = @('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','2000','--harness',"$port",'--test-mission',('"'+$mission+'"'),
         '--test-world-hour','16','--test-world-freefly','9475.25','3018.25','230','0','-50','--log-file',('"'+$log+'"'))
     if (!$LegacyCwa) { $arguments += @('--test-world',('"'+$NativeAddons+'"')) }; $result.arguments = $arguments
-    $p = Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $arguments
+    $p = Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $arguments
     $null = $p.Handle; $result.pid = $p.Id; $until = [DateTime]::UtcNow.AddSeconds(120)
     do {
         Assert-RunHealth; $client = [Net.Sockets.TcpClient]::new()

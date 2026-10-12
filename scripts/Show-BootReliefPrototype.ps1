@@ -5,7 +5,7 @@
 param()
 $ErrorActionPreference='Stop'
 $repo=Split-Path -Parent $PSScriptRoot
-if(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue){throw 'Existing game preserved; close it before opening the prototype.'}
+if(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue){throw 'Existing game preserved; close it before opening the prototype.'}
 $gitBash='C:/Program Files/Git/bin/bash.exe'
 if(!(Test-Path -LiteralPath $gitBash)){throw 'Git for Windows Bash is required for the installed-game lock.'}
 Push-Location $repo

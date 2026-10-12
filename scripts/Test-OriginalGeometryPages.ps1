@@ -50,7 +50,7 @@ if(!$env:LOCK_OWNER){
  $env:LOCK_OWNER='original source private paged geometry fixture'
  try{& 'C:\Program Files\Git\bin\bash.exe' @argv;if($LASTEXITCODE){throw "Original pages child failed $LASTEXITCODE"}}finally{Remove-Item Env:LOCK_OWNER};return
 }
-if(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue){throw 'Game already running'}
+if(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue){throw 'Game already running'}
 $root=Split-Path $PSScriptRoot -Parent
 if(!$Tools){$Tools=Join-Path $root 'build/win-x64-clang-rwdi/apps/tools/Tools/PoseidonTools.exe'}
 $Tools=[IO.Path]::GetFullPath($Tools)
@@ -211,7 +211,7 @@ if($RetailVisible){
 }
 $old=@{};Get-ChildItem Env:|Where-Object {$_.Name -match '^(WGR_|POSEIDON_)'}|ForEach-Object {$old[$_.Name]=$_.Value}
 $p=$null;$client=$null;$normal=$false;$forced=$false;$result=$null;$failure=$null
-$exe=Join-Path $GameDir 'OpenPoseidon.exe';$dll=Join-Path $GameDir 'wgpu_renderer.dll';$log=Join-Path $out 'engine.log'
+$exe=Join-Path $GameDir 'ProteusGame.exe';$dll=Join-Path $GameDir 'wgpu_renderer.dll';$log=Join-Path $out 'engine.log'
 $hashes=@(Get-FileHash -LiteralPath $exe,$dll)
 try{
  Get-ChildItem Env:|Where-Object {$_.Name -match '^(WGR_|POSEIDON_)'}|ForEach-Object {Remove-Item ('Env:'+$_.Name)}

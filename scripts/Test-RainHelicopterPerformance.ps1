@@ -306,11 +306,11 @@ if($SelfTest){
  Write-Output 'Occupied flight performance pure helpers PASS; no game/profile/GPU used.';return
 }
 Require ([bool]$ExpectedCommit -and [bool]$env:LOCK_OWNER) 'Supply installed ExpectedCommit and invoke with-game-lock.sh.'
-Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Preserve the running game.'
+Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Preserve the running game.'
 function Pair{
  $stamp=[IO.File]::ReadAllText((Join-Path $GameDir 'DEPLOYED-FROM.txt')).Trim()
  Require ($stamp -match ('(?i)\b'+[regex]::Escape($ExpectedCommit)+'[a-f0-9]*\b')) 'Installed source differs.'
- return @{stamp=$stamp;exe=(Get-FileHash -LiteralPath (Join-Path $GameDir 'OpenPoseidon.exe')).Hash;dll=(Get-FileHash -LiteralPath (Join-Path $GameDir 'wgpu_renderer.dll')).Hash}
+ return @{stamp=$stamp;exe=(Get-FileHash -LiteralPath (Join-Path $GameDir 'ProteusGame.exe')).Hash;dll=(Get-FileHash -LiteralPath (Join-Path $GameDir 'wgpu_renderer.dll')).Hash}
 }
 function Same-Pair($a,$b){Require ($a.stamp -ceq $b.stamp -and $a.exe -ceq $b.exe -and $a.dll -ceq $b.dll) 'Installed pair changed.'}
 $before=Pair
@@ -329,7 +329,7 @@ $result=[ordered]@{status='running';installed=$before;sourceHead=(& git -C $root
 $p=$null;$client=$null;$held=@()
 function Health{
  Require ($p -and !$p.HasExited -and [DateTime]::UtcNow -lt $deadline) 'Owned game exited or bounded wall deadline exceeded.'
- $live=@(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue);Require ($live.Count -eq 1 -and $live[0].Id -eq $p.Id) 'Foreign game contention.'
+ $live=@(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue);Require ($live.Count -eq 1 -and $live[0].Id -eq $p.Id) 'Foreign game contention.'
 }
 function Send($command){
  Health;$line=$command|ConvertTo-Json -Compress;$line|Add-Content -LiteralPath $rpc;$writer.WriteLine($line)
@@ -360,7 +360,7 @@ function Close-Owned{
 try{
  $controls=@('Default');if($IncludeFarCoverOff){$controls+='FarCoverOff'}
  foreach($control in $controls){foreach($weatherName in @('Dry','Rain')){
-  Same-Pair $before (Pair);Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Ownership conflict.'
+  Same-Pair $before (Pair);Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Ownership conflict.'
   foreach($key in $keys){Restore-Environment $key $null};foreach($key in $settings.Keys){Restore-Environment $key $settings[$key]}
   if($control -ceq 'FarCoverOff'){$env:WGR_WEATHER_COVER_FAR='0'}
   $armDir=Join-Path $campaign ($control+'-'+$weatherName);$profile=Join-Path $armDir 'user';New-Item -ItemType Directory -Force $profile|Out-Null
@@ -375,7 +375,7 @@ try{
   $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
   $arguments=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','2000','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','16','--log-file',('"'+$log+'"'))
   $deadline=[DateTime]::UtcNow.AddSeconds(360)
-  $p=Start-Process (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $arguments -RedirectStandardOutput (Join-Path $armDir 'stdout.txt') -RedirectStandardError (Join-Path $armDir 'stderr.txt')
+  $p=Start-Process (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $arguments -RedirectStandardOutput (Join-Path $armDir 'stdout.txt') -RedirectStandardError (Join-Path $armDir 'stderr.txt')
   $null=$p.Handle;$arm.pid=$p.Id;$until=[DateTime]::UtcNow.AddSeconds(120)
   do{Health;$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port)}catch{$client.Dispose();$client=$null};if(!$client){Require ([DateTime]::UtcNow -lt $until) 'Harness startup timeout.';Start-Sleep -Milliseconds 250}}while(!$client)
   $stream=$client.GetStream();$stream.ReadTimeout=10000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true

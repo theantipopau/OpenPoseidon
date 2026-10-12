@@ -35,7 +35,7 @@ function Send($command){
 function Exec($code){$null=Send @{cmd='exec';code=$code}}
 try{
  $argv=@('--render=wgpu','--window','--dev','--width','1600','--height','900','--vd','1800','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','12','--log-file',('"'+(Join-Path $out 'engine.log')+'"'))
- $p=Start-Process (Join-Path $game 'OpenPoseidon.exe') -WorkingDirectory $game -WindowStyle Normal -ArgumentList $argv -PassThru
+ $p=Start-Process (Join-Path $game 'ProteusGame.exe') -WorkingDirectory $game -WindowStyle Normal -ArgumentList $argv -PassThru
  $deadline=[DateTime]::UtcNow.AddSeconds(120)
  do{
   if($p.HasExited){throw 'Game startup exited'}

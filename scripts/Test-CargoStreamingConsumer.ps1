@@ -11,7 +11,7 @@ if (!$env:LOCK_OWNER) {
     finally {Remove-Item Env:LOCK_OWNER}
     return
 }
-if (Get-Process OpenPoseidon -ErrorAction SilentlyContinue) {throw 'Game already running'}
+if (Get-Process ProteusGame -ErrorAction SilentlyContinue) {throw 'Game already running'}
 $root=Split-Path $PSScriptRoot -Parent
 $fixture=Join-Path $root ('build/stream-residency/cargo-world-'+(Get-Date -Format yyyyMMdd-HHmmss))
 & $Python (Join-Path $PSScriptRoot 'streaming/build_simulation_residency_fixture.py') $fixture --absolute-model-path --land-side 256

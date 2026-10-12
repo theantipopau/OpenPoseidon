@@ -98,10 +98,10 @@ if ($packArchive) {
     ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $output 'test-context.json')
 if ($StreamingWorld) {
     @{scriptSha256=(Get-FileHash $PSCommandPath).Hash;world=(Get-FileHash $StreamingWorld);simulationResidency=[bool]$SimulationResidency;
-      binaries=@(Get-FileHash (Join-Path $GameDir 'OpenPoseidon.exe'),(Join-Path $GameDir 'wgpu_renderer.dll'))} |
+      binaries=@(Get-FileHash (Join-Path $GameDir 'ProteusGame.exe'),(Join-Path $GameDir 'wgpu_renderer.dll'))} |
         ConvertTo-Json -Depth 5 | Set-Content (Join-Path $output 'streaming-provenance.json')
 }
-$p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $gameArgs
+$p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $gameArgs
 $null=$p.Handle
 $client=$null
 function RifleRounds($response) {

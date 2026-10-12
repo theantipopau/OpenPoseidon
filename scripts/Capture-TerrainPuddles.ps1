@@ -11,7 +11,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 if (!$env:LOCK_OWNER) { throw 'Run under scripts/with-game-lock.sh' }
-if (Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Game already running' }
+if (Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Game already running' }
 $root = Split-Path $PSScriptRoot -Parent
 $game = 'D:\SteamLibrary\steamapps\common\ARMA Cold War Assault'
 $out = Join-Path $root ("build/terrain-puddles/$Tag-" + (Get-Date -Format yyyyMMdd-HHmmss))
@@ -39,7 +39,7 @@ if ($Original) {
 [IO.File]::WriteAllText((Join-Path $user 'graphics.cfg'), "qualityPreset=3;`nmsaaSamples=4;`ndlssMode=0;`nvsync=0;`nfpsCap=60;`n")
 $pose = @($Camera -split '\s+' | Where-Object { $_ })
 if ($pose.Count -ne 5) { throw 'Camera must contain X Z altitude azimuth elevation' }
-$exe = Join-Path $game 'OpenPoseidon.exe'
+$exe = Join-Path $game 'ProteusGame.exe'
 $dll = Join-Path $game 'wgpu_renderer.dll'
 $log = Join-Path $out 'engine.log'
 $metrics = Join-Path $out 'metrics.json'

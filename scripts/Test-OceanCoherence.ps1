@@ -27,7 +27,7 @@ if (!$env:LOCK_OWNER) {
  finally {Remove-Item Env:LOCK_OWNER}
  return
 }
-if (Get-Process OpenPoseidon -ErrorAction SilentlyContinue) {throw 'Game already running'}
+if (Get-Process ProteusGame -ErrorAction SilentlyContinue) {throw 'Game already running'}
 if (!$BinaryDir) {$BinaryDir=Join-Path $root 'dist/x64-win-rwdi'}
 $out=Join-Path $root ('build/ocean-runs/'+$Label+'-'+(Get-Date -Format yyyyMMdd-HHmmss))
 $env:POSEIDON_USER_DIR=Join-Path $out 'user'
@@ -58,13 +58,13 @@ $log=Join-Path $out 'engine.log'
 $arguments=@('-C',('"'+$GameDir+'"'),'--render=wgpu','--window','--no-dev','--width','1280','--height','720','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--log-file',('"'+$log+'"'))
 if ($Menu) {$arguments=@('-C',('"'+$GameDir+'"'),'--render=wgpu','--window','--no-dev','--width','1280','--height','720','--harness',"$port",'--log-file',('"'+$log+'"'))}
 if ($Review) {$arguments=$arguments | ForEach-Object {if ($_ -eq '--no-dev') {'--dev'} else {$_}}}
-@{head=(& git -C $root rev-parse HEAD);arguments=$arguments;hashes=@(Get-FileHash (Join-Path $BinaryDir 'OpenPoseidon.exe'),(Join-Path $BinaryDir 'wgpu_renderer.dll'),(Join-Path $mission 'mission.sqm'));settings=@(Get-ChildItem Env: | Where-Object Name -Match '^(WGR|POSEIDON)' | Select-Object Name,Value);deployment=(Get-Content (Join-Path $GameDir 'DEPLOYED-FROM.txt'))} | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $out 'provenance.json')
+@{head=(& git -C $root rev-parse HEAD);arguments=$arguments;hashes=@(Get-FileHash (Join-Path $BinaryDir 'ProteusGame.exe'),(Join-Path $BinaryDir 'wgpu_renderer.dll'),(Join-Path $mission 'mission.sqm'));settings=@(Get-ChildItem Env: | Where-Object Name -Match '^(WGR|POSEIDON)' | Select-Object Name,Value);deployment=(Get-Content (Join-Path $GameDir 'DEPLOYED-FROM.txt'))} | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $out 'provenance.json')
 $sourcePatch=Join-Path $out 'source.patch'
 & git -C $root diff --binary --output=$sourcePatch HEAD
 $process=$null;$client=$null
 try {
  $windowStyle=if ($Review) {'Normal'} else {'Hidden'}
- $process=Start-Process -FilePath (Join-Path $BinaryDir 'OpenPoseidon.exe') -ArgumentList $arguments -WorkingDirectory $BinaryDir -PassThru -WindowStyle $windowStyle
+ $process=Start-Process -FilePath (Join-Path $BinaryDir 'ProteusGame.exe') -ArgumentList $arguments -WorkingDirectory $BinaryDir -PassThru -WindowStyle $windowStyle
  $null=$process.Handle
  $client=[Net.Sockets.TcpClient]::new(); $deadline=[DateTime]::UtcNow.AddSeconds(90)
  while (!$client.Connected) {

@@ -32,7 +32,7 @@ function Restore-Environment([string]$key,$value){
 }
 function Installed-State{
     $state=@{}
-    foreach($name in @('OpenPoseidon.exe','wgpu_renderer.dll','DEPLOYED-FROM.txt')){
+    foreach($name in @('ProteusGame.exe','wgpu_renderer.dll','DEPLOYED-FROM.txt')){
         $path=Join-Path $GameDir $name
         Require (Test-Path -LiteralPath $path -PathType Leaf) "Installed file absent: $path"
         $state[$name]=(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
@@ -42,7 +42,7 @@ function Installed-State{
     return $state
 }
 function Assert-Pair($before,$after){
-    foreach($key in @('OpenPoseidon.exe','wgpu_renderer.dll','DEPLOYED-FROM.txt','stamp')){
+    foreach($key in @('ProteusGame.exe','wgpu_renderer.dll','DEPLOYED-FROM.txt','stamp')){
         Require ($null -ne $before[$key] -and $before[$key] -ceq $after[$key]) "Installed pair changed: $key"
     }
 }
@@ -123,7 +123,7 @@ function Test-Helpers{
 if($SelfTest){Test-Helpers;return}
 Require ([bool]$ExpectedCommit) 'Supply -ExpectedCommit for the installed binary pair.'
 Require ([bool]$env:LOCK_OWNER) 'Run through scripts/with-game-lock.sh.'
-Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Another game process is running.'
+Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Another game process is running.'
 $before=Installed-State
 if(!$Out){$Out=Join-Path $root 'build/weather-cover-performance'}
 if(![IO.Path]::IsPathRooted($Out)){$Out=Join-Path $root $Out}
@@ -153,7 +153,7 @@ try{
     foreach($viewName in $selected){
         $population=$null;$off=@();$on=@();$sequence=@(0,1,1,0)
         for($blockIndex=0;$blockIndex -lt $sequence.Count;$blockIndex++){
-            Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Game ownership conflict.'
+            Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Game ownership conflict.'
             Assert-Pair $before (Installed-State)
             $flag=[string]$sequence[$blockIndex];$blockLabel=$viewName+'-block'+($blockIndex+1)+'-far'+$flag
             $blockDir=Join-Path $campaign $blockLabel;$user=Join-Path $blockDir 'user';New-Item -ItemType Directory -Path $user -Force|Out-Null

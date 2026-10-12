@@ -32,13 +32,13 @@ if(!$env:LOCK_OWNER){
  finally{Remove-Item Env:LOCK_OWNER}
  return
 }
-if(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue){throw 'Game already running'}
+if(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue){throw 'Game already running'}
 $root=Split-Path $PSScriptRoot -Parent
 $out=Join-Path $root ('build/stream-residency/'+$Label+'-'+(Get-Date -Format yyyyMMdd-HHmmss)+'-'+[guid]::NewGuid().ToString('N').Substring(0,6))
 $fixture=Join-Path $out 'fixture'
 $profile=Join-Path $out 'user'
 $mission=Join-Path $out 'retail-cold.eden'
-$exe=Join-Path $GameDir 'OpenPoseidon.exe'
+$exe=Join-Path $GameDir 'ProteusGame.exe'
 $dll=Join-Path $GameDir 'wgpu_renderer.dll'
 $stampPath=Join-Path $GameDir 'DEPLOYED-FROM.txt'
 $log=Join-Path $out 'engine.log'

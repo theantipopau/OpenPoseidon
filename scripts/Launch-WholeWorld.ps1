@@ -35,7 +35,7 @@ if (!$PrepareOnly -and !$env:LOCK_OWNER) {
     } finally { $env:LOCK_OWNER = $previous }
     return
 }
-if (Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Close the existing game before starting this preview.' }
+if (Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Close the existing game before starting this preview.' }
 $fixture = Join-Path $CacheDirectory 'fixture'
 $mission = Join-Path $fixture 'earth-preview.abel'
 $null = New-Item -ItemType Directory -Force -Path $mission
@@ -93,7 +93,7 @@ try {
     $argv += @('--log-file',$LogFile)
     Write-Host "Earth preview at $Latitude, $Longitude. Freefly only. Cache: $CacheDirectory"
     Push-Location $GameDir
-    try { & (Join-Path $GameDir 'OpenPoseidon.exe') @argv; if ($LASTEXITCODE -ne 0) { throw "Game exit: $LASTEXITCODE" } }
+    try { & (Join-Path $GameDir 'ProteusGame.exe') @argv; if ($LASTEXITCODE -ne 0) { throw "Game exit: $LASTEXITCODE" } }
     finally { Pop-Location }
 } finally {
     foreach ($key in $saved.Keys) { [Environment]::SetEnvironmentVariable($key,$saved[$key],'Process') }

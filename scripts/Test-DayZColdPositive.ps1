@@ -11,7 +11,7 @@ if (!$env:LOCK_OWNER) {
  finally {Remove-Item Env:LOCK_OWNER}
  return
 }
-if(Get-Process OpenPoseidon -ErrorAction SilentlyContinue){throw 'Game already running'}
+if(Get-Process ProteusGame -ErrorAction SilentlyContinue){throw 'Game already running'}
 $root=Split-Path $PSScriptRoot -Parent
 $out=Join-Path $root ('build/stream-residency/'+$Label+'-'+(Get-Date -Format yyyyMMdd-HHmmss))
 $profile=Join-Path $out 'user'; $mission=Join-Path $out 'cold-positive.eden'
@@ -33,7 +33,7 @@ class OutroWin {randomSeed=2;class Intel {};};
 class OutroLoose {randomSeed=3;class Intel {};};
 '@ | Set-Content (Join-Path $mission 'mission.sqm')
 $world=(Resolve-Path -LiteralPath (Join-Path $root '../../../packages/dayz-compat/world/chernarusplus/chernarusplus.wrp')).Path
-$log=Join-Path $out 'engine.log'; $exe=Join-Path $GameDir 'OpenPoseidon.exe'
+$log=Join-Path $out 'engine.log'; $exe=Join-Path $GameDir 'ProteusGame.exe'
 $environment=@{POSEIDON_USER_DIR=$profile;WGR_SIMULATION_RESIDENCY='1';WGR_SIMULATION_RESIDENCY_TEST='1';WGR_SIMULATION_POSITIVE_COLD='1';WGR_OBJECT_STREAM_TEST_BUDGET='1';WGR_OBJECT_STREAM_MAX_OBJECTS='20000';WGR_OBJECT_STREAM_GPU_BUDGET='0';WGR_GEO_POOL_GROWTH='2.0';WGR_GEO_POOL_PRESSURE_GROWTH='0';WGR_OBJECT_STREAM_PBO='1';POSEIDON_MODEL_DDC='0';WGR_OBJECT_STREAM_PBO_TEXTURES='0';WGR_NATIVE_DDS_PREPARE='0';WGR_NATIVE_DDS_BC3_ONLY='0';WGR_ADAPTIVE_TEXTURE_DETAIL='0';WGR_LOD_GOVERNOR_RANGE='1';WGR_SKY_VOLUME_INCREMENTAL='1'}
 if($PBOTextures){$environment.WGR_OBJECT_STREAM_PBO_TEXTURES='1'}
 $clearNames=@((Get-ChildItem Env: | Where-Object {$_.Name -like 'WGR_*' -or $_.Name -like 'POSEIDON_REFORGER_*'} | ForEach-Object {$_.Name}))+@('POSEIDON_USER_DIR','POSEIDON_TEST_RAIN')

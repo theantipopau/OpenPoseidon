@@ -7,7 +7,7 @@ procedural texture artwork, not extracted video assets or a copied level.
 
 ## Start
 
-Open **OpenPoseidon.exe**, then **Single Mission > Showcase Lab - Physics and Light**.
+Open **ProteusGame.exe**, then **Single Mission > Showcase Lab - Physics and Light**.
 Use the `LAB:` entries in the player's action menu. The Help entry describes the
 stations. Dev Tools' Physics and Weather tabs remain available for deeper tuning.
 

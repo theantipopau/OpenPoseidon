@@ -57,7 +57,7 @@ try {
     Check ((Parse-SandStep $line).depth -eq .10)
 } finally { [Threading.Thread]::CurrentThread.CurrentCulture=$oldCulture }
 function New-Pair {
-    return @{deployedFrom='installed-test-commit';files=@(@{name='OpenPoseidon.exe';path='D:\game\OpenPoseidon.exe';sha256=('a'*64);bytes=100;writtenUtc='2026-09-30T19:00:00Z'},@{name='wgpu_renderer.dll';path='D:\game\wgpu_renderer.dll';sha256=('b'*64);bytes=200;writtenUtc='2026-09-30T19:00:00Z'})}
+    return @{deployedFrom='installed-test-commit';files=@(@{name='ProteusGame.exe';path='D:\game\ProteusGame.exe';sha256=('a'*64);bytes=100;writtenUtc='2026-09-30T19:00:00Z'},@{name='wgpu_renderer.dll';path='D:\game\wgpu_renderer.dll';sha256=('b'*64);bytes=200;writtenUtc='2026-09-30T19:00:00Z'})}
 }
 $pair=New-Pair;$same=New-Pair;Assert-SandPair $pair $same;++$script:checks
 $same.deployedFrom='other';Refuses {Assert-SandPair $pair $same}

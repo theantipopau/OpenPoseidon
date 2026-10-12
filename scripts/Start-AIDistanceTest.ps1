@@ -31,9 +31,9 @@ $mission = if ($Scenario -eq 'Stress') {
     Join-Path $repoRoot 'tests/perf/missions/perf_heli_distance.Intro'
 }
 if (!(Test-Path -LiteralPath $mission)) { throw "Mission missing: $mission" }
-$gameExe = Join-Path $GameDir 'OpenPoseidon.exe'
+$gameExe = Join-Path $GameDir 'ProteusGame.exe'
 if (!(Test-Path -LiteralPath $gameExe)) { throw "Game executable missing: $gameExe" }
-if (Get-Process OpenPoseidon -ErrorAction SilentlyContinue) { throw 'Close the running OpenPoseidon first.' }
+if (Get-Process ProteusGame -ErrorAction SilentlyContinue) { throw 'Close the running ProteusGame first.' }
 if ($CheckOnly) {
     Write-Host "Launch check passed: $Scenario, PowerShell $($PSVersionTable.PSVersion), game lock acquired."
     Write-Host "Mission: $mission"
@@ -52,7 +52,7 @@ try {
     if ($Scenario -eq 'Stress') { $gameArgs += @('--addon-root', (Join-Path $GameDir 'Mods/@63units')) }
     Write-Host "Log: $log"
     Push-Location $GameDir
-    try { & (Join-Path $GameDir 'OpenPoseidon.exe') @gameArgs }
+    try { & (Join-Path $GameDir 'ProteusGame.exe') @gameArgs }
     finally { Pop-Location }
 } finally {
     $env:POSEIDON_HELI_FAR_FULL_RATE = $previous

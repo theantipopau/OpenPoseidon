@@ -8,7 +8,7 @@ $root = Split-Path $PSScriptRoot -Parent
 $game = 'D:/SteamLibrary/steamapps/common/ARMA Cold War Assault'
 $stamp = (Get-Content (Join-Path $game 'DEPLOYED-FROM.txt') -Raw).Trim()
 if (!$stamp.Contains($ExpectedCommit)) { throw 'Installed source differs' }
-if (Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Existing game preserved' }
+if (Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Existing game preserved' }
 $out = Join-Path $root ('build/physical-inventory/' + (Get-Date -Format yyyyMMdd-HHmmss-fff))
 $mission = Join-Path $out 'inventory.eden'
 $null = New-Item -ItemType Directory -Path $mission -Force
@@ -58,7 +58,7 @@ try {
     $log=Join-Path $out 'engine.log'; $stderr=Join-Path $out 'stderr.log'
     $args=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--harness',"$port",'--private','--log-file',('"'+$log+'"'))
     if (!$Multiplayer) { $args+=@('--test-mission',('"'+$mission+'"'),'--test-world-hour','12') }
-    $p=Start-Process (Join-Path $game 'OpenPoseidon.exe') -WorkingDirectory $game -WindowStyle Hidden -ArgumentList $args -RedirectStandardOutput (Join-Path $out 'stdout.log') -RedirectStandardError $stderr -PassThru
+    $p=Start-Process (Join-Path $game 'ProteusGame.exe') -WorkingDirectory $game -WindowStyle Hidden -ArgumentList $args -RedirectStandardOutput (Join-Path $out 'stdout.log') -RedirectStandardError $stderr -PassThru
     $until=[DateTime]::UtcNow.AddSeconds(180)
     do {
         Require (!$p.HasExited) 'Startup exited'

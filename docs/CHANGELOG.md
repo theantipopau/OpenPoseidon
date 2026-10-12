@@ -4,6 +4,16 @@ Running log of changes made by agents on this fork. Newest first.
 
 ## Unreleased
 
+- Renamed the shipped client to **ProteusGame.exe** (was OpenPoseidon.exe). The engine stays Poseidon. CMake `OUTPUT_NAME`, the game's version resource (FileDescription, ProductName, InternalName, OriginalFilename), the launch and test scripts, process checks and docs now use the new name. `scripts/Deploy.ps1` treats an old `OpenPoseidon.exe` like the old `PoseidonGame.exe`.
+- Investigated why the WW4 units do not replace the defaults. Root cause and fix options are in `docs/KNOWN_ISSUES.md` (duplicate `kozl.pbo` prefix). No engine change committed for it.
+
+- FSR 4 (AMD's signed ML upscaler) as a Video page upscaler choice, "FSR 4 (DX12)". New backend `engine/WgpuRenderer/rust/src/fsr4.rs`, ahead of FSR 1 in the chain.
+  - DX12 only. The FidelityFX SDK's signed FSR 4 binary is DX12, and its readme says Vulkan is not supported. The engine runs wgpu on Vulkan by default, so launch with `scripts/Start.ps1 -Dx12` (sets `WGPU_BACKEND=dx12`). Off DX12 the renderer logs why, and the upscale falls back as it does for a missing DLSS runtime.
+  - The signed loader and upscaler DLLs are not in the repo. Copy `amd_fidelityfx_loader_dx12.dll` and `amd_fidelityfx_upscaler_dx12.dll` from the FidelityFX SDK `signedbin` folder beside the exe, or point `WGR_FSR4_DIR` at that folder.
+  - FFI structs mirror the FidelityFX SDK 2.3 headers (MIT). Inputs are the same as DLSS: HDR colour, reversed depth, render-size motion vectors, the exposure texture, and history control as the reactive mask.
+  - Not verified on hardware by the author. Open risks: the resource-state contract with FFX (inputs declared PIXEL|COMPUTE read, output UAV), and the sign of the motion-vector scale, which reuses the DLSS flip settings.
+  - `graphics.cfg` `dlssMode = 3` selects FSR 4. Tuning flag bit 6 carries it to the renderer. Engine upscaler id 4 ("FSR 4") joins the dev panel's names.
+- Mission start diagnostics (uncommitted until the single-mission return-to-menu bug is traced): `DIAG single PLAY` lines at the PLAY branch's early exits and at the intro start, and `DIAG ParseCutscene` on an unreadable `mission.sqm`.
 - Forked `koosoli/OpenPoseidon` to `theantipopau/OpenPoseidon`, cloned locally, created branch `dev/matt-fork-main`.
 - Added fork docs: `FORK_ROADMAP.md`, `ASSET_PIPELINE.md`, `KNOWN_ISSUES.md`, `CHANGELOG.md`.
 - Audited the local OFP Evos asset folder (341 PBOs). Results are in `ASSET_PIPELINE.md`. Nothing from the folder was copied into the repo.

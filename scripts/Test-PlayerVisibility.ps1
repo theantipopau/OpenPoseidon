@@ -5,7 +5,7 @@ $ErrorActionPreference='Stop'
 if(!$env:LOCK_OWNER){throw 'Game lock required'}
 $root=Split-Path $PSScriptRoot -Parent
 $game='D:/SteamLibrary/steamapps/common/ARMA Cold War Assault'
-if(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue){throw 'Existing game preserved'}
+if(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue){throw 'Existing game preserved'}
 $stamp=(Get-Content (Join-Path $game 'DEPLOYED-FROM.txt') -Raw).Trim()
 if(!$stamp.Contains($ExpectedCommit)){throw 'Installed source differs'}
 $out=Join-Path $root ('build/player-visibility/'+$Label+'-'+(Get-Date -Format yyyyMMdd-HHmmss))
@@ -29,7 +29,7 @@ fpsCap=60;
  $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
  $log=Join-Path $out 'engine.log';$stdout=Join-Path $out 'stdout.log';$stderr=Join-Path $out 'stderr.log'
  $args=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','8000','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','12','--log-file',('"'+$log+'"'))
- $p=Start-Process (Join-Path $game 'OpenPoseidon.exe') -WorkingDirectory $game -WindowStyle Hidden -ArgumentList $args -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+ $p=Start-Process (Join-Path $game 'ProteusGame.exe') -WorkingDirectory $game -WindowStyle Hidden -ArgumentList $args -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
  $deadline=[DateTime]::UtcNow.AddSeconds(180)
  do{Require (!$p.HasExited) 'Startup exited';$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port)}catch{$client.Dispose();$client=$null};if(!$client){Require ([DateTime]::UtcNow-lt$deadline) 'Startup deadline';Start-Sleep -Milliseconds 250}}while(!$client)
  $stream=$client.GetStream();$stream.ReadTimeout=30000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true

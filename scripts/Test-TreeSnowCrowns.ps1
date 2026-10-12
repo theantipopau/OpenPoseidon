@@ -150,11 +150,11 @@ function Test-Helpers {
 }
 if ($SelfTest) { Test-Helpers; return }
 if (!$env:LOCK_OWNER) { throw 'Run through scripts/with-game-lock.sh.' }
-if (Get-Process OpenPoseidon -ErrorAction SilentlyContinue) { throw 'Game already running; refusing shared ownership.' }
+if (Get-Process ProteusGame -ErrorAction SilentlyContinue) { throw 'Game already running; refusing shared ownership.' }
 function Installed-State {
     $stamp = [IO.File]::ReadAllText((Join-Path $GameDir 'DEPLOYED-FROM.txt')).Trim()
     Require ([bool]$stamp) 'Installed provenance is empty.'
-    $files = @('OpenPoseidon.exe','wgpu_renderer.dll') | ForEach-Object {
+    $files = @('ProteusGame.exe','wgpu_renderer.dll') | ForEach-Object {
         $file = Get-Item -LiteralPath (Join-Path $GameDir $_)
         @{ name=$_; path=$file.FullName; sha256=(Get-FileHash -LiteralPath $file.FullName).Hash; bytes=$file.Length; writtenUtc=$file.LastWriteTimeUtc.ToString('o') }
     }
@@ -270,7 +270,7 @@ try {
         $seedValues=Camera-Numbers $seed;$result.attempts[$worldArm]=@{status='running';seed=$seed;refusals=@();arms=@{}}
         try{
             foreach($arm in @('deposit-tree-on','deposit-tree-off')){
-                Require (!(Get-Process OpenPoseidon -ErrorAction SilentlyContinue)) 'Unexpected game process between arms.'
+                Require (!(Get-Process ProteusGame -ErrorAction SilentlyContinue)) 'Unexpected game process between arms.'
                 $armDir=Join-Path $output ($worldArm+'-'+$arm);$profile=Join-Path $armDir 'user';New-Item -ItemType Directory -Force -Path $profile|Out-Null
                 $log=Join-Path $armDir 'engine.log';$env:POSEIDON_USER_DIR=$profile;$env:WGR_TREE_SNOW=if($arm -eq 'deposit-tree-on'){'1'}else{'0'}
                 [IO.File]::WriteAllText((Join-Path $profile 'graphics.cfg'),"qualityPreset=3;`nmsaaSamples=4;`ndlssMode=0;`nvsync=0;`nfpsCap=60;`n")
@@ -278,7 +278,7 @@ try {
                 $arguments=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','2000','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','16','--test-world-freefly')+($seed -split '\s+')+@('--log-file',('"'+$log+'"'))
                 if($worldArm -eq 'Native'){$arguments+=@('--test-world',('"'+$NativeAddons+'"'))}
                 $stdout=Join-Path $armDir 'stdout.txt';$stderr=Join-Path $armDir 'stderr.txt'
-                $p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $arguments -RedirectStandardOutput $stdout -RedirectStandardError $stderr;$null=$p.Handle
+                $p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $arguments -RedirectStandardOutput $stdout -RedirectStandardError $stderr;$null=$p.Handle
                 $result.attempts[$worldArm].arms[$arm]=@{status='starting';pid=$p.Id;log=$log;arguments=$arguments;treeSwitch=$env:WGR_TREE_SNOW}
                 $until=[DateTime]::UtcNow.AddSeconds(120)
                 do{Assert-RunHealth;$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port)}catch{$client.Dispose();$client=$null};if(!$client){Require ([DateTime]::UtcNow -lt $until) 'Harness unavailable after120s.';Start-Sleep -Milliseconds 250}}while(!$client)

@@ -132,7 +132,7 @@ if($SelfTest){Test-Helpers;return}
 $World=$World.ToLowerInvariant()
 Require ([bool]$ExpectedCommit) 'Supply -ExpectedCommit for the installed pair.'
 Require ([bool]$env:LOCK_OWNER) 'Run through scripts/with-game-lock.sh.'
-Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Existing game has another owner.'
+Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Existing game has another owner.'
 Require ($SingleArm -eq 'Custom' -or !($PSBoundParameters.ContainsKey('Film') -or $PSBoundParameters.ContainsKey('Water') -or $PSBoundParameters.ContainsKey('SSR'))) 'Explicit Film/Water/SSR parameters require -SingleArm Custom.'
 foreach($value in @($SearchX,$SearchZ,$SoilX,$SoilZ)){$null=Number $value}
 $explicitTarget=![double]::IsNaN($TargetX)
@@ -143,7 +143,7 @@ function Installed-State{
     Require ($stamp -match '^codex/streaming-residency\s+([a-fA-F0-9]{8,40})\s+') 'Installed branch/commit stamp missing.'
     $commit=$Matches[1];$common=[Math]::Min($commit.Length,$ExpectedCommit.Length)
     Require ($common -ge 8 -and $commit.Substring(0,$common).Equals($ExpectedCommit.Substring(0,$common),[StringComparison]::OrdinalIgnoreCase)) 'Installed commit differs from requested pair.'
-    return [ordered]@{stamp=$stamp;files=@(@('OpenPoseidon.exe','wgpu_renderer.dll')|ForEach-Object{$f=Get-Item -LiteralPath (Join-Path $GameDir $_);@{name=$_;sha256=(Get-FileHash -LiteralPath $f.FullName).Hash;bytes=$f.Length;writtenUtc=$f.LastWriteTimeUtc.ToString('o')}})}
+    return [ordered]@{stamp=$stamp;files=@(@('ProteusGame.exe','wgpu_renderer.dll')|ForEach-Object{$f=Get-Item -LiteralPath (Join-Path $GameDir $_);@{name=$_;sha256=(Get-FileHash -LiteralPath $f.FullName).Hash;bytes=$f.Length;writtenUtc=$f.LastWriteTimeUtc.ToString('o')}})}
 }
 function Assert-Pair($a,$b){Require (($a|ConvertTo-Json -Depth 6 -Compress) -ceq ($b|ConvertTo-Json -Depth 6 -Compress)) 'Installed EXE/DLL pair changed.'}
 $before=Installed-State
@@ -219,7 +219,7 @@ function Close-Owned{
 $auditedSoil=($World -ceq 'noe' -and $SoilX -eq 4975 -and $SoilZ -eq 4675)
 try{
     foreach($flag in $plan){
-        Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Another process owns the game.';Assert-Pair $before (Installed-State)
+        Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Another process owns the game.';Assert-Pair $before (Installed-State)
         $armDir=Join-Path $output $flag.name;New-Item -ItemType Directory -Path $armDir -Force|Out-Null
         $profile=Join-Path $armDir 'user';New-Item -ItemType Directory -Path $profile|Out-Null
         & "$PSScriptRoot/Write-BenchmarkGraphics.ps1" -UserDir $profile -MsaaSamples 4 -DlssMode 0
@@ -234,7 +234,7 @@ try{
         Copy-Item -LiteralPath (Join-Path $root 'tests/perf/missions/perf_sand.noe/mission.sqm') -Destination (Join-Path $mission 'mission.sqm')
         $arm.missionSha256=(Get-FileHash -LiteralPath (Join-Path $mission 'mission.sqm')).Hash
         $args=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd',"$ViewDistance",'--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','16','--log-file',('"'+$log+'"'));$arm.arguments=$args
-        $p=Start-Process (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $args -RedirectStandardOutput $stdout -RedirectStandardError $stderr;$null=$p.Handle;$arm.pid=$p.Id
+        $p=Start-Process (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $args -RedirectStandardOutput $stdout -RedirectStandardError $stderr;$null=$p.Handle;$arm.pid=$p.Id
         $until=[DateTime]::UtcNow.AddSeconds(120)
         do{Health;$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port)}catch{$client.Dispose();$client=$null};if(!$client){Require ([DateTime]::UtcNow -lt $until) 'Harness unavailable.';Start-Sleep -Milliseconds 250}}while(!$client)
         $stream=$client.GetStream();$stream.ReadTimeout=30000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true

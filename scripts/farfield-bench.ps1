@@ -241,7 +241,7 @@ function Stop-OwnedProcess {
 function Get-ForeignGameProcessIds {
     param([hashtable]$Owned)
     $ids = @()
-    $running = @(Get-Process -Name 'OpenPoseidon', 'ColdWarAssault', 'PoseidonGame' -ErrorAction SilentlyContinue)
+    $running = @(Get-Process -Name 'ProteusGame', 'ColdWarAssault', 'PoseidonGame' -ErrorAction SilentlyContinue)
     foreach ($process in $running) {
         if (-not $Owned.ContainsKey([int]$process.Id)) { $ids += [int]$process.Id }
     }
@@ -263,7 +263,7 @@ function Test-JsonProperty {
 # Resolve inputs
 # ----------------------------------------------------------------------------------------
 if (-not (Test-Path -LiteralPath $GameDir)) { throw "Game directory not found: $GameDir" }
-$gameExe = Join-Path $GameDir 'OpenPoseidon.exe'
+$gameExe = Join-Path $GameDir 'ProteusGame.exe'
 if (-not (Test-Path -LiteralPath $gameExe)) {
     throw "Game executable not found: $gameExe`n  Deploy first: .\scripts\Deploy.ps1"
 }
@@ -462,7 +462,7 @@ try {
 
         Write-Output ""
         Write-Output "--- $Label repeat $repeat/$Repeats ---"
-        Write-Verbose "OpenPoseidon.exe $argumentString"
+        Write-Verbose "ProteusGame.exe $argumentString"
 
         $startedAt = Get-Date
         $process = Start-Process -FilePath $gameExe -ArgumentList $argumentString -WorkingDirectory $GameDir `

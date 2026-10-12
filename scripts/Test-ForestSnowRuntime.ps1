@@ -72,7 +72,7 @@ function Installed-State{
     Require ($stamp -match '^codex/streaming-residency\s+([a-fA-F0-9]{8,40})\s+') 'Installed branch/commit stamp missing.'
     $installedCommit=$Matches[1];$common=[Math]::Min($installedCommit.Length,$ExpectedCommit.Length)
     Require ($common -ge 8 -and $installedCommit.Substring(0,$common).Equals($ExpectedCommit.Substring(0,$common),[StringComparison]::OrdinalIgnoreCase)) 'Installed commit differs from requested pair.'
-    $files=@('OpenPoseidon.exe','wgpu_renderer.dll')|ForEach-Object{$file=Get-Item -LiteralPath (Join-Path $GameDir $_);@{name=$_;sha256=(Get-FileHash -LiteralPath $file.FullName).Hash;bytes=$file.Length;writtenUtc=$file.LastWriteTimeUtc.ToString('o')}}
+    $files=@('ProteusGame.exe','wgpu_renderer.dll')|ForEach-Object{$file=Get-Item -LiteralPath (Join-Path $GameDir $_);@{name=$_;sha256=(Get-FileHash -LiteralPath $file.FullName).Hash;bytes=$file.Length;writtenUtc=$file.LastWriteTimeUtc.ToString('o')}}
     return [ordered]@{stamp=$stamp;files=@($files)}
 }
 function Test-Helpers{
@@ -111,7 +111,7 @@ if($SelfTest){Test-Helpers;return}
 Require (!($FarCover -and $DefaultFarCover)) 'Choose explicit far cover or the engine default policy.'
 Require ([bool]$ExpectedCommit) 'Supply -ExpectedCommit for the installed pair.'
 Require ([bool]$env:LOCK_OWNER) 'Run through scripts/with-game-lock.sh.'
-Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Existing game has another owner.'
+Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Existing game has another owner.'
 $before=Installed-State
 . "$PSScriptRoot/TerrainPuddleStockRoof.ps1"
 $fixtures=@{
@@ -178,7 +178,7 @@ try{
     foreach($worldName in $worlds){
         $fixture=$fixtures[$worldName];$paired=$null;$views=$null;$mission=Join-Path $root $fixture.mission;Require (Test-Path -LiteralPath (Join-Path $mission 'mission.sqm')) 'Original-map authored mission missing.'
         foreach($treeFlag in @('1','0')){
-            Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Game ownership conflict.';Assert-Pair $before (Installed-State)
+            Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Game ownership conflict.';Assert-Pair $before (Installed-State)
             $armName=$worldName+'-tree'+$treeFlag;$armDir=Join-Path $output $armName;$profile=Join-Path $armDir 'user';New-Item -ItemType Directory -Path $profile -Force|Out-Null
             & "$PSScriptRoot/Write-BenchmarkGraphics.ps1" -UserDir $profile -DlssMode 0 -MsaaSamples 4
             $cfg=Join-Path $profile 'graphics.cfg';[IO.File]::WriteAllText($cfg,([IO.File]::ReadAllText($cfg).Replace('brightness=1.6;','brightness=1;').Replace('fpsCap=0;','fpsCap=60;')))
@@ -188,7 +188,7 @@ try{
             $argsList=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','2000','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','16','--test-world-freefly')+($seed -split '\s+')+@('--log-file',('"'+$log+'"'))
             $arm=@{status='starting';fixture=$fixture;missionSha256=(Get-FileHash -LiteralPath (Join-Path $mission 'mission.sqm')).Hash;treeFlag=$treeFlag;atlasFlag='1';arguments=$argsList;log=$log;stdout=$stdout;stderr=$stderr;profileSha256=(Get-FileHash -LiteralPath $cfg).Hash;captures=@{};before=(Installed-State)};$result.arms[$armName]=$arm
             $armDeadline=[DateTime]::UtcNow.AddSeconds(600)
-            $p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -ArgumentList $argsList -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru;$null=$p.Handle;$arm.pid=$p.Id
+            $p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -ArgumentList $argsList -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru;$null=$p.Handle;$arm.pid=$p.Id
             $deadline=[DateTime]::UtcNow.AddSeconds(120)
             do{Health;$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port)}catch{$client.Dispose();$client=$null};if(!$client){Require ([DateTime]::UtcNow -lt $deadline) 'Harness startup exceeded120s.';Start-Sleep -Milliseconds 250}}while(!$client)
             $stream=$client.GetStream();$stream.ReadTimeout=30000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true

@@ -3,7 +3,7 @@ $ErrorActionPreference='Stop'
 if (!$env:LOCK_OWNER) {throw 'Run via scripts/with-game-lock.sh with LOCK_OWNER set.'}
 $root=Split-Path $PSScriptRoot -Parent
 $output=Join-Path $root 'build/fusion/size-probe'
-if (!(Test-Path -LiteralPath (Join-Path $GameDir 'OpenPoseidon.exe'))) {throw 'Not an OpenPoseidon game install'}
+if (!(Test-Path -LiteralPath (Join-Path $GameDir 'ProteusGame.exe'))) {throw 'Not a ProteusGame install'}
 python (Join-Path $PSScriptRoot 'fusion/build_size_probe.py') $output
 if ($LASTEXITCODE -ne 0) {throw 'Size probe generation failed'}
 & "$PSScriptRoot/Move-DefaultContentToMods.ps1" -GameDir $GameDir

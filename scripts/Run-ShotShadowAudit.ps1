@@ -14,18 +14,18 @@ if (!$env:LOCK_OWNER) {
  finally {Remove-Item Env:LOCK_OWNER}
  return
 }
-if (Get-Process OpenPoseidon -ErrorAction SilentlyContinue) {throw 'Game already running'}
+if (Get-Process ProteusGame -ErrorAction SilentlyContinue) {throw 'Game already running'}
 $out=Join-Path $root ('build/audit-runs/'+$Scenario+'-'+(Get-Date -Format yyyyMMdd-HHmmss))
 New-Item -ItemType Directory -Force $out | Out-Null
 $bin=Join-Path $root 'dist/x64-win-rwdi'
 if ($Reference) {
  $bin=Join-Path $root 'build/audit-reference'
  New-Item -ItemType Directory -Force $bin | Out-Null
- foreach ($name in @('OpenPoseidon.exe','wgpu_renderer.dll','OpenAL32.dll')) {
+ foreach ($name in @('ProteusGame.exe','wgpu_renderer.dll','OpenAL32.dll')) {
   Copy-Item -LiteralPath (Join-Path $GameDir $name) -Destination (Join-Path $bin $name)
  }
 }
-$exe=Join-Path $bin 'OpenPoseidon.exe'
+$exe=Join-Path $bin 'ProteusGame.exe'
 if (!(Test-Path $exe)) {throw "Missing build: $exe"}
 $env:POSEIDON_USER_DIR=Join-Path $out 'user'
 New-Item -ItemType Directory -Force $env:POSEIDON_USER_DIR | Out-Null
@@ -43,7 +43,7 @@ $listener.Start(); $port=$listener.LocalEndpoint.Port; $listener.Stop()
 $log=Join-Path $out 'engine.log'
 $gameArgs=@('-C',('"'+$GameDir+'"'),'--render=wgpu','--window','--no-dev','--width','1280','--height','720','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--log-file',('"'+$log+'"'))
 if ($Scenario -eq 'Stress') {$gameArgs+=@('--addon-root',('"'+(Join-Path $GameDir 'Mods/@63units')+'"'))}
-@{head=(& git -C $root rev-parse HEAD);reference=[bool]$Reference;mission=$mission;gameArgs=$gameArgs;environment=@(Get-ChildItem Env: | Where-Object Name -Match '^(POSEIDON|WGR)' | Select-Object Name,Value);hashes=@(Get-FileHash (Join-Path $bin 'OpenPoseidon.exe'),(Join-Path $bin 'wgpu_renderer.dll'));deployment=(Get-Content (Join-Path $GameDir 'DEPLOYED-FROM.txt') -ErrorAction SilentlyContinue)} | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $out 'provenance.json')
+@{head=(& git -C $root rev-parse HEAD);reference=[bool]$Reference;mission=$mission;gameArgs=$gameArgs;environment=@(Get-ChildItem Env: | Where-Object Name -Match '^(POSEIDON|WGR)' | Select-Object Name,Value);hashes=@(Get-FileHash (Join-Path $bin 'ProteusGame.exe'),(Join-Path $bin 'wgpu_renderer.dll'));deployment=(Get-Content (Join-Path $GameDir 'DEPLOYED-FROM.txt') -ErrorAction SilentlyContinue)} | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $out 'provenance.json')
 $p=Start-Process -FilePath $exe -ArgumentList $gameArgs -WorkingDirectory $bin -PassThru -WindowStyle Hidden
 $null=$p.Handle
 try {

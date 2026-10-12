@@ -43,7 +43,7 @@ $cameraArgs=if ($Zeus) {@('--no-dev','--harness',"$port",'--auto-screenshot',('"
 $worldArgs=@('--test-world-hour',$hourText)
 if (!$Everon) {$worldArgs+=@('--mod','@a3stratis','--test-world',('"'+$World+'"'))}
 $argsGame=@('--render','wgpu','--window','--width','1280','--height','720','--test-mission',('"'+$mission+'"'),'--log-file',('"'+$log+'"'),'--capture-metrics',('"'+$metrics+'"')) + $cameraArgs + $worldArgs
-$p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $output "$name.stdout.txt") -RedirectStandardError (Join-Path $output "$name.stderr.txt") -ArgumentList $argsGame
+$p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $output "$name.stdout.txt") -RedirectStandardError (Join-Path $output "$name.stderr.txt") -ArgumentList $argsGame
 $null=$p.Handle
 $client=$null
 try {

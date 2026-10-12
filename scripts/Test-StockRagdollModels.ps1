@@ -28,7 +28,7 @@ function AssertGroundFreeze($sample){
 }
 function AssertPair($before,$after){
  Require ($before.stamp-ceq $after.stamp-and $before.files.Count-eq 2-and $after.files.Count-eq 2) 'Installed source stamp or binary count changed.'
- foreach($name in @('OpenPoseidon.exe','wgpu_renderer.dll')){
+ foreach($name in @('ProteusGame.exe','wgpu_renderer.dll')){
   $a=@($before.files|Where-Object {$_.name-ceq $name});$b=@($after.files|Where-Object {$_.name-ceq $name})
   Require ($a.Count-eq 1-and $b.Count-eq 1) 'Installed binary identity missing or duplicated.'
   Require ($a[0].sha256-match '^[a-fA-F0-9]{64}$'-and $b[0].sha256-match '^[a-fA-F0-9]{64}$'-and $a[0].sha256-ieq $b[0].sha256-and $a[0].bytes-eq $b[0].bytes) ('Installed binary changed: '+$name)
@@ -98,8 +98,8 @@ if($SelfTest){
  $fixture.families+=,$fixture.families[0];$refused=$false;try{$null=Targets $fixture @()}catch{$refused=$true};Require $refused 'Duplicate model family accepted.'
  $refused=$false;try{AssertGroundFreeze @{frozen=$true;root=@(0,5,0);terrainY=0}}catch{$refused=$true};Require $refused 'Airborne frozen corpse accepted.'
  AssertGroundFreeze @{frozen=$false;root=@(0,5,0);terrainY=0};AssertGroundFreeze @{frozen=$true;root=@(0,.2,0);terrainY=0}
- $pairA=@{stamp='branch source time';files=@(@{name='OpenPoseidon.exe';sha256=('A'*64);bytes=10},@{name='wgpu_renderer.dll';sha256=('B'*64);bytes=20})}
- $pairB=@{files=@(@{bytes=20;sha256=('B'*64);name='wgpu_renderer.dll'},@{bytes=10;sha256=('A'*64);name='OpenPoseidon.exe'});stamp='branch source time'}
+ $pairA=@{stamp='branch source time';files=@(@{name='ProteusGame.exe';sha256=('A'*64);bytes=10},@{name='wgpu_renderer.dll';sha256=('B'*64);bytes=20})}
+ $pairB=@{files=@(@{bytes=20;sha256=('B'*64);name='wgpu_renderer.dll'},@{bytes=10;sha256=('A'*64);name='ProteusGame.exe'});stamp='branch source time'}
  AssertPair $pairA $pairB;$pairB.files[0].sha256='C'*64;$refused=$false;try{AssertPair $pairA $pairB}catch{$refused=$true};Require $refused 'Changed installed hash accepted.'
  $hitBefore=@{received=0;wakes=0;transfers=0;lastPart=-1};$hitAfter=@{received=1;wakes=1;transfers=0;lastPart=-1}
  AssertHitReactivation $hitBefore $hitAfter @{active=1} @{bodies=11;joints=10}
@@ -145,10 +145,10 @@ if($CensusPath-and $Classes.Count-eq 0-and $Models.Count-eq 0){
 $null=Num $SiteX;$null=Num $SiteZ
 function Pair{
  $stamp=Get-Content -LiteralPath (Join-Path $GameDir 'DEPLOYED-FROM.txt') -Raw;Require ($stamp-match [regex]::Escape($ExpectedCommit)) 'Installed source differs.'
- return @{stamp=$stamp;files=@(@('OpenPoseidon.exe','wgpu_renderer.dll')|ForEach-Object{$f=Get-Item -LiteralPath (Join-Path $GameDir $_);@{name=$_;sha256=(Get-FileHash -LiteralPath $f.FullName).Hash;bytes=$f.Length;writtenUtc=$f.LastWriteTimeUtc.ToString('o')}})}
+ return @{stamp=$stamp;files=@(@('ProteusGame.exe','wgpu_renderer.dll')|ForEach-Object{$f=Get-Item -LiteralPath (Join-Path $GameDir $_);@{name=$_;sha256=(Get-FileHash -LiteralPath $f.FullName).Hash;bytes=$f.Length;writtenUtc=$f.LastWriteTimeUtc.ToString('o')}})}
 }
 Require ([bool]$env:LOCK_OWNER) 'Invoke through scripts/with-game-lock.sh.'
-Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Existing owner game is preserved.'
+Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Existing owner game is preserved.'
 $before=Pair;$taskOut=Join-Path $taskRoot ('build/stock-ragdoll-models/'+$Label+'-'+(Get-Date -Format 'yyyyMMdd-HHmmss'))
 $profile=Join-Path $taskOut 'user';New-Item -ItemType Directory -Force $profile|Out-Null
 $settings=@{POSEIDON_USER_DIR=$profile;WGR_GRASS='0';POSEIDON_SNOWLINE='off';POSEIDON_SNOW_TEST_DEPTH='0';WGR_TEMPORAL='0';WGR_AUTO_EXPOSURE='0';WGR_EXPOSURE='1'}
@@ -283,7 +283,7 @@ try{
  $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
  $mission=Join-Path $taskRoot 'tests/perf/missions/perf_field.eden'
  $args=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','1500','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','16','--log-file',('"'+$log+'"'))
- $p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -ArgumentList $args -PassThru
+ $p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -ArgumentList $args -PassThru
  $null=$p.Handle # Cache the owned handle before exit so PS7 retains a reliable ExitCode.
  $until=[DateTime]::UtcNow.AddSeconds(120)
  do{Require (!$p.HasExited) 'Startup exited.';$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port)}catch{$client.Dispose();$client=$null};if(!$client){Require ([DateTime]::UtcNow-lt $until) 'Startup deadline.';Start-Sleep -Milliseconds 250}}while(!$client)

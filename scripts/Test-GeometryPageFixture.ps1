@@ -37,7 +37,7 @@ if (!$env:LOCK_OWNER) {
     finally {Remove-Item Env:LOCK_OWNER}
     return
 }
-if (Get-Process OpenPoseidon -ErrorAction SilentlyContinue) {throw 'Game already running'}
+if (Get-Process ProteusGame -ErrorAction SilentlyContinue) {throw 'Game already running'}
 $root=Split-Path $PSScriptRoot -Parent
 $out=Join-Path $root ('build/stream-residency/'+$Label+'-'+(Get-Date -Format yyyyMMdd-HHmmss))
 $fixture=Join-Path $out 'fixture'; $mission=Join-Path $out 'geometry-fixture.eden'
@@ -92,11 +92,11 @@ $listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
 $log=Join-Path $out 'engine.log'
 @{head=(& git -C $root rev-parse HEAD);installed=(Get-Content (Join-Path $GameDir 'DEPLOYED-FROM.txt'));
     disabled=[bool]$Disabled;clod=[bool]$Clod;paged=[bool]$Paged;evict=[bool]$Evict;disk=[bool]$Disk;diskFault=$DiskFault;sectionReuse=[bool]$SectionReuse;sectionReuseEnvironment=$env:WGR_CULL_SECTION_REUSE;lodReuse=[bool]$LodReuse;lodReuseEnvironment=$env:WGR_CULL_LOD_REUSE;modelRowUpload=[bool]$ModelRowUpload;modelRowUploadEnvironment=$env:WGR_CULL_MODEL_ROW_UPLOAD;diskProof=$diskProof;diskFaultProof=$diskFaultProof;scriptSha256=(Get-FileHash $PSCommandPath).Hash;
-    hashes=@(Get-FileHash (Join-Path $GameDir 'OpenPoseidon.exe'),(Join-Path $GameDir 'wgpu_renderer.dll'))} |
+    hashes=@(Get-FileHash (Join-Path $GameDir 'ProteusGame.exe'),(Join-Path $GameDir 'wgpu_renderer.dll'))} |
     ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $out 'provenance.json')
 $p=$null;$client=$null
 try {
-    $p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList @(
+    $p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList @(
         '--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','2000','--harness',"$port",
         '--test-world-freefly','1184','1240','18','90','-8','--test-world-hour','12',
         '--test-mission',('"'+$mission+'"'),'--test-world',('"'+(Join-Path $fixture 'simulation-residency.wrp')+'"'),

@@ -5,7 +5,7 @@ $ErrorActionPreference='Stop'
 if(!$env:LOCK_OWNER){throw 'Game lock required'}
 $root=Split-Path $PSScriptRoot -Parent
 $game='D:/SteamLibrary/steamapps/common/ARMA Cold War Assault'
-if(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue){throw 'Existing game preserved'}
+if(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue){throw 'Existing game preserved'}
 $stamp=(Get-Content (Join-Path $game 'DEPLOYED-FROM.txt') -Raw).Trim()
 if(!$stamp.Contains($ExpectedCommit)){throw 'Installed source differs'}
 $out=Join-Path $root ('build/local-browser/'+$Preview+'-'+(Get-Date -Format yyyyMMdd-HHmmss))
@@ -28,7 +28,7 @@ try{
  $log=Join-Path $out 'engine.log';$stdout=Join-Path $out 'stdout.log';$stderr=Join-Path $out 'stderr.log'
  $args=@('--render=wgpu','--dev','--width','1280','--height','720','--harness',"$port",'--lang','English','--log-file',('"'+$log+'"'))
  if($Fullscreen){$args+=@('--display-mode','borderless')}else{$args+=@('--window')}
- $p=Start-Process (Join-Path $game 'OpenPoseidon.exe') -WorkingDirectory $game -WindowStyle Hidden -ArgumentList $args -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+ $p=Start-Process (Join-Path $game 'ProteusGame.exe') -WorkingDirectory $game -WindowStyle Hidden -ArgumentList $args -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
  $deadline=[DateTime]::UtcNow.AddSeconds(180)
  do{Require (!$p.HasExited) 'Startup exited';$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port)}catch{$client.Dispose();$client=$null};if(!$client){Require ([DateTime]::UtcNow-lt$deadline) 'Startup deadline';Start-Sleep -Milliseconds 250}}while(!$client)
  $stream=$client.GetStream();$stream.ReadTimeout=30000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true
@@ -54,7 +54,7 @@ try{
   $oldPid=$p.Id;$writer.WriteLine((@{cmd="exec";code='triClick 62004'}|ConvertTo-Json -Compress))
   Require ($p.WaitForExit(20000)-and$p.ExitCode-eq0) 'Browser parent normal exit failed'
   $client.Dispose();$client=$null;$writer=$null
-  $owned=Get-CimInstance Win32_Process -Filter "Name='OpenPoseidon.exe'"|Where-Object {$_.CommandLine -match ('--wait-for-parent\s+'+$oldPid+'(?:\s|$)')}
+  $owned=Get-CimInstance Win32_Process -Filter "Name='ProteusGame.exe'"|Where-Object {$_.CommandLine -match ('--wait-for-parent\s+'+$oldPid+'(?:\s|$)')}
   Require (@($owned).Count-eq1) 'Browser child identity differs';$p=Get-Process -Id $owned.ProcessId;$null=$p.Handle;$receipt.childPid=$p.Id;$receipt.childCommand=$owned.CommandLine
   $expectedMode=if($Fullscreen){'borderless'}else{'windowed'};Require ($owned.CommandLine -match ('--display-mode\s+'+$expectedMode)) 'Live display mode was not preserved'
   $deadline=[DateTime]::UtcNow.AddSeconds(180)

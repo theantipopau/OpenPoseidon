@@ -42,7 +42,7 @@ function Restore-Environment([string]$key,$value){if($null-eq$value){Remove-Item
 function Pair{
  $stamp=[IO.File]::ReadAllText((Join-Path $GameDir 'DEPLOYED-FROM.txt')).Trim();Require ($stamp-match'^codex/\S+\s+([a-fA-F0-9]{8,40})\s+') 'Installed branch stamp absent.'
  $hash=$Matches[1];$count=[Math]::Min($hash.Length,$ExpectedCommit.Length);Require ($count-ge8-and$hash.Substring(0,$count).Equals($ExpectedCommit.Substring(0,$count),[StringComparison]::OrdinalIgnoreCase)) 'Installed requested commit differs.'
- @{stamp=$stamp;exe=(Get-FileHash (Join-Path $GameDir 'OpenPoseidon.exe')).Hash;dll=(Get-FileHash (Join-Path $GameDir 'wgpu_renderer.dll')).Hash}
+ @{stamp=$stamp;exe=(Get-FileHash (Join-Path $GameDir 'ProteusGame.exe')).Hash;dll=(Get-FileHash (Join-Path $GameDir 'wgpu_renderer.dll')).Hash}
 }
 function Same-Pair($a,$b){foreach($key in @('stamp','exe','dll')){Require ($a[$key]-ceq$b[$key]) 'Installed matched pair changed.'}}
 function Refuses([scriptblock]$body){$failed=$false;try{&$body|Out-Null}catch{$failed=$true};Require $failed 'Invalid fixture accepted.'}
@@ -96,7 +96,7 @@ foreach($value in $reported){$null=Number $value}
 Require (($CandidateIds | Select-Object -Unique).Count-eq$CandidateIds.Count-and($CandidateIds | Measure-Object -Minimum).Minimum-ge0) 'Candidate IDs must be unique and nonnegative.'
 Require (($FarCandidateIds | Select-Object -Unique).Count-eq$FarCandidateIds.Count) 'Far candidate IDs must be unique.'
 foreach($id in $FarCandidateIds){Require ($id-in$CandidateIds) 'Every far candidate must belong to the source census.'}
-if(!$SourceOnly){Require ([bool]$env:LOCK_OWNER) 'Invoke with scripts/with-game-lock.sh.';Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Preserve existing game owner.'}
+if(!$SourceOnly){Require ([bool]$env:LOCK_OWNER) 'Invoke with scripts/with-game-lock.sh.';Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Preserve existing game owner.'}
 $before=Pair
 $output=Join-Path $root ('build/everon-placement/'+$Label+'-'+(Get-Date -Format yyyyMMdd-HHmmss)+'-'+[guid]::NewGuid().ToString('N').Substring(0,6));New-Item -ItemType Directory -Force $output|Out-Null
 $result=[ordered]@{status='prepared';installed=$before;sourceHead=(& git -C $root rev-parse HEAD);scriptSha256=(Get-FileHash $PSCommandPath).Hash;captures=@();owners=@();foundation=@();error=$null;
@@ -203,8 +203,8 @@ try{
  $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
  $arguments=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','16','--test-world-freefly')+((Pose $reported)-split' ')+@('--log-file',('"'+$log+'"'))
  if($InitialViewDistance){$arguments+=@('--vd',"$InitialViewDistance")};$result.arguments=$arguments;$deadline=[DateTime]::UtcNow.AddSeconds(420)
- Same-Pair $before (Pair);Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Game ownership conflict.'
- $p=Start-Process (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -ArgumentList $arguments -RedirectStandardOutput (Join-Path $output 'stdout.txt') -RedirectStandardError (Join-Path $output 'stderr.txt') -PassThru;$null=$p.Handle;$result.pid=$p.Id
+ Same-Pair $before (Pair);Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Game ownership conflict.'
+ $p=Start-Process (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -ArgumentList $arguments -RedirectStandardOutput (Join-Path $output 'stdout.txt') -RedirectStandardError (Join-Path $output 'stderr.txt') -PassThru;$null=$p.Handle;$result.pid=$p.Id
  $until=[DateTime]::UtcNow.AddSeconds(120);do{Health;$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port)}catch{$client.Dispose();$client=$null};if(!$client){Require ([DateTime]::UtcNow-lt$until) 'Harness startup timeout.';Start-Sleep -Milliseconds 250}}while(!$client)
  $stream=$client.GetStream();$stream.ReadTimeout=30000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true
  Start-Sleep -Seconds 12;Require ((Eval 'triSceneReady')-ceq'OK') 'Stock Eden scene not ready.'

@@ -61,8 +61,8 @@ mod precedence and clean-release tests remain on the acceptance list.
 ## Disable (restart required)
 
 ```powershell
-./OpenPoseidon.exe --no-visual-upgrade
-./OpenPoseidon.exe --no-vehicle-actions
+./ProteusGame.exe --no-visual-upgrade
+./ProteusGame.exe --no-vehicle-actions
 ```
 
 These suppress automatic loading independently. Explicitly passing the same

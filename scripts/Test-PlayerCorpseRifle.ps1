@@ -61,11 +61,11 @@ if($SelfTest){
  Write-Host 'PASS: aligned/nonzero raw XYZ aim, damped bounded mouse steps, scalar actual-hull midpoint, camera guard, four editor mission classes and parse.';return
 }
 Require ([bool]$env:LOCK_OWNER) 'Invoke via scripts/with-game-lock.sh.'
-Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Existing owner game is preserved.'
+Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Existing owner game is preserved.'
 Require ($Classes.Count-ge 1-and @($Classes|Select-Object -Unique).Count-eq $Classes.Count) 'Duplicate or empty target list.'
 function Pair{
  $stamp=Get-Content -LiteralPath (Join-Path $GameDir 'DEPLOYED-FROM.txt') -Raw;Require ($stamp-match [regex]::Escape($ExpectedCommit)) 'Installed source commit differs.'
- return @{stamp=$stamp;files=@(@('OpenPoseidon.exe','wgpu_renderer.dll')|ForEach-Object{$f=Get-Item -LiteralPath (Join-Path $GameDir $_);@{name=$_;bytes=$f.Length;sha256=(Get-FileHash -LiteralPath $f.FullName).Hash;writtenUtc=$f.LastWriteTimeUtc.ToString('o')}})}
+ return @{stamp=$stamp;files=@(@('ProteusGame.exe','wgpu_renderer.dll')|ForEach-Object{$f=Get-Item -LiteralPath (Join-Path $GameDir $_);@{name=$_;bytes=$f.Length;sha256=(Get-FileHash -LiteralPath $f.FullName).Hash;writtenUtc=$f.LastWriteTimeUtc.ToString('o')}})}
 }
 $before=Pair;$out=Join-Path $root ('build/player-corpse-rifle/'+$Label+'-'+(Get-Date -Format 'yyyyMMdd-HHmmss'))
 $profile=Join-Path $out 'user';$mission=Join-Path $out 'corpse_rifle.eden';New-Item -ItemType Directory -Force $profile,$mission|Out-Null
@@ -157,7 +157,7 @@ try{
  foreach($key in $clear){Remove-Item -LiteralPath ('Env:'+$key) -ErrorAction SilentlyContinue};foreach($key in $settings.Keys){[Environment]::SetEnvironmentVariable($key,$settings[$key],'Process')}
  $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
  $args=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','1500','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--log-file',('"'+$log+'"'))
- $p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -ArgumentList $args -PassThru;$null=$p.Handle
+ $p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -ArgumentList $args -PassThru;$null=$p.Handle
  $until=[DateTime]::UtcNow.AddSeconds(120)
  do{Require (!$p.HasExited) 'Startup exited.';$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port)}catch{$client.Dispose();$client=$null};if(!$client){Require ([DateTime]::UtcNow-lt $until) 'Harness startup deadline.';Start-Sleep -Milliseconds 250}}while(!$client)
  $stream=$client.GetStream();$stream.ReadTimeout=30000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true

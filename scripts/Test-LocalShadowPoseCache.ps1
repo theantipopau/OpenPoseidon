@@ -19,14 +19,14 @@ if (!$env:LOCK_OWNER) {
     } finally { Remove-Item Env:LOCK_OWNER }
     return
 }
-if (Get-Process OpenPoseidon -ErrorAction SilentlyContinue) { throw 'Game already running' }
+if (Get-Process ProteusGame -ErrorAction SilentlyContinue) { throw 'Game already running' }
 $root = Split-Path $PSScriptRoot -Parent
 $out = Join-Path $root ('build/stream-residency/' + $Label + '-' + (Get-Date -Format yyyyMMdd-HHmmss))
 $profile = Join-Path $out 'user'; New-Item -ItemType Directory -Force -Path $profile | Out-Null
 [IO.File]::WriteAllText((Join-Path $profile 'graphics.cfg'), "qualityPreset=3;`nmsaaSamples=4;`ndlssMode=0;`nvsync=0;`nfpsCap=60;`n")
 [IO.File]::WriteAllText((Join-Path $profile 'game.cfg'), "preferredViewDistance=2000;`n")
 $mission = Join-Path $root 'dev-missions/freefly-lights.eden'
-$exe = Join-Path $GameDir 'OpenPoseidon.exe'; $dll = Join-Path $GameDir 'wgpu_renderer.dll'
+$exe = Join-Path $GameDir 'ProteusGame.exe'; $dll = Join-Path $GameDir 'wgpu_renderer.dll'
 $log = Join-Path $out 'engine.log'; $stdout = Join-Path $out 'stdout.txt'; $stderr = Join-Path $out 'stderr.txt'
 $environment = @{
     POSEIDON_USER_DIR = $profile; WGR_AUTO_EXPOSURE = '0'; WGR_EXPOSURE = '2'

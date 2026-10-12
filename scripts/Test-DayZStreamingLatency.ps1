@@ -123,7 +123,7 @@ if (!$env:LOCK_OWNER) {
     } finally { Remove-Item Env:LOCK_OWNER }
     return
 }
-if (Get-Process OpenPoseidon -ErrorAction SilentlyContinue) { throw 'Game already running' }
+if (Get-Process ProteusGame -ErrorAction SilentlyContinue) { throw 'Game already running' }
 $root = Split-Path $PSScriptRoot -Parent
 $out = Join-Path $root ('build/stream-residency/' + $Label + '-' + $Mode.ToLowerInvariant() + '-' + (Get-Date -Format yyyyMMdd-HHmmss))
 $profile = Join-Path $out 'user'; $mission = Join-Path $out 'latency.eden'
@@ -143,7 +143,7 @@ class OutroWin {randomSeed=2;class Intel {};};
 class OutroLoose {randomSeed=3;class Intel {};};
 '@ | Set-Content (Join-Path $mission 'mission.sqm')
 $world = (Resolve-Path -LiteralPath (Join-Path $root '../../../packages/dayz-compat/world/chernarusplus/chernarusplus.wrp')).Path
-$log = Join-Path $out 'engine.log'; $exe = Join-Path $GameDir 'OpenPoseidon.exe'; $dll = Join-Path $GameDir 'wgpu_renderer.dll'
+$log = Join-Path $out 'engine.log'; $exe = Join-Path $GameDir 'ProteusGame.exe'; $dll = Join-Path $GameDir 'wgpu_renderer.dll'
 $baseX = 5704.58; $baseZ = 2523.37; $baseY = 73.74; $azimuth = 260.9; $elevation = -3.8
 # Exact eight convergence traversal poses, followed by three stationary return holds.
 $route = @(5804.58, 5904.58, 6004.58, 6104.58, 6004.58, 5904.58, 5804.58, 5704.58, 5704.58, 5704.58, 5704.58)

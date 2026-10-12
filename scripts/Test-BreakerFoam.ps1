@@ -28,7 +28,7 @@ if ($Label) {$name += '-'+$Label}
 $capture=Join-Path $output "$name.png"
 $log=Join-Path $output "$name.log"
 $mission=Join-Path $root 'dev-missions/foam-ocean.noe'
-$p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList @('--render','wgpu','--window','--no-dev','--width','1280','--height','720','--test-mission',('"'+$mission+'"'),'--test-world-freefly','13000','3000','8','90','-30','--auto-screenshot',('"25s:'+$capture+'"'),'--log-file',('"'+$log+'"'))
+$p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList @('--render','wgpu','--window','--no-dev','--width','1280','--height','720','--test-mission',('"'+$mission+'"'),'--test-world-freefly','13000','3000','8','90','-30','--auto-screenshot',('"25s:'+$capture+'"'),'--log-file',('"'+$log+'"'))
 $null=$p.Handle
 try {
     if (!$p.WaitForExit(180000) -or $p.ExitCode -ne 0) {throw 'Breaker foam capture failed'}

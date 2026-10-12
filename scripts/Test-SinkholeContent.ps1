@@ -12,14 +12,14 @@ function Require([bool]$ok,[string]$message){if(!$ok){throw $message}}
 function Pair {
     $stamp=Get-Content -LiteralPath (Join-Path $GameDir 'DEPLOYED-FROM.txt') -Raw
     Require ($stamp -match ('\b'+[regex]::Escape($ExpectedCommit)+'\b')) 'Installed commit differs.'
-    return @{stamp=$stamp;files=@(@('OpenPoseidon.exe','wgpu_renderer.dll')|ForEach-Object{
+    return @{stamp=$stamp;files=@(@('ProteusGame.exe','wgpu_renderer.dll')|ForEach-Object{
         $f=Get-Item -LiteralPath (Join-Path $GameDir $_)
         @{name=$_;sha256=(Get-FileHash -LiteralPath $f.FullName).Hash;bytes=$f.Length;writtenUtc=$f.LastWriteTimeUtc.ToString('o')}
     })}
 }
 $before=Pair
 Require ([bool]$env:LOCK_OWNER) 'Invoke through scripts/with-game-lock.sh.'
-Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Existing owner game is preserved.'
+Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Existing owner game is preserved.'
 if(!$ModDir){$ModDir=Join-Path $root 'build/sinkhole-test/@OP_SinkholeTest'}
 $ModDir=(Resolve-Path -LiteralPath $ModDir).ProviderPath
 $packs=@('ugcave.pbo','ugtest.pbo')|ForEach-Object{
@@ -69,7 +69,7 @@ try {
         @{name='cave';mission='ugcave-test.Eden';variable='cave';class='UgCave';shape='ugcave/ugcave.p3d';x=4870.;z=11305.;depth=5.;entranceZ=11324.;entranceY=-0.3},
         @{name='basement';mission='ugbasement-test.Eden';variable='ub';class='UgBasement';shape='ugtest/ugbasement.p3d';x=9698.;z=1622.;depth=3.;entranceZ=1630.;entranceY=-0.3}
     )) {
-        Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Another game appeared; preserving it.'
+        Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Another game appeared; preserving it.'
         Require ((Pair|ConvertTo-Json -Depth 5 -Compress) -ceq ($before|ConvertTo-Json -Depth 5 -Compress)) 'Installed pair changed.'
         $armOut=Join-Path $out $fixture.name;$profile=Join-Path $armOut 'user';New-Item -ItemType Directory -Force -Path $profile|Out-Null
         $env:POSEIDON_USER_DIR=$profile
@@ -79,7 +79,7 @@ try {
         $mission=Join-Path $root ('dev-missions/'+$fixture.mission)
         $args=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','1500','--harness',"$port",'--mod',('"'+$ModDir+'"'),'--test-mission',('"'+$mission+'"'),'--test-world-hour','16','--log-file',('"'+$log+'"'))
         $arm.arguments=$args
-        $p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -ArgumentList $args -PassThru
+        $p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -ArgumentList $args -PassThru
         $null=$p.Handle;$arm.pid=$p.Id;$until=[DateTime]::UtcNow.AddSeconds(120)
         do{
             Require (!$p.HasExited) 'Startup exited.';$client=[Net.Sockets.TcpClient]::new()

@@ -57,7 +57,7 @@ if ($Stratis) {
     $world=(Resolve-Path -LiteralPath (Join-Path $root '../../../packages/a3-compat/world/stratis/stratis.wrp')).Path
     $worldArgs=@('--mod','@a3stratis','--test-world',('"'+$world+'"'))
 }
-$p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList (@('--render','wgpu','--window','--no-dev','--width','1280','--height','720','--test-mission',('"'+$mission+'"'),'--auto-screenshot',('"25s:'+$capture+'"'),'--log-file',('"'+$log+'"'))+$worldArgs)
+$p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList (@('--render','wgpu','--window','--no-dev','--width','1280','--height','720','--test-mission',('"'+$mission+'"'),'--auto-screenshot',('"25s:'+$capture+'"'),'--log-file',('"'+$log+'"'))+$worldArgs)
 $null=$p.Handle
 try {
     if (!$p.WaitForExit(180000) -or $p.ExitCode -ne 0) {throw 'Impact test failed'}

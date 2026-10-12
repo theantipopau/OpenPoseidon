@@ -20,7 +20,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 if (!$env:LOCK_OWNER) { throw 'Run through scripts/with-game-lock.sh.' }
-if (Get-Process OpenPoseidon -ErrorAction SilentlyContinue) { throw 'Game already running; refusing shared ownership.' }
+if (Get-Process ProteusGame -ErrorAction SilentlyContinue) { throw 'Game already running; refusing shared ownership.' }
 $culture = [Globalization.CultureInfo]::InvariantCulture
 function Camera-Numbers([string]$value) {
     $tokens = @($value.Trim() -split '\s+')
@@ -50,7 +50,7 @@ function Installed-State {
     # Provenance is the first installed file read, before hashes or launch.
     $stamp = [IO.File]::ReadAllText((Join-Path $GameDir 'DEPLOYED-FROM.txt')).Trim()
     if (!$stamp) { throw 'Installed deployment provenance is empty.' }
-    $files = @('OpenPoseidon.exe', 'wgpu_renderer.dll') | ForEach-Object {
+    $files = @('ProteusGame.exe', 'wgpu_renderer.dll') | ForEach-Object {
         $file = Get-Item -LiteralPath (Join-Path $GameDir $_)
         @{ name = $_; path = $file.FullName; sha256 = (Get-FileHash -LiteralPath $file.FullName).Hash;
            bytes = $file.Length; writtenUtc = $file.LastWriteTimeUtc.ToString('o') }
@@ -197,7 +197,7 @@ try {
     $armNames = @('dry','wet','master-off')
     if ($roofEnabled) { $armNames += 'raw-sky' }
     foreach ($arm in $armNames) {
-        if (Get-Process OpenPoseidon -ErrorAction SilentlyContinue) { throw 'Unexpected game process between arms.' }
+        if (Get-Process ProteusGame -ErrorAction SilentlyContinue) { throw 'Unexpected game process between arms.' }
         $armDir = Join-Path $output $arm; $armProfile = Join-Path $armDir 'user'
         New-Item -ItemType Directory -Force -Path $armProfile | Out-Null
         $log = Join-Path $armDir 'engine.log'
@@ -212,7 +212,7 @@ try {
             '--harness',"$port",'--test-mission',('"'+$mission+'"'))
         if (!$LegacyCwa) { $arguments += @('--test-world',('"'+$NativeAddons+'"')) }
         $arguments += @('--test-world-hour','16','--test-world-freefly') + $numbers + @('--log-file',('"'+$log+'"'))
-        $p = Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $arguments
+        $p = Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $arguments
         $null = $p.Handle
         $until = [DateTime]::UtcNow.AddSeconds(120)
         do {

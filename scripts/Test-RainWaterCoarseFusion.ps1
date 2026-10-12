@@ -7,7 +7,7 @@ function Hash-Text([string]$v){[Convert]::ToHexString([Security.Cryptography.SHA
 $baselinePath=(Resolve-Path -LiteralPath $BaselineReceipt).Path
 $baseline=Get-Content -LiteralPath $baselinePath -Raw|ConvertFrom-Json
 Require ($baseline.status-in@('actual-state-baseline-bitwise-pass','actual-state-baseline-bitwise-and-abba-pass')) 'Faithful baseline proof required first.'
-if($Measure){Require (@(Get-Process -Name OpenPoseidon -ErrorAction SilentlyContinue).Count-eq0) 'Hold prototype timing while a game is running.'}
+if($Measure){Require (@(Get-Process -Name ProteusGame -ErrorAction SilentlyContinue).Count-eq0) 'Hold prototype timing while a game is running.'}
 Require ((Get-FileHash -LiteralPath (Join-Path $root 'tests/unit/engine/weather/rain_water_coarse_replay.cpp')).Hash-ceq$baseline.replayCppSha256) 'Audited loader/restore bridge differs from baseline proof.'
 $baseDir=Split-Path -Parent $baselinePath
 $output=Join-Path $root ('build/rain-water-coarse-fusion/run-'+[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmssfff'))
@@ -133,11 +133,11 @@ try{
   $exe=Join-Path $bench 'fusion-benchmark.exe'
   & $Compiler '-std=c++20' '-O2' '-Wall' '-Wextra' '-Werror' ('-I'+$bench) ('-I'+$weather) (Join-Path $root 'tests/unit/engine/weather/rain_water_coarse_replay.cpp') '-o' $exe
   Require ($LASTEXITCODE-eq0) 'Counter-free prototype benchmark compilation failed.'
-  Require (@(Get-Process -Name OpenPoseidon -ErrorAction SilentlyContinue).Count-eq0) 'A game appeared before prototype timing.'
+  Require (@(Get-Process -Name ProteusGame -ErrorAction SilentlyContinue).Count-eq0) 'A game appeared before prototype timing.'
   foreach($arm in $baseline.arms){
    $lines=@(& $exe $arm.path $arm.forcing.rainBits $arm.forcing.solarBits $arm.forcing.windBits 'bench' $Rounds)
    Require ($LASTEXITCODE-eq0-and$lines.Count-eq4*$Rounds) 'Prototype bounded ABBA execution failed.'
-   Require (@(Get-Process -Name OpenPoseidon -ErrorAction SilentlyContinue).Count-eq0) 'A game appeared during prototype timing.'
+   Require (@(Get-Process -Name ProteusGame -ErrorAction SilentlyContinue).Count-eq0) 'A game appeared during prototype timing.'
    $rows=@($lines|ForEach-Object{$_|ConvertFrom-Json})
    Require (@($rows.outputFnv64|Select-Object -Unique).Count-eq1) 'Timed baseline/prototype observable fingerprints differ.'
    $receipt.timings+=@{arm=$arm.name;rawBlocks=$rows}

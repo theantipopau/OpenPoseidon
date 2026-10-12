@@ -7,12 +7,12 @@ Set-StrictMode -Version Latest
 
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $mission = Join-Path $repo 'dev-missions/tw-showcase.eden'
-$exe = Join-Path $GameDir 'OpenPoseidon.exe'
+$exe = Join-Path $GameDir 'ProteusGame.exe'
 $stamp = Join-Path $GameDir 'DEPLOYED-FROM.txt'
 foreach ($file in @($exe, (Join-Path $mission 'mission.sqm'), $stamp)) {
     if (!(Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing showcase input: $file" }
 }
-if (Get-Process OpenPoseidon, ColdWarAssault -ErrorAction SilentlyContinue) {
+if (Get-Process ProteusGame, ColdWarAssault -ErrorAction SilentlyContinue) {
     throw 'A game session is already running; leave it to its owner.'
 }
 

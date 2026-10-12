@@ -16,14 +16,14 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 if (!$env:LOCK_OWNER) { throw 'Run through scripts/with-game-lock.sh.' }
-if (Get-Process OpenPoseidon -ErrorAction SilentlyContinue) { throw 'Game already running; refusing shared ownership.' }
+if (Get-Process ProteusGame -ErrorAction SilentlyContinue) { throw 'Game already running; refusing shared ownership.' }
 $culture = [Globalization.CultureInfo]::InvariantCulture
 $root = Split-Path -Parent $PSScriptRoot
 function Installed-State {
     # Provenance is the first installed file read, before hashing or launch.
     $stamp = [IO.File]::ReadAllText((Join-Path $GameDir 'DEPLOYED-FROM.txt')).Trim()
     if (!$stamp) { throw 'Installed deployment provenance is empty.' }
-    $files = @('OpenPoseidon.exe','wgpu_renderer.dll') | ForEach-Object {
+    $files = @('ProteusGame.exe','wgpu_renderer.dll') | ForEach-Object {
         $file = Get-Item -LiteralPath (Join-Path $GameDir $_)
         @{ name = $_; path = $file.FullName; sha256 = (Get-FileHash -LiteralPath $file.FullName).Hash;
            bytes = $file.Length; writtenUtc = $file.LastWriteTimeUtc.ToString('o') }
@@ -203,7 +203,7 @@ try {
     $env:WGR_SNOW_POWDER = if ($PowderOff) { '0' } else { '1' }
     $env:WGR_SNOW_SURFACE_FIXTURE = '1'
     foreach ($arm in $selectedArms) {
-        Require (!(Get-Process OpenPoseidon -ErrorAction SilentlyContinue)) 'Unexpected game process between arms.'
+        Require (!(Get-Process ProteusGame -ErrorAction SilentlyContinue)) 'Unexpected game process between arms.'
         $armDir = Join-Path $output $arm; $profile = Join-Path $armDir 'user'
         New-Item -ItemType Directory -Force -Path $profile | Out-Null
         $log = Join-Path $armDir 'engine.log'; $env:POSEIDON_USER_DIR = $profile
@@ -216,7 +216,7 @@ try {
             '--test-world-freefly','9486','3006','240','0','-70','--log-file',('"'+$log+'"'))
         if (!$LegacyCwa) { $arguments += @('--test-world',('"'+$NativeAddons+'"')) }
         $stdout = Join-Path $armDir 'stdout.txt'; $stderr = Join-Path $armDir 'stderr.txt'
-        $p = Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $arguments -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+        $p = Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $arguments -RedirectStandardOutput $stdout -RedirectStandardError $stderr
         $result.arms[$arm] = @{ status = 'starting'; pid = $p.Id; log = $log; arguments = $arguments }
         $null = $p.Handle; $until = [DateTime]::UtcNow.AddSeconds(120)
         do {

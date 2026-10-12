@@ -123,7 +123,7 @@ if($SelfTest) {
     Write-Host 'Fine runtime helper gates PASS (stale key, rejection, incomplete tiles, source gap, triangle mass, budget, SQF path).';return
 }
 Require ([bool]$env:LOCK_OWNER) 'Run through scripts/with-game-lock.sh.'
-Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Preserve the running game.'
+Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Preserve the running game.'
 Require ([Math]::Abs($X/6.25-[Math]::Round($X/6.25)) -lt .000001 -and [Math]::Abs($Z/6.25-[Math]::Round($Z/6.25)) -lt .000001 -and
          [Math]::Abs($X/25-[Math]::Floor($X/25)-.5) -lt .000001 -and [Math]::Abs($Z/25-[Math]::Floor($Z/25)-.5) -lt .000001) 'Crater centre must be an actual 6.25m native vertex halfway between old 25m nodes.'
 $root=Split-Path -Parent $PSScriptRoot
@@ -132,7 +132,7 @@ New-Item -ItemType Directory -Force $output|Out-Null
 . (Join-Path $PSScriptRoot 'TerrainPuddleStockRoof.ps1')
 function Pair {
     $stamp=[IO.File]::ReadAllText((Join-Path $GameDir 'DEPLOYED-FROM.txt')).Trim();Require ([bool]$stamp) 'Empty deployed provenance.'
-    return @{stamp=$stamp;exe=(Get-FileHash -LiteralPath (Join-Path $GameDir 'OpenPoseidon.exe')).Hash;dll=(Get-FileHash -LiteralPath (Join-Path $GameDir 'wgpu_renderer.dll')).Hash}
+    return @{stamp=$stamp;exe=(Get-FileHash -LiteralPath (Join-Path $GameDir 'ProteusGame.exe')).Hash;dll=(Get-FileHash -LiteralPath (Join-Path $GameDir 'wgpu_renderer.dll')).Hash}
 }
 $before=Pair
 $result=[ordered]@{status='running';before=$before;arms=@{};limitations='Default-off CPU feature and opt-in paired fine renderer. Actual geometry/volume/receipts and captures only; appearance, roof mask and all-map flow require separate visual/GPU acceptance. CPU rain forcing applies to whole owners, including beneath roofs.'}
@@ -239,7 +239,7 @@ try {
         $log=Join-Path $armDir 'engine.log';$rpc=Join-Path $armDir 'harness.jsonl'
         $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
         $args=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','2000','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','14','--log-file',('"'+$log+'"'))
-        $p=Start-Process (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $args -RedirectStandardOutput (Join-Path $armDir 'stdout.txt') -RedirectStandardError (Join-Path $armDir 'stderr.txt');$null=$p.Handle
+        $p=Start-Process (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $args -RedirectStandardOutput (Join-Path $armDir 'stdout.txt') -RedirectStandardError (Join-Path $armDir 'stderr.txt');$null=$p.Handle
         $until=[DateTime]::UtcNow.AddSeconds(120)
         do {Health;$client=[Net.Sockets.TcpClient]::new();try {$client.Connect('127.0.0.1',$port)} catch {$client.Dispose();$client=$null};if(!$client) {Require ([DateTime]::UtcNow -lt $until) 'Harness unavailable.';Start-Sleep -Milliseconds 250}} while(!$client)
         $stream=$client.GetStream();$stream.ReadTimeout=30000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true

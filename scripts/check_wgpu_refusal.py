@@ -115,7 +115,7 @@ def require(condition: bool, message: str) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--exe", required=True, type=Path, help="game client binary (PoseidonGame / OpenPoseidon.exe)")
+    parser.add_argument("--exe", required=True, type=Path, help="game client binary (PoseidonGame / ProteusGame.exe)")
     parser.add_argument("--data-dir", required=True, type=Path, help="game data dir passed as -C (Demo data is enough)")
     parser.add_argument("--out-dir", default=Path("wgpu-refusal-output"), type=Path)
     parser.add_argument(

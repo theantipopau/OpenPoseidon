@@ -21,7 +21,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 if (!$env:LOCK_OWNER) { throw 'Run through scripts/with-game-lock.sh.' }
-if (Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Game already running; refusing shared ownership.' }
+if (Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Game already running; refusing shared ownership.' }
 $culture = [Globalization.CultureInfo]::InvariantCulture
 function Camera-Numbers([string]$value) {
     $tokens = @($value.Trim() -split '\s+')
@@ -42,7 +42,7 @@ foreach ($path in @($mission,$NativeAddons)) {
 function Installed-State {
     $stamp = [IO.File]::ReadAllText((Join-Path $GameDir 'DEPLOYED-FROM.txt')).Trim()
     if (!$stamp) { throw 'Empty installed deployment provenance.' }
-    $files = @('OpenPoseidon.exe','wgpu_renderer.dll') | ForEach-Object {
+    $files = @('ProteusGame.exe','wgpu_renderer.dll') | ForEach-Object {
         $file = Get-Item -LiteralPath (Join-Path $GameDir $_)
         @{ name=$_; path=$file.FullName; sha256=(Get-FileHash -LiteralPath $file.FullName).Hash;
            bytes=$file.Length; writtenUtc=$file.LastWriteTimeUtc.ToString('o') }
@@ -145,7 +145,7 @@ function Close-Owned {
 try {
     foreach ($key in $settings.Keys) { [Environment]::SetEnvironmentVariable($key,$settings[$key],'Process') }
     foreach ($filter in @('0','1')) {
-        if (Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Unexpected game process between arms.' }
+        if (Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Unexpected game process between arms.' }
         $armDir=Join-Path $output ('filter'+$filter); $profile=Join-Path $armDir 'user'
         New-Item -ItemType Directory -Force -Path $profile | Out-Null
         & "$PSScriptRoot/Write-BenchmarkGraphics.ps1" -UserDir $profile -DlssMode 0 -MsaaSamples 4
@@ -159,7 +159,7 @@ try {
             '--test-world-hour','16','--test-world-freefly')+$close+@('--log-file',('"'+$log+'"'))
         # GUI bootstrap recognizes redirected stdout, then reopens BOTH CRT
         # streams. Redirecting stderr alone can lose Rust's filter-mode witness.
-        $p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $arguments -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+        $p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $arguments -RedirectStandardOutput $stdout -RedirectStandardError $stderr
         $null=$p.Handle
         $armResult=@{pid=$p.Id;filter=$filter;arguments=$arguments;log=$log;stdout=$stdout;stderr=$stderr;captures=@{};normalShutdown=$false}
         $result.arms[$filter]=$armResult

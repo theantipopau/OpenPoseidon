@@ -7,10 +7,10 @@ $game='D:/SteamLibrary/steamapps/common/ARMA Cold War Assault'
 function Require([bool]$ok,[string]$message){if(!$ok){throw $message}}
 function Pair{
  $stamp=Get-Content -LiteralPath (Join-Path $game 'DEPLOYED-FROM.txt') -Raw;Require ($stamp-match [regex]::Escape($ExpectedCommit)) 'Installed source differs.'
- return @{stamp=$stamp;files=@(@('OpenPoseidon.exe','wgpu_renderer.dll')|ForEach-Object{@{name=$_;sha256=(Get-FileHash -LiteralPath (Join-Path $game $_)).Hash}})}
+ return @{stamp=$stamp;files=@(@('ProteusGame.exe','wgpu_renderer.dll')|ForEach-Object{@{name=$_;sha256=(Get-FileHash -LiteralPath (Join-Path $game $_)).Hash}})}
 }
 Require ([bool]$env:LOCK_OWNER) 'Game lock required.'
-Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Preserving existing game.'
+Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Preserving existing game.'
 $before=Pair;$taskOut=Join-Path $taskRoot ('build/terrain-background/'+$Label+'-'+(Get-Date -Format yyyyMMdd-HHmmss));New-Item -ItemType Directory -Force $taskOut|Out-Null
 $keys=@('POSEIDON_USER_DIR','POSEIDON_AUTOMATIC_RAGDOLL','WGR_TERRAIN_BACKGROUND','WGR_TERRAIN_EXTENT','WGR_WATER_EXTENT','WGR_GRASS','WGR_TEMPORAL','WGR_AUTO_EXPOSURE','WGR_EXPOSURE','WGR_TONEMAP','WGR_LAYERED_FOG','WGR_FOG_LAYER0','WGR_FOG_LAYER1','WGR_FOG_TERRAIN','WGR_FOG_PATCH','WGR_CLOUD_COVERAGE','POSEIDON_REFORGER_WORLD','POSEIDON_REFORGER_OBJECTS','POSEIDON_REFORGER_STREAM','POSEIDON_TEST_RAIN','POSEIDON_SNOWLINE','POSEIDON_SNOW_TEST_DEPTH','WGR_TERRAIN_PUDDLE_FIXTURE','WGR_TERRAIN_PUDDLE_WETNESS')
 $saved=@{};foreach($key in $keys){$saved[$key]=[Environment]::GetEnvironmentVariable($key,'Process')}
@@ -26,7 +26,7 @@ try{
  $arms=@(@{name='legacy';background='0';extent='3'},@{name='background';background='1';extent='3'});if($MapOnly){$arms+=@{name='map-only';background='1';extent='1'}}
  if($OnlyMapExtent){$arms=@(@{name='map-only';background='1';extent='1'})}
  foreach($arm in $arms){
-  Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Foreign game appeared.'
+  Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Foreign game appeared.'
   $armOut=Join-Path $taskOut $arm.name;$armProfile=Join-Path $armOut 'user';New-Item -ItemType Directory -Force $armProfile|Out-Null
   [IO.File]::WriteAllText((Join-Path $armProfile 'graphics.cfg'),"qualityPreset=3;`nmsaaSamples=4;`ndlssMode=0;`nvsync=0;`nfpsCap=60;`n")
   foreach($key in $keys){Remove-Item -LiteralPath ('Env:'+$key) -ErrorAction SilentlyContinue}
@@ -34,7 +34,7 @@ try{
   foreach($key in $settings.Keys){[Environment]::SetEnvironmentVariable($key,$settings[$key],'Process')}
   $log=Join-Path $armOut 'engine.log';$listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
   $mission=Join-Path $taskRoot 'tests/perf/missions/perf_field.eden';$argv=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','3500','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','12','--log-file',('"'+$log+'"'))
-  $p=Start-Process -FilePath (Join-Path $game 'OpenPoseidon.exe') -WorkingDirectory $game -WindowStyle Hidden -ArgumentList $argv -PassThru
+  $p=Start-Process -FilePath (Join-Path $game 'ProteusGame.exe') -WorkingDirectory $game -WindowStyle Hidden -ArgumentList $argv -PassThru
   $until=[DateTime]::UtcNow.AddSeconds(120)
   do{Require (!$p.HasExited) 'Startup exited.';$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port)}catch{$client.Dispose();$client=$null};if(!$client){Require ([DateTime]::UtcNow-lt $until) 'Startup deadline.';Start-Sleep -Milliseconds 250}}while(!$client)
   $stream=$client.GetStream();$stream.ReadTimeout=30000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true

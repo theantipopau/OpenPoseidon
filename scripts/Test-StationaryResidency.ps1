@@ -10,7 +10,7 @@ if (!$env:LOCK_OWNER) {
  try {& 'C:\Program Files\Git\bin\bash.exe' @argv; if ($LASTEXITCODE) {throw "Residency test exited $LASTEXITCODE"}} finally {Remove-Item Env:LOCK_OWNER}
  return
 }
-if (Get-Process OpenPoseidon -ErrorAction SilentlyContinue) {throw 'Game already running'}
+if (Get-Process ProteusGame -ErrorAction SilentlyContinue) {throw 'Game already running'}
 if ($SimulationMetadata -and ($Corpus -ne 'DayZ' -or !$Normal -or $Adaptive -or $Controlled -or $DuringFill -or $Identity -or $RequiredIdentity -or $SaveRoundTrip -or $FreshReload)) {throw 'SimulationMetadata requires the normal DayZ workload without other correctness or adaptive modes'}
 if ($FreshReload) {$SaveRoundTrip=$true}
 if ($NativeBc3Only) {$NativeDdsPrepared=$true}
@@ -68,7 +68,7 @@ Remove-Item Env:WGR_WATER_CURLING_BREAKER -ErrorAction SilentlyContinue
 $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
 $mission=Join-Path $root 'tests/perf/missions/perf_field.eden';$log=Join-Path $out 'engine.log'
 $testLog=$log
-@{scriptSha256=(Get-FileHash $PSCommandPath).Hash;head=(& git -C $root rev-parse HEAD);installed=(Get-Content (Join-Path $GameDir 'DEPLOYED-FROM.txt'));corpus=$Corpus;geoGrowth=$GeoGrowth;pressureGrowth=[bool]$PressureGrowth;packedModels=[bool]$PackedModels;packedTextures=[bool]$PackedTextures;nativeDdsPrepared=[bool]$NativeDdsPrepared;nativeBc3Only=[bool]$NativeBc3Only;coverageOnly=[bool]$CoverageOnly;saveRoundTrip=[bool]$SaveRoundTrip;freshReload=[bool]$FreshReload;lodGovernorRange=($env:WGR_LOD_GOVERNOR_RANGE);incrementalSkyUploads=(!$FullSkyUploads);adaptive=[bool]$Adaptive;controlled=[bool]$Controlled;readyMb=$ReadyMb;hashes=@(Get-FileHash (Join-Path $GameDir 'OpenPoseidon.exe'),(Join-Path $GameDir 'wgpu_renderer.dll'))} | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $out 'provenance.json')
+@{scriptSha256=(Get-FileHash $PSCommandPath).Hash;head=(& git -C $root rev-parse HEAD);installed=(Get-Content (Join-Path $GameDir 'DEPLOYED-FROM.txt'));corpus=$Corpus;geoGrowth=$GeoGrowth;pressureGrowth=[bool]$PressureGrowth;packedModels=[bool]$PackedModels;packedTextures=[bool]$PackedTextures;nativeDdsPrepared=[bool]$NativeDdsPrepared;nativeBc3Only=[bool]$NativeBc3Only;coverageOnly=[bool]$CoverageOnly;saveRoundTrip=[bool]$SaveRoundTrip;freshReload=[bool]$FreshReload;lodGovernorRange=($env:WGR_LOD_GOVERNOR_RANGE);incrementalSkyUploads=(!$FullSkyUploads);adaptive=[bool]$Adaptive;controlled=[bool]$Controlled;readyMb=$ReadyMb;hashes=@(Get-FileHash (Join-Path $GameDir 'ProteusGame.exe'),(Join-Path $GameDir 'wgpu_renderer.dll'))} | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $out 'provenance.json')
 $p=$null;$client=$null;$gpuSampler=$null
 try {
  if ($SampleDriverMemory) {
@@ -76,7 +76,7 @@ try {
   $gpuSampler=Start-Process -FilePath $smi.Source -ArgumentList @('--query-gpu=timestamp,index,memory.total,memory.used,utilization.gpu,utilization.memory,clocks.gr,clocks.mem,power.draw,temperature.gpu,pstate','--format=csv,noheader,nounits','--loop-ms=1000') -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $out 'whole-gpu-memory.csv') -RedirectStandardError (Join-Path $out 'whole-gpu-memory-errors.txt')
   'Whole GPU including other applications; 1 second interval; compare only equally instrumented arms. Columns: timestamp,index,totalMiB,usedMiB,gpuPercent,memoryPercent,graphicsMHz,memoryMHz,powerW,temperatureC,pstate.' | Set-Content (Join-Path $out 'whole-gpu-memory-scope.txt')
  }
- $p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList (@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','2000','--harness',"$port",'--capture-metrics',('"'+(Join-Path $out 'capture.json')+'"'),'--test-world-freefly',[string]$baseX,[string]$baseZ,[string]$baseY,[string]$azimuth,[string]$elevation,'--test-mission',('"'+$mission+'"'),'--log-file',('"'+$log+'"'))+$worldArgs)
+ $p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList (@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','2000','--harness',"$port",'--capture-metrics',('"'+(Join-Path $out 'capture.json')+'"'),'--test-world-freefly',[string]$baseX,[string]$baseZ,[string]$baseY,[string]$azimuth,[string]$elevation,'--test-mission',('"'+$mission+'"'),'--log-file',('"'+$log+'"'))+$worldArgs)
  $null=$p.Handle;$client=[Net.Sockets.TcpClient]::new();$deadline=[DateTime]::UtcNow.AddSeconds(90)
  while (!$client.Connected) {try {$client.Connect('127.0.0.1',$port)} catch {if ($p.HasExited -or [DateTime]::UtcNow -gt $deadline) {throw};Start-Sleep -Milliseconds 250}}
  $stream=$client.GetStream();$stream.ReadTimeout=30000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true
@@ -220,7 +220,7 @@ try {
     $null=Send @{cmd='exit'}
     if (!$p.WaitForExit(15000) -or $p.ExitCode) {throw 'Save process failed to exit cleanly'}
     $client.Dispose()
-    $p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $reloadArgs
+    $p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $reloadArgs
     $null=$p.Handle; $client=[Net.Sockets.TcpClient]::new(); $deadline=[DateTime]::UtcNow.AddSeconds(90)
     while (!$client.Connected) {try {$client.Connect('127.0.0.1',$port)} catch {if ($p.HasExited -or [DateTime]::UtcNow -gt $deadline) {throw}; Start-Sleep -Milliseconds 250}}
     $stream=$client.GetStream(); $stream.ReadTimeout=30000

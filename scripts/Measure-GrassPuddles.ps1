@@ -7,11 +7,11 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 if (!$env:LOCK_OWNER) { throw 'Use scripts/with-game-lock.sh' }
-if (Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Game already running' }
+if (Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue) { throw 'Game already running' }
 $root = Split-Path $PSScriptRoot -Parent
 $game = 'D:\SteamLibrary\steamapps\common\ARMA Cold War Assault'
 $stamp = Get-Content (Join-Path $game 'DEPLOYED-FROM.txt') -Raw
-$hashes = @(Get-FileHash -LiteralPath (Join-Path $game 'OpenPoseidon.exe'),(Join-Path $game 'wgpu_renderer.dll'))
+$hashes = @(Get-FileHash -LiteralPath (Join-Path $game 'ProteusGame.exe'),(Join-Path $game 'wgpu_renderer.dll'))
 $out = Join-Path $root ("build/grass-puddle-perf/$Scene-" + (Get-Date -Format yyyyMMdd-HHmmss))
 New-Item -ItemType Directory -Force $out | Out-Null
 @{installed=$stamp;hashes=$hashes;head=(& git -C $root rev-parse HEAD);scene=$Scene;pairs=$Pairs;
@@ -60,7 +60,7 @@ for ($pair=1; $pair -le $Pairs; $pair++) {
             cpu=$m.cpu_frame_phases_ms;build=$m.build;metrics="$stem.json"}
     }
 }
-$after = @(Get-FileHash -LiteralPath (Join-Path $game 'OpenPoseidon.exe'),(Join-Path $game 'wgpu_renderer.dll'))
+$after = @(Get-FileHash -LiteralPath (Join-Path $game 'ProteusGame.exe'),(Join-Path $game 'wgpu_renderer.dll'))
 if ((Get-Content (Join-Path $game 'DEPLOYED-FROM.txt') -Raw) -ne $stamp) { throw 'Installed stamp changed' }
 for ($i=0; $i -lt 2; $i++) { if ($hashes[$i].Hash -ne $after[$i].Hash) { throw 'Installed binary changed' } }
 @{scene=$Scene;installed=$stamp;runs=$rows;scope='Compare distributions and medians across alternating arms; final GPU snapshots are not a whole-run GPU average.'} |

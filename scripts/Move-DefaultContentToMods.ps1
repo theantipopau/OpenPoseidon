@@ -1,9 +1,9 @@
 param([string]$GameDir='D:\SteamLibrary\steamapps\common\ARMA Cold War Assault')
 $ErrorActionPreference='Stop'
 if (!$env:LOCK_OWNER) {throw 'Use scripts/with-game-lock.sh'}
-if (Get-Process OpenPoseidon -ErrorAction SilentlyContinue) {throw 'Close the game before migrating content'}
+if (Get-Process ProteusGame -ErrorAction SilentlyContinue) {throw 'Close the game before migrating content'}
 $base=(Resolve-Path -LiteralPath $GameDir).Path.TrimEnd('\','/')
-if (!(Test-Path -LiteralPath (Join-Path $base 'OpenPoseidon.exe'))) {throw 'Not an OpenPoseidon install'}
+if (!(Test-Path -LiteralPath (Join-Path $base 'ProteusGame.exe')) -and !(Test-Path -LiteralPath (Join-Path $base 'OpenPoseidon.exe'))) {throw 'Not a ProteusGame install'}
 $plans=[Collections.Generic.List[object]]::new()
 $directories=[Collections.Generic.List[string]]::new()
 function CheckPath([string]$path) {

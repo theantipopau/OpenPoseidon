@@ -70,7 +70,7 @@ if (Test-Path -LiteralPath $captureDir) { throw "Capture directory already exist
 New-Item -ItemType Directory -Path $user -Force | Out-Null
 & "$PSScriptRoot/Write-BenchmarkGraphics.ps1" -UserDir $user -DlssMode 0 -MsaaSamples 4
 
-$pairPaths = @('OpenPoseidon.exe','wgpu_renderer.dll','DEPLOYED-FROM.txt') | ForEach-Object { Join-Path $GameDir $_ }
+$pairPaths = @('ProteusGame.exe','wgpu_renderer.dll','DEPLOYED-FROM.txt') | ForEach-Object { Join-Path $GameDir $_ }
 $stamp = Get-Content -LiteralPath $pairPaths[2] -Raw
 if ([string]::IsNullOrWhiteSpace($stamp)) { throw 'Installed pair has an empty deployment stamp' }
 $beforeHashes = @(Get-FileHash -LiteralPath $pairPaths -Algorithm SHA256)

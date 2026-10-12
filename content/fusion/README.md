@@ -14,7 +14,7 @@ PowerShell launch after installation:
 
 ```powershell
 Set-Location 'D:\SteamLibrary\steamapps\common\ARMA Cold War Assault'
-.\OpenPoseidon.exe --render wgpu --window --test-mission 'Missions\FusionTour.FusionOFP'
+.\ProteusGame.exe --render wgpu --window --test-mission 'Missions\FusionTour.FusionOFP'
 ```
 
 Also available in Single Missions as **OFP Fusion - Five Islands**, and as a

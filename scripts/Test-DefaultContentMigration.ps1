@@ -6,7 +6,7 @@ function FixtureFile($relative,$text) {
     New-Item -ItemType Directory -Force (Split-Path $path -Parent) | Out-Null
     [IO.File]::WriteAllText($path,$text)
 }
-FixtureFile 'valid/OpenPoseidon.exe' 'fixture, not executable'
+FixtureFile 'valid/ProteusGame.exe' 'fixture, not executable'
 FixtureFile 'valid/@OP_VehicleActions/mod.json' '{"defaultContentApi":"1","version":"1.0.0"}'
 FixtureFile 'valid/@OP_VehicleActions/AddOns/op_jeep_actions.pbo' 'fixture archive'
 FixtureFile 'valid/AddOns/fusion_ofp.pbo' 'fusion fixture'
@@ -22,14 +22,14 @@ if ((Get-Content -LiteralPath "$root/valid/AddOns/stock.pbo") -ne 'untouched sto
 if ((Get-Content -LiteralPath "$root/valid/Mods/@OP_Showcase/Missions/OpenPoseidon/ShowcaseLab.Intro/mission.sqm") -ne 'existing showcase') {throw 'Installed mission lost'}
 if ((Get-Content -LiteralPath "$root/valid/Mods/@OP_VehicleActions/Missions/OpenPoseidon/jeep-manual.Intro/mission.sqm") -ne 'old jeep') {throw 'Legacy pack mission lost'}
 & "$PSScriptRoot/Move-DefaultContentToMods.ps1" -GameDir "$root/valid"
-FixtureFile 'conflict/OpenPoseidon.exe' 'fixture'
+FixtureFile 'conflict/ProteusGame.exe' 'fixture'
 FixtureFile 'conflict/AddOns/fusion_ofp.pbo' 'original'
 FixtureFile 'conflict/Mods/@OP_Fusion/AddOns/fusion_ofp.pbo' 'different'
 $refused=$false
 try {& "$PSScriptRoot/Move-DefaultContentToMods.ps1" -GameDir "$root/conflict"} catch {$refused=$true}
 if (!$refused -or (Get-Content -LiteralPath "$root/conflict/AddOns/fusion_ofp.pbo") -ne 'original') {throw 'Conflict not preserved'}
-FixtureFile 'linked/OpenPoseidon.exe' 'fixture'
-FixtureFile 'mission-conflict/OpenPoseidon.exe' 'fixture'
+FixtureFile 'linked/ProteusGame.exe' 'fixture'
+FixtureFile 'mission-conflict/ProteusGame.exe' 'fixture'
 FixtureFile 'mission-conflict/Missions/FusionTour.FusionOFP/mission.sqm' 'original'
 FixtureFile 'mission-conflict/Mods/@OP_Fusion/Missions/FusionTour.FusionOFP/mission.sqm' 'modified'
 $refused=$false

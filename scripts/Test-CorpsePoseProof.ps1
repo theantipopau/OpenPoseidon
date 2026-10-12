@@ -16,14 +16,14 @@ if ($ArticulationSmoke -and $FinalPoseProbe) { throw 'Articulation smoke and rea
 if ($AnatomicalHinges -and !$ArticulationSmoke) { throw 'Anatomical hinges require the complete articulation smoke campaign.' }
 if ($FrozenRetirementSmoke -and !$ArticulationSmoke) { throw 'Frozen retirement requires the complete articulation smoke campaign.' }
 if (!$env:LOCK_OWNER) { throw 'Run through scripts/with-game-lock.sh.' }
-if (Get-Process OpenPoseidon -ErrorAction SilentlyContinue) { throw 'Game already running; refusing shared ownership.' }
+if (Get-Process ProteusGame -ErrorAction SilentlyContinue) { throw 'Game already running; refusing shared ownership.' }
 $culture = [Globalization.CultureInfo]::InvariantCulture
 $root = Split-Path -Parent $PSScriptRoot
 function Installed-State {
     # First installed file read: preserve the stamped executable/DLL provenance.
     $stamp = [IO.File]::ReadAllText((Join-Path $GameDir 'DEPLOYED-FROM.txt')).Trim()
     if (!$stamp) { throw 'Installed deployment provenance is empty.' }
-    $files = @('OpenPoseidon.exe','wgpu_renderer.dll') | ForEach-Object {
+    $files = @('ProteusGame.exe','wgpu_renderer.dll') | ForEach-Object {
         $file = Get-Item -LiteralPath (Join-Path $GameDir $_)
         @{ name = $_; path = $file.FullName; sha256 = (Get-FileHash -LiteralPath $file.FullName).Hash;
            bytes = $file.Length; writtenUtc = $file.LastWriteTimeUtc.ToString('o') }
@@ -345,7 +345,7 @@ try {
         '--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world',('"'+$NativeAddons+'"'),
         '--test-world-hour','16','--test-world-freefly','6532','6466','100','0','-30','--log-file',('"'+$log+'"'))
     $result.launchArguments = $arguments
-    $p = Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $arguments
+    $p = Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $arguments
     $null = $p.Handle
     $until = [DateTime]::UtcNow.AddSeconds(120)
     do {

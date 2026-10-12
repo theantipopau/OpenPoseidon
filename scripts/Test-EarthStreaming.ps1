@@ -7,7 +7,7 @@ $ErrorActionPreference='Stop'
 if(!$env:LOCK_OWNER){throw 'Game lock required'}
 $repo=Split-Path -Parent $PSScriptRoot
 $game='D:/SteamLibrary/steamapps/common/ARMA Cold War Assault'
-if(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue){throw 'Existing game preserved'}
+if(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue){throw 'Existing game preserved'}
 $stamp=(Get-Content (Join-Path $game 'DEPLOYED-FROM.txt') -Raw).Trim()
 if(!$stamp.Contains($ExpectedCommit)){throw 'Installed source differs'}
 $out=Join-Path $repo ('build/earth-streaming/'+(Get-Date -Format yyyyMMdd-HHmmss))
@@ -27,7 +27,7 @@ try{
  $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
  $log=Join-Path $out 'engine.log'
  $argv=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','20000','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world',('"'+$world+'"'),'--test-world-freefly','6400','6400','4500','30','-20','--test-world-hour','12','--log-file',('"'+$log+'"'))
- $p=Start-Process (Join-Path $game 'OpenPoseidon.exe') -WorkingDirectory $game -WindowStyle Hidden -ArgumentList $argv -RedirectStandardOutput (Join-Path $out 'stdout.log') -RedirectStandardError (Join-Path $out 'stderr.log') -PassThru
+ $p=Start-Process (Join-Path $game 'ProteusGame.exe') -WorkingDirectory $game -WindowStyle Hidden -ArgumentList $argv -RedirectStandardOutput (Join-Path $out 'stdout.log') -RedirectStandardError (Join-Path $out 'stderr.log') -PassThru
  $deadline=[DateTime]::UtcNow.AddSeconds(150)
  do{Require (!$p.HasExited) 'Startup exited';$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port)}catch{$client.Dispose();$client=$null};if(!$client){Require ([DateTime]::UtcNow-lt$deadline) 'Startup deadline';Start-Sleep -Milliseconds 250}}while(!$client)
  $stream=$client.GetStream();$stream.ReadTimeout=30000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true

@@ -7,7 +7,7 @@ if($Resistance -and $DisableResistance){throw 'Choose resistance on or off'}
 $resistanceEnabled=!$DisableResistance
 if(!$env:LOCK_OWNER){throw 'Game lock required'}
 $root=Split-Path $PSScriptRoot -Parent;$game='D:/SteamLibrary/steamapps/common/ARMA Cold War Assault'
-if(Get-Process OpenPoseidon -ErrorAction SilentlyContinue){throw 'Existing game preserved'}
+if(Get-Process ProteusGame -ErrorAction SilentlyContinue){throw 'Existing game preserved'}
 $stamp=(Get-Content (Join-Path $game 'DEPLOYED-FROM.txt') -Raw).Trim()
 if(!$stamp.Contains($ExpectedCommit)){throw 'Installed source differs'}
 $out=Join-Path $root ('build/jeep-mud-runtime/'+(Get-Date -Format yyyyMMdd-HHmmss));$null=New-Item -ItemType Directory -Path $out -Force
@@ -26,7 +26,7 @@ try{
  $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
  $log=Join-Path $out 'engine.log';$stderr=Join-Path $out 'stderr.log';$mission=Join-Path $root 'tests/perf/missions/perf_mud.noe'
  $args=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','800','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','12','--log-file',('"'+$log+'"'))
- $p=Start-Process (Join-Path $game 'OpenPoseidon.exe') -WorkingDirectory $game -WindowStyle Hidden -ArgumentList $args -RedirectStandardOutput (Join-Path $out 'stdout.log') -RedirectStandardError $stderr -PassThru
+ $p=Start-Process (Join-Path $game 'ProteusGame.exe') -WorkingDirectory $game -WindowStyle Hidden -ArgumentList $args -RedirectStandardOutput (Join-Path $out 'stdout.log') -RedirectStandardError $stderr -PassThru
  $deadline=[DateTime]::UtcNow.AddSeconds(120)
  do{Require (!$p.HasExited) 'Startup exited';$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port)}catch{$client.Dispose();$client=$null};if(!$client){Require ([DateTime]::UtcNow-lt$deadline) 'Startup deadline';Start-Sleep -Milliseconds 250}}while(!$client)
  $stream=$client.GetStream();$stream.ReadTimeout=30000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true

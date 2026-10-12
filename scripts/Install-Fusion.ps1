@@ -4,7 +4,7 @@ if (!$env:LOCK_OWNER) {throw 'Run via scripts/with-game-lock.sh with LOCK_OWNER 
 $root=Split-Path $PSScriptRoot -Parent
 $tools=Join-Path $root 'dist/x64-win-rwdi/PoseidonTools.exe'
 $build=Join-Path $root 'build/fusion'
-if (!(Test-Path -LiteralPath (Join-Path $GameDir 'OpenPoseidon.exe'))) {throw 'Not an OpenPoseidon game install'}
+if (!(Test-Path -LiteralPath (Join-Path $GameDir 'ProteusGame.exe'))) {throw 'Not a ProteusGame install'}
 New-Item -ItemType Directory -Force (Join-Path $build 'sources') | Out-Null
 & $tools pbo extract (Join-Path $GameDir 'AddOns/Noe.pbo') (Join-Path $build 'source-noe')
 if ($LASTEXITCODE -ne 0) {throw 'Nogova extraction failed'}

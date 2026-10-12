@@ -5,10 +5,10 @@ $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
 $game='D:/SteamLibrary/steamapps/common/ARMA Cold War Assault'
 if(!$env:LOCK_OWNER){throw 'Game lock required'}
-if(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue){throw 'Preserving existing game'}
+if(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue){throw 'Preserving existing game'}
 $stamp=Get-Content -LiteralPath (Join-Path $game 'DEPLOYED-FROM.txt') -Raw
 if($stamp -notmatch [regex]::Escape($ExpectedCommit)){throw 'Installed source differs'}
-$pair=@{};foreach($name in @('OpenPoseidon.exe','wgpu_renderer.dll')){$pair[$name]=(Get-FileHash -LiteralPath (Join-Path $game $name)).Hash}
+$pair=@{};foreach($name in @('ProteusGame.exe','wgpu_renderer.dll')){$pair[$name]=(Get-FileHash -LiteralPath (Join-Path $game $name)).Hash}
 $out=Join-Path $root ('build/owner-ragdoll-fog/'+(Get-Date -Format yyyyMMdd-HHmmss));$profile=Join-Path $out 'user'
 New-Item -ItemType Directory -Force -Path $profile | Out-Null
 $settings=@{POSEIDON_USER_DIR=$profile;WGR_LAYERED_FOG_TRACE='1';WGR_WEATHER_COVER='1';WGR_WEATHER_COVER_FAR='1';WGR_AUTO_EXPOSURE='0';WGR_EXPOSURE='0.6';WGR_TONEMAP='1';POSEIDON_SNOWLINE='off';POSEIDON_SNOW_TEST_DEPTH='0'}
@@ -52,7 +52,7 @@ try{
  $mission=Join-Path $root 'tests/perf/missions/perf_field.eden';$log=Join-Path $out 'engine.log'
  $argv=@('--render=wgpu','--window','--dev','--width','1600','--height','900','--vd','2000','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','16','--log-file',('"'+$log+'"'))
  # Visible window explicitly requested by the owner; this follows Show-CorpseRagdollPrototype's handoff pattern.
- $p=Start-Process -FilePath (Join-Path $game 'OpenPoseidon.exe') -WorkingDirectory $game -WindowStyle Normal -ArgumentList $argv -PassThru
+ $p=Start-Process -FilePath (Join-Path $game 'ProteusGame.exe') -WorkingDirectory $game -WindowStyle Normal -ArgumentList $argv -PassThru
  $until=[DateTime]::UtcNow.AddSeconds(120)
  do{if($p.HasExited){throw 'Game exited during startup'};$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port)}catch{$client.Dispose();$client=$null};if(!$client){if([DateTime]::UtcNow -gt $until){throw 'Startup deadline'};Start-Sleep -Milliseconds 250}}while(!$client)
  $stream=$client.GetStream();$stream.ReadTimeout=30000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true

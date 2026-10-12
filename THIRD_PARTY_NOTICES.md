@@ -628,6 +628,36 @@ source notices. This source notice file does not replace a binary dependency
 license inventory. Renderer Cargo dependencies are pinned by the workspace
 `Cargo.lock`; include their applicable licenses in binary distributions.
 
+### AMD FidelityFX Super Resolution 4 (FFX API)
+
+`engine/WgpuRenderer/rust/src/fsr4.rs` mirrors the FFX API structures from the
+FidelityFX SDK 2.3 headers (`api/include/ffx_api.h`, `api/include/ffx_api_types.h`,
+`upscalers/include/ffx_upscale.h`, `api/include/dx12/ffx_api_dx12.h`):
+https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK
+
+The FSR 4 runtime is not in this repository and not distributed with it. The
+signed binaries (`amd_fidelityfx_loader_dx12.dll`, `amd_fidelityfx_upscaler_dx12.dll`)
+come from the SDK's `signedbin` folder, under the SDK's own licence (`docs/license.md`
+in the SDK). Copy them beside the exe or set `WGR_FSR4_DIR`.
+
+```
+Copyright (C) 2026 Advanced Micro Devices, Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+```
+
 ### AMD FidelityFX Super Resolution 1
 
 The WGSL implementation in `engine/WgpuRenderer/rust/src/fsr1.wgsl` is ported

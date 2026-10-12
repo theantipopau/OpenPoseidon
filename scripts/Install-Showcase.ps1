@@ -5,7 +5,7 @@ $root=Split-Path $PSScriptRoot -Parent
 $output=Join-Path $root 'build/showcase/showcase_lab.pbo'
 python "$PSScriptRoot/showcase/build_showcase.py" $output
 if ($LASTEXITCODE -ne 0) { throw 'Showcase addon generation failed' }
-if (!(Test-Path -LiteralPath (Join-Path $GameDir 'OpenPoseidon.exe'))) { throw 'Not a game install' }
+if (!(Test-Path -LiteralPath (Join-Path $GameDir 'ProteusGame.exe'))) { throw 'Not a game install' }
 & "$PSScriptRoot/Move-DefaultContentToMods.ps1" -GameDir $GameDir
 $pack=Join-Path $GameDir 'Mods/@OP_Showcase'
 New-Item -ItemType Directory -Force "$pack/AddOns", "$pack/Missions/OpenPoseidon" | Out-Null

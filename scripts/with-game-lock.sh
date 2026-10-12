@@ -57,7 +57,7 @@ trap 'rm -rf "$LOCK"' EXIT INT TERM
 # The lock says nobody ELSE holding it will start a game. It cannot say nobody bypassed it
 # -- the owner playing the game themselves, or an agent that has not been told about this
 # script. Refuse rather than measure against a contended machine.
-running=$(powershell -NoProfile -Command "(Get-Process OpenPoseidon -ErrorAction SilentlyContinue | Measure-Object).Count" 2>/dev/null | tr -d '\r')
+running=$(powershell -NoProfile -Command "(Get-Process ProteusGame -ErrorAction SilentlyContinue | Measure-Object).Count" 2>/dev/null | tr -d '\r')
 if [ -n "$running" ] && [ "$running" != "0" ]; then
     echo "game-lock: REFUSED, $running OpenPoseidon instance(s) already running outside the lock" >&2
     exit 4

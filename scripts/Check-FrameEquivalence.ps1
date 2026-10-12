@@ -140,8 +140,8 @@ function Read-FrameStream {
 
 function Invoke-Run {
     param([string]$LogPath, [string]$PngPath, [int]$Index)
-    $exe = Join-Path $GameDir 'OpenPoseidon.exe'
-    if (-not (Test-Path -LiteralPath $exe)) { throw "no OpenPoseidon.exe in $GameDir" }
+    $exe = Join-Path $GameDir 'ProteusGame.exe'
+    if (-not (Test-Path -LiteralPath $exe)) { throw "no ProteusGame.exe in $GameDir" }
 
     $missionPath = if ([System.IO.Path]::IsPathRooted($Mission)) { $Mission }
                    else { Join-Path (Split-Path -Parent $PSScriptRoot) $Mission }

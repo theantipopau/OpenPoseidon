@@ -22,7 +22,7 @@ $argsGame=@('--render','wgpu','--window','--no-dev','--width','1280','--height',
 if ($Menu) {
  $argsGame=@('--render','wgpu','--window','--no-dev','--width','1280','--height','720','--harness',"$port",'--log-file',('"'+$log+'"'),'--log-level','debug')
 }
-$p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -ArgumentList $argsGame -WorkingDirectory $GameDir -PassThru -WindowStyle Hidden
+$p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -ArgumentList $argsGame -WorkingDirectory $GameDir -PassThru -WindowStyle Hidden
 $null=$p.Handle
 try {
  $client=[Net.Sockets.TcpClient]::new()

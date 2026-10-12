@@ -2,14 +2,14 @@
 .SYNOPSIS
     Copy the built game binaries into the retail Arma: Cold War Assault install.
 .DESCRIPTION
-    Deploys both binaries: OpenPoseidon.exe and wgpu_renderer.dll. Both, always
+    Deploys both binaries: ProteusGame.exe and wgpu_renderer.dll. Both, always
     - copying only one of them gives an instant "Entry Point Not Found" on launch,
     because the exe and the cdylib share a hand-written C ABI that changes between
     builds. That failure mode is why this is a script and not a Copy-Item you type.
 
     Staged default content packs and the available DLSS runtime are also copied.
     No original game archive or ColdWarAssault.exe is produced or touched:
-    OpenPoseidon.exe is the only binary this project ships. There is deliberately ONE
+    ProteusGame.exe is the only binary this project ships. There is deliberately ONE
     name. The folder is shared by several worktrees, and every mismatched-pair incident
     so far started with a second exe in it wearing a name someone recognised.
 
@@ -65,9 +65,9 @@ if (Test-Path -LiteralPath $visualStage) {
 # The two files that must move together. Order is deliberate: the DLL lands first, so
 # a half-finished deploy leaves the OLD exe against the NEW dll (which fails loudly at
 # startup) rather than a new exe against an old dll (which can fail much later).
-$payload = @('wgpu_renderer.dll', 'OpenPoseidon.exe')
+$payload = @('wgpu_renderer.dll', 'ProteusGame.exe')
 
-# NTFS is case-INSENSITIVE but case-PRESERVING: copying `OpenPoseidon.exe` over a file already
+# NTFS is case-INSENSITIVE but case-PRESERVING: copying `ProteusGame.exe` over a file already
 # called `openposeidon.exe` overwrites the bytes and keeps the OLD name on disk. The rename to
 # capitals would then be invisible in the game folder forever, and the only symptom is a
 # lower-case name nobody can explain. Delete a differently-cased match first so the new casing
@@ -144,7 +144,7 @@ else
 #     or the next capture is attributed to a commit that does not contain what ran.
 $buildDir = Join-Path $repoRoot "build\$Preset"
 $buildPairs = @{
-    'OpenPoseidon.exe'  = Join-Path $buildDir 'apps\cwr\Game\OpenPoseidon.exe'
+    'ProteusGame.exe'  = Join-Path $buildDir 'apps\cwr\Game\ProteusGame.exe'
     'wgpu_renderer.dll' = Join-Path $buildDir 'engine\WgpuRenderer\wgpu_renderer.dll'
 }
 foreach ($name in $payload)
@@ -254,7 +254,7 @@ foreach ($pack in @(
 Write-Host "From: $distDir"
 Write-Host "To:   $GameDir`n"
 
-if (Test-Path -LiteralPath (Join-Path $GameDir 'OpenPoseidon.exe')) {
+if ((Test-Path -LiteralPath (Join-Path $GameDir 'ProteusGame.exe')) -or (Test-Path -LiteralPath (Join-Path $GameDir 'OpenPoseidon.exe'))) {
     & "$PSScriptRoot/Move-DefaultContentToMods.ps1" -GameDir $GameDir
 }
 
@@ -285,13 +285,13 @@ foreach ($item in $contentPayload) {
 
 if ($PruneStale)
 {
-    foreach ($name in @('PoseidonGame.exe', 'PoseidonGame.pdb'))
+    foreach ($name in @('PoseidonGame.exe', 'PoseidonGame.pdb', 'OpenPoseidon.exe', 'OpenPoseidon.pdb'))
     {
         $stale = Join-Path $GameDir $name
         if (Test-Path -LiteralPath $stale)
         {
             Remove-Item -LiteralPath $stale -Force
-            Write-Host "  - $name (legacy name, superseded by OpenPoseidon.exe)"
+            Write-Host "  - $name (legacy name, superseded by ProteusGame.exe)"
         }
     }
 }
@@ -299,10 +299,13 @@ else
 {
     # Warn rather than delete: an old PoseidonGame.exe next to a new wgpu_renderer.dll
     # is exactly the ABI mismatch above, and someone's desktop shortcut may point at it.
-    $stale = Join-Path $GameDir 'PoseidonGame.exe'
-    if (Test-Path -LiteralPath $stale)
+    foreach ($old in @('PoseidonGame.exe', 'OpenPoseidon.exe'))
     {
-        Write-Warning "PoseidonGame.exe is still in the game folder. That is the OLD name for this client, it is NOT matched to the wgpu_renderer.dll just deployed, and launching it is the mismatched-pair failure. Re-run with -PruneStale to remove it."
+        $stale = Join-Path $GameDir $old
+        if (Test-Path -LiteralPath $stale)
+        {
+            Write-Warning "$old is still in the game folder. That is an OLD name for this client, it is NOT matched to the wgpu_renderer.dll just deployed, and launching it is the mismatched-pair failure. Re-run with -PruneStale to remove it."
+        }
     }
 }
 
@@ -330,7 +333,7 @@ $stampLine = "{0} {1}{3} {2} deploy-ps1" -f $branch, $commit, (Get-Date -Format 
 Set-Content -LiteralPath $stampPath -Value $stampLine -Encoding utf8
 Write-Host "Stamped: $stampLine"
 
-Write-Host "`nDone. Launch: $(Join-Path $GameDir 'OpenPoseidon.exe')" -ForegroundColor Green
+Write-Host "`nDone. Launch: $(Join-Path $GameDir 'ProteusGame.exe')" -ForegroundColor Green
 
 # ColdWarAssault.exe is the RETAIL binary and this script deliberately never touches it, so it
 # only ever gets older. It also sits in the same folder, sorts first alphabetically, and is the

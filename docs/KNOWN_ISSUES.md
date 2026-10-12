@@ -2,6 +2,21 @@
 
 Build and runtime issues found during setup. Each entry notes whether it is fixed in this repo.
 
+## Game name
+
+- The shipped client is **ProteusGame.exe** (CMake target still `PoseidonGame`; `OUTPUT_NAME` set in `apps/cwr/Game/CMakeLists.txt`). The engine is Poseidon and keeps its name. Scripts and docs were renamed to match. Old `OpenPoseidon.exe` copies in a game folder are removed by `scripts/Deploy.ps1 -PruneStale` and warned about otherwise.
+
+## Open: WW4 units do not replace the defaults (Kozlice addon)
+
+- The WW4 addons log `requires addon 'Kozlice'`, so their unit replacements never register.
+- `Kozlice` is in three copies of `kozl.pbo` in the OFP Evos folder: `Addons\kozl.pbo` (2008, no product), `@Evos\Addons\kozl.pbo` (product `OFP: Resistance`, has `config.cpp` with `CfgPatches` class `Kozlice`), and `Res\AddOns\kozl.pbo`. All three share the prefix `kozl`.
+- `AddonSystem::ParseAddonConfig` only sees a prefix's `config.cpp` through the file server, and it does not find `kozl\config.cpp`. Its `config.bin` fallback then returns true without registering anything. A stream parse of the bank's `config.cpp` returned zero entries, because `ParamFile::Parse(QIStream&)` skips the preprocessing that `Parse(name)` does, and `Preprocess` opens files by name.
+- Fix options, not yet done: (a) remove the two older `kozl.pbo` copies from the game folder, which the mod layer should make unnecessary; (b) give the preprocessor an input-buffer entry point, so a bank's `config.cpp` can be parsed while it is mounted. (a) is a data change for the owner to make; (b) is an engine change.
+
+## Open: DX12 renderer stalls or crashes on this machine
+
+- `scripts/Start.ps1 -Dx12` (`WGPU_BACKEND=dx12`) on the RX 9070 XT: once run crashed with an access violation in `amdxc64.dll` about 4 seconds after renderer start; a control run with FSR 1 and no FSR 4 stalled after `prepass discard parity` with no frames. The Vulkan path renders normally. FSR 4 needs DX12, so it cannot be tested until this is fixed. Next step: check whether the stall predates the FSR 4 changes (build the previous commit).
+
 ## Repository layout
 
 - **`CLAUDE.md` is missing.** The kickstart expects agent instructions and build notes at the root. Nothing exists. The README "Current limitations" section is the closest substitute and is used for the known-limitations list. Not fixed in repo; flagged for Matt.
@@ -30,7 +45,7 @@ Build and runtime issues found during setup. Each entry notes whether it is fixe
 
 ## Runtime
 
-- **Window launch aborts on missing Remastered fonts.** `OpenPoseidon.exe -C <dir> --window` exits 1 with `FontSystem: required font missing: Fonts\cwr_{title,body,mono,serif,hand}.ttf`. The probe used the local OFP Evos folder as the data directory, and it lacks the Remastered files. Those come from `scripts/Install.ps1`, which copies `fonts`, `dtaExt`, `AddOns\cwr_logo.pbo` and `BIN` from the Steam **Demo** install into the retail install. Both installs must be found, and the registry lookup finds neither. Not fixed in repo; blocked on the install paths.
+- **Window launch aborts on missing Remastered fonts.** `ProteusGame.exe -C <dir> --window` exits 1 with `FontSystem: required font missing: Fonts\cwr_{title,body,mono,serif,hand}.ttf`. The probe used the local OFP Evos folder as the data directory, and it lacks the Remastered files. Those come from `scripts/Install.ps1`, which copies `fonts`, `dtaExt`, `AddOns\cwr_logo.pbo` and `BIN` from the Steam **Demo** install into the retail install. Both installs must be found, and the registry lookup finds neither. Not fixed in repo; blocked on the install paths.
 - **Mod mounting not verified.** The probe aborted before `ModSystem::SetModPath` logged `Mod path set` / `Loaded mod`. Retest once the installs are in place.
 - **Build warnings.** The `PoseidonGame` build logged 763 `warning:` lines (clang-cl and the Rust crate). No errors. Not triaged.
 - **Engine config is written to the user profile.** First run created `%APPDATA%\CWR\audio.cfg`. Expected; noted so it isn't mistaken for repo state.

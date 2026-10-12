@@ -24,7 +24,7 @@ function Float-Bits($value){
 Require ($result.status-ceq'actual-occupied-dry-rain-flight-measured') 'Campaign did not pass occupied flight capture.'
 Require ($result.sourceHead-cmatch'^[0-9a-f]{40}$'-and$result.installed.stamp-match[regex]::Escape($result.sourceHead.Substring(0,8))) 'Captured installed/source commit identity missing.'
 Require ($result.installed.exe-cmatch'^[0-9A-F]{64}$'-and$result.installed.dll-cmatch'^[0-9A-F]{64}$') 'Captured matched-pair hashes missing.'
-$games=@(Get-Process -Name OpenPoseidon -ErrorAction SilentlyContinue)
+$games=@(Get-Process -Name ProteusGame -ErrorAction SilentlyContinue)
 if(!$SkipBenchmark){Require ($games.Count-eq0) 'A game is running: hold offline performance timing; use -SkipBenchmark for source/correctness checks.'}
 $runName='run-'+[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmssfff')
 $output=Join-Path $root ('build/rain-water-coarse-replay/'+[IO.Path]::GetFileName($campaign)+'/'+$runName)
@@ -113,7 +113,7 @@ try{
    $lines=@(& $exe $arm.path $arm.forcing.rainBits $arm.forcing.solarBits $arm.forcing.windBits 'bench' $Rounds)
    Require ($LASTEXITCODE-eq0-and$lines.Count-eq$Rounds*4) 'Bounded ABBA replay failed.'
    foreach($line in $lines){$arm.timings+=($line|ConvertFrom-Json)}
-   Require (@(Get-Process -Name OpenPoseidon -ErrorAction SilentlyContinue).Count-eq0) 'A game appeared during offline timing; performance acceptance is refused.'
+   Require (@(Get-Process -Name ProteusGame -ErrorAction SilentlyContinue).Count-eq0) 'A game appeared during offline timing; performance acceptance is refused.'
    Require (@($arm.timings.outputFnv64|Select-Object -Unique).Count-eq1) 'Identical restored baseline/control timed outputs differ.'
    foreach($label in @('A','B')){
     $rows=@($arm.timings|Where-Object{$_.label-ceq$label})

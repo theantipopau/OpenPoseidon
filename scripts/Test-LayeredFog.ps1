@@ -65,11 +65,11 @@ if($SelfTest){
 }
 function Pair{
  $stamp=Get-Content -LiteralPath (Join-Path $GameDir 'DEPLOYED-FROM.txt') -Raw;Require ($stamp -match [regex]::Escape($ExpectedCommit)) 'Installed commit differs.'
- return @{stamp=$stamp;files=@(@('OpenPoseidon.exe','wgpu_renderer.dll')|ForEach-Object{$file=Get-Item -LiteralPath (Join-Path $GameDir $_);@{name=$_;sha256=(Get-FileHash -LiteralPath $file.FullName).Hash;bytes=$file.Length}})}
+ return @{stamp=$stamp;files=@(@('ProteusGame.exe','wgpu_renderer.dll')|ForEach-Object{$file=Get-Item -LiteralPath (Join-Path $GameDir $_);@{name=$_;sha256=(Get-FileHash -LiteralPath $file.FullName).Hash;bytes=$file.Length}})}
 }
 Require ([bool]$ExpectedCommit) 'Supply the installed ExpectedCommit.'
 Require ([bool]$env:LOCK_OWNER) 'Invoke through scripts/with-game-lock.sh.'
-Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Existing owner game is preserved.'
+Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Existing owner game is preserved.'
 $before=Pair;$taskOut=Join-Path $taskRoot ('build/layered-fog/'+$Label+'-'+(Get-Date -Format 'yyyyMMdd-HHmmss'));New-Item -ItemType Directory -Force $taskOut|Out-Null
 $keys=@('POSEIDON_USER_DIR','WGR_LAYERED_FOG','WGR_LAYERED_FOG_TRACE','WGR_FOG_LAYER0','WGR_FOG_LAYER1','WGR_FOG_TERRAIN','WGR_FOG_PATCH','WGR_WEATHER_COVER','WGR_WEATHER_COVER_FAR','WGR_GRASS','WGR_TEMPORAL','POSEIDON_SNOWLINE','POSEIDON_SNOW_TEST_DEPTH','POSEIDON_TEST_RAIN','POSEIDON_REFORGER_WORLD','POSEIDON_REFORGER_OBJECTS','WGR_EXPOSURE','WGR_AUTO_EXPOSURE','WGR_TONEMAP','WGR_CLOUD_COVERAGE')
 $saved=@{};foreach($key in $keys){$saved[$key]=[Environment]::GetEnvironmentVariable($key,'Process')}
@@ -87,7 +87,7 @@ function Exec([string]$code){$null=Send @{cmd='exec';code=$code}}
 function Logs{return @(@($log,$stderr,$stdout)|Where-Object{Test-Path -LiteralPath $_}|ForEach-Object{Get-Content -LiteralPath $_})}
 try{
  foreach($arm in @(@{name='off';on='0';fog=$WeatherFog},@{name='on';on='1';fog=$WeatherFog},@{name='on-zero';on='1';fog=0},@{name='off-zero';on='0';fog=0})){
-  Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Foreign game appeared between arms.'
+  Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Foreign game appeared between arms.'
   $armOut=Join-Path $taskOut $arm.name;$profile=Join-Path $armOut 'user';New-Item -ItemType Directory -Force $profile|Out-Null
   [IO.File]::WriteAllText((Join-Path $profile 'graphics.cfg'),"qualityPreset=3;`nmsaaSamples=4;`ndlssMode=0;`nvsync=0;`nfpsCap=60;`n")
   foreach($key in $keys){Remove-Item -LiteralPath ('Env:'+$key) -ErrorAction SilentlyContinue}
@@ -101,7 +101,7 @@ try{
   $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
   $mission=Join-Path $taskRoot 'tests/perf/missions/perf_field.eden'
   $arguments=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','1500','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','12','--log-file',('"'+$log+'"'))
-  $p=Start-Process -FilePath (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -ArgumentList $arguments -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+  $p=Start-Process -FilePath (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -ArgumentList $arguments -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
   $until=[DateTime]::UtcNow.AddSeconds(120)
   do{Require (!$p.HasExited) 'Startup exited.';$client=[Net.Sockets.TcpClient]::new();try{$client.Connect('127.0.0.1',$port)}catch{$client.Dispose();$client=$null};if(!$client){Require ([DateTime]::UtcNow -lt $until) 'Startup deadline.';Start-Sleep -Milliseconds 250}}while(!$client)
   $stream=$client.GetStream();$stream.ReadTimeout=30000;$reader=[IO.StreamReader]::new($stream);$writer=[IO.StreamWriter]::new($stream,[Text.UTF8Encoding]::new($false));$writer.AutoFlush=$true

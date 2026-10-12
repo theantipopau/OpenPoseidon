@@ -133,12 +133,12 @@ if ($SelfTest) {
     Write-Host 'PASS read-only rotor snapshot schema/falsifiers; failed flight authority remains evidence. No game.';return
 }
 if (!$env:LOCK_OWNER) {throw 'Run through scripts/with-game-lock.sh.'}
-if (Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue) {throw 'Preserve the running game.'}
+if (Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue) {throw 'Preserve the running game.'}
 function Pair {
     # Provenance is the first installed file read.
     $stamp=[IO.File]::ReadAllText((Join-Path $GameDir 'DEPLOYED-FROM.txt')).Trim()
     Require ($stamp.Length -gt 0) 'Empty installed provenance.'
-    $files=@('OpenPoseidon.exe','wgpu_renderer.dll') | ForEach-Object {
+    $files=@('ProteusGame.exe','wgpu_renderer.dll') | ForEach-Object {
         $file=Get-Item -LiteralPath (Join-Path $GameDir $_)
         @{name=$_;sha256=(Get-FileHash -LiteralPath $file.FullName).Hash;bytes=$file.Length;writtenUtc=$file.LastWriteTimeUtc.ToString('o')}
     }
@@ -338,7 +338,7 @@ try {
     . (Join-Path $PSScriptRoot 'TerrainPuddleStockRoof.ps1')
     $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$listener.Start();$port=$listener.LocalEndpoint.Port;$listener.Stop()
     $args=@('--render=wgpu','--window','--dev','--width','1280','--height','720','--vd','2000','--harness',"$port",'--test-mission',('"'+$mission+'"'),'--test-world-hour','16','--log-file',('"'+$log+'"'))
-    $p=Start-Process (Join-Path $GameDir 'OpenPoseidon.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $args -RedirectStandardOutput (Join-Path $output 'stdout.txt') -RedirectStandardError (Join-Path $output 'stderr.txt');$null=$p.Handle
+    $p=Start-Process (Join-Path $GameDir 'ProteusGame.exe') -WorkingDirectory $GameDir -WindowStyle Hidden -PassThru -ArgumentList $args -RedirectStandardOutput (Join-Path $output 'stdout.txt') -RedirectStandardError (Join-Path $output 'stderr.txt');$null=$p.Handle
     $until=[DateTime]::UtcNow.AddSeconds(120)
     do {
         Health;$client=[Net.Sockets.TcpClient]::new();try {$client.Connect('127.0.0.1',$port)} catch {$client.Dispose();$client=$null}

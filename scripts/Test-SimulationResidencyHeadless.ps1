@@ -29,7 +29,7 @@ if (!$env:LOCK_OWNER) {
  try {& 'C:\Program Files\Git\bin\bash.exe' @argv; if ($LASTEXITCODE) {throw "Headless fixture exited $LASTEXITCODE"}} finally {Remove-Item Env:LOCK_OWNER}
  return
 }
-if (Get-Process OpenPoseidon,PoseidonServer -ErrorAction SilentlyContinue) {throw 'Game or server already running'}
+if (Get-Process ProteusGame,PoseidonServer -ErrorAction SilentlyContinue) {throw 'Game or server already running'}
 $root=Split-Path $PSScriptRoot -Parent
 if (!$ServerExe) {
  $ServerExe=Join-Path $root 'dist/x64-win-rwdi/PoseidonServer.exe'

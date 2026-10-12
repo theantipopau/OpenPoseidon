@@ -9,7 +9,7 @@ if(!$env:LOCK_OWNER){
  try{& 'C:\Program Files\Git\bin\bash.exe' @args;if($LASTEXITCODE){throw "Fixture child failed $LASTEXITCODE"}}finally{Remove-Item Env:LOCK_OWNER}
  return
 }
-if(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue){throw 'Game already running'}
+if(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue){throw 'Game already running'}
 $root=Split-Path $PSScriptRoot -Parent
 if(!$OriginalSource){$OriginalSource=Join-Path $root 'build/original-mlod-cli-20260927/input.p3d'}
 if(!$Manifest){$Manifest=Join-Path $root 'build/original-mlod-cli-20260927/valid-output/manifest.json'}
@@ -97,7 +97,7 @@ $environment=@{
 $environment.WGR_GEOMETRY_PAGE_ORIGINAL_SOURCE=$(if($enabled){'1'}else{'0'})
 $old=@{};Get-ChildItem Env:|Where-Object {$_.Name -match '^(WGR_|POSEIDON_)'}|ForEach-Object {$old[$_.Name]=$_.Value}
 $p=$null;$client=$null;$normal=$false;$forced=$false;$result=$null;$failure=$null
-$exe=Join-Path $GameDir 'OpenPoseidon.exe';$dll=Join-Path $GameDir 'wgpu_renderer.dll';$log=Join-Path $out 'engine.log'
+$exe=Join-Path $GameDir 'ProteusGame.exe';$dll=Join-Path $GameDir 'wgpu_renderer.dll';$log=Join-Path $out 'engine.log'
 $hashes=@(Get-FileHash -LiteralPath $exe,$dll)
 try{
  Get-ChildItem Env:|Where-Object {$_.Name -match '^(WGR_|POSEIDON_)'}|ForEach-Object {Remove-Item ('Env:'+$_.Name)}

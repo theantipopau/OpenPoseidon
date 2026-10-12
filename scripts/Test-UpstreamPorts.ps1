@@ -10,10 +10,10 @@ function Require([bool]$condition,[string]$message){if(!$condition){throw $messa
 function Pair {
  $stamp=Get-Content -LiteralPath (Join-Path $GameDir 'DEPLOYED-FROM.txt') -Raw
  Require ($stamp.Contains($ExpectedCommit)) 'Installed source differs from requested checkpoint.'
- @{stamp=$stamp;exe=(Get-FileHash -LiteralPath (Join-Path $GameDir 'OpenPoseidon.exe')).Hash;dll=(Get-FileHash -LiteralPath (Join-Path $GameDir 'wgpu_renderer.dll')).Hash}
+ @{stamp=$stamp;exe=(Get-FileHash -LiteralPath (Join-Path $GameDir 'ProteusGame.exe')).Hash;dll=(Get-FileHash -LiteralPath (Join-Path $GameDir 'wgpu_renderer.dll')).Hash}
 }
 Require ([bool]$env:LOCK_OWNER) 'Run through scripts/with-game-lock.sh.'
-Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Existing owner session is preserved.'
+Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Existing owner session is preserved.'
 Require (Test-Path -LiteralPath (Join-Path $DataDir 'demo/demo.wrp')) 'Imported Demo fixtures require installed Demo data; no data is downloaded.'
 $before=Pair
 $out=Join-Path $root ('build/upstream-runtime/'+(Get-Date -Format 'yyyyMMdd-HHmmss'))
@@ -31,7 +31,7 @@ $p=$null
 try {
  foreach($key in $keys){[Environment]::SetEnvironmentVariable($key,$null,'Process')}
  foreach($fixture in $fixtures){
-  Require (!(Get-Process OpenPoseidon,ColdWarAssault -ErrorAction SilentlyContinue)) 'Game ownership conflict.'
+  Require (!(Get-Process ProteusGame,ColdWarAssault -ErrorAction SilentlyContinue)) 'Game ownership conflict.'
   Require (((Pair)|ConvertTo-Json -Compress)-ceq($before|ConvertTo-Json -Compress)) 'Installed pair changed.'
   $name=[IO.Path]::GetFileNameWithoutExtension($fixture)
   $caseOut=Join-Path $out $name;New-Item -ItemType Directory -Force $caseOut|Out-Null
@@ -49,7 +49,7 @@ try {
   Require (Test-Path -LiteralPath $log) 'Missing actual installed engine log.'
   Require (Select-String -LiteralPath $log -Pattern 'Shutdown complete' -Quiet) 'Game did not report completed shutdown.'
   Require (!(Select-String -LiteralPath $log -Pattern 'Validation Error|DeviceLost|uncaught exception|unhandled exception|panicked at' -Quiet)) 'GPU or unhandled runtime failure.'
-  Require (!(Get-Process OpenPoseidon -ErrorAction SilentlyContinue)) 'Fixture leaked its game process.'
+  Require (!(Get-Process ProteusGame -ErrorAction SilentlyContinue)) 'Fixture leaked its game process.'
   $result.fixtures+=@{path=$fixture;sha256=(Get-FileHash (Join-Path $root $fixture)).Hash;exitCode=$p.ExitCode;output=$caseOut;engineLogSha256=(Get-FileHash $log).Hash}
   $p=$null;Write-Output "PASS $fixture"
  }
