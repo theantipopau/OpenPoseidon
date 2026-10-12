@@ -924,6 +924,7 @@ bool ParseCutscene(RString cutscene, bool multiplayer)
     ParamArchiveLoad ar;
     if (!ar.LoadBin(name) && ar.Load(name) != LSOK)
     {
+        LOG_WARN(Mission, "DIAG ParseCutscene {}: cannot load {}", (const char*)cutscene, (const char*)name);
         CurrentTemplate.Clear();
         return false;
     }
@@ -950,6 +951,8 @@ bool ParseCutscene(RString cutscene, bool multiplayer)
         }
     }
 
+    LOG_INFO(Mission, "DIAG ParseCutscene {} from {}: groups={} consistent={}", (const char*)cutscene,
+             (const char*)name, CurrentTemplate.groups.Size(), CurrentTemplate.IsConsistent(nullptr, multiplayer));
     if (CurrentTemplate.groups.Size() == 0 || !CurrentTemplate.IsConsistent(nullptr, multiplayer))
     {
         CurrentTemplate.Clear();

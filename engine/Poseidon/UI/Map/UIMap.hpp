@@ -861,6 +861,11 @@ public:
 	ArcadeUnitInfo _unit;
 	ArcadeTemplate *_template;
 
+	// 3D sample of the selected vehicle class (IDC_ARCUNIT_PREVIEW).
+	ControlObject *_preview = nullptr;
+	ControlObject* OnCreateObject(int type, int idc, const ParamEntry& cls) override;
+	void UpdatePreview();
+
 public:
 
 	DisplayArcadeUnit

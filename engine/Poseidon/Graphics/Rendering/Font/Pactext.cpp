@@ -2136,10 +2136,12 @@ bool TextureSourcePac::Init(const char* name, PacLevelMem* mips, int maxMips)
         completion.buffer = in.GetBuffer();
     if (in.fail())
     {
+        LOG_WARN(Graphics, "PAA DIAG {}: open failed", name); // DIAG
         return false;
     }
     if (in.rest() == 0)
     {
+        LOG_WARN(Graphics, "PAA DIAG {}: empty stream", name); // DIAG
         return false;
     }
 
@@ -2173,6 +2175,7 @@ bool TextureSourcePac::Init(const char* name, PacLevelMem* mips, int maxMips)
 
     if (_pal.Load(in, offsets, maxOffsets))
     {
+        LOG_WARN(Graphics, "PAA DIAG {}: palette/tagg parse failed", name); // DIAG
         return false;
     }
     // get number of mipmaps
@@ -2201,6 +2204,7 @@ bool TextureSourcePac::Init(const char* name, PacLevelMem* mips, int maxMips)
 
         if (ret < 0)
         {
+            LOG_WARN(Graphics, "PAA DIAG {}: mip {} header failed at {}", name, i, offsets[i]); // DIAG
             return false;
         }
         if (ret > 0)

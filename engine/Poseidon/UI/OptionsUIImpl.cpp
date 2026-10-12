@@ -86,6 +86,9 @@ RString DecodeUserFacingLegacyText(RString text)
 DisplaySingleMission::DisplaySingleMission(ControlsContainer* parent) : Display(parent)
 {
     EnableProteusTheme();
+    // Built in code, so Load(resource) never sets the id. The parent matches on IDD_SINGLE_MISSION to start the
+    // mission; without it PLAY closed the page and dropped back to the main menu.
+    _idd = IDD_SINGLE_MISSION;
 
     static ParamFile cfg;
     cfg.Clear();
@@ -853,8 +856,10 @@ void DisplaySingleMission::OnButtonClicked(int idc)
                 return;
             }
             int sel = lbox->GetCurSel();
+            LOG_INFO(Mission, "DIAG single PLAY: IDC_OK handled, sel={} rows={}", sel, lbox->GetSize());
             if (sel < 0)
             {
+                LOG_WARN(Mission, "DIAG single PLAY: PLAY pressed with no list selection (rows={})", lbox->GetSize());
                 return;
             }
             int value = lbox->GetValue(sel);
@@ -963,6 +968,8 @@ DisplayCampaignLoad::DisplayCampaignLoad(ControlsContainer* parent) : Display(pa
 {
     LoadCampaigns();
     EnableProteusTheme();
+    // Built in code, so the id must be set here: the parent matches on IDD_CAMPAIGN_LOAD to start the campaign.
+    _idd = IDD_CAMPAIGN_LOAD;
 
     // Panel and rows, as screen fractions of the 816x639 design canvas.
     static ParamFile cfg;

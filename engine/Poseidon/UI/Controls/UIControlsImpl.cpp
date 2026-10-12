@@ -84,6 +84,9 @@ static void DrawRect(float x1, float y1, float x2, float y2, PackedColor color)
 CListBoxContainer::CListBoxContainer(const ParamEntry& cls)
 {
     _ftColor = GetPackedColor(cls >> "colorText");
+    _frameColor = _ftColor;
+    if (const ParamEntry* frame = cls.FindEntry("colorFrame"))
+        _frameColor = GetPackedColor(*frame);
     _selColor = GetPackedColor(cls >> "colorSelect");
 
     _selString = -1;
@@ -815,10 +818,11 @@ void CCombo::OnDraw(float alpha)
     Texture* texture = GLOB_SCENE->Preloaded(TextureWhite);
 
     // draw bar
-    DrawLeft(0, ftColor);
-    DrawTop(0, ftColor);
-    DrawBottom(0, ftColor);
-    DrawRight(0, ftColor);
+    PackedColor frameColor = ModAlpha(_frameColor, alpha);
+    DrawLeft(0, frameColor);
+    DrawTop(0, frameColor);
+    DrawBottom(0, frameColor);
+    DrawRight(0, frameColor);
 
     if (IsFocused())
     {

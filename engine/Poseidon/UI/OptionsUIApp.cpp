@@ -833,6 +833,7 @@ void DisplayMain::OnChildDestroyed(int idd, int exit)
             }
             break;
         case IDD_SINGLE_MISSION: // Single mission
+            LOG_INFO(Mission, "DIAG single page closed: exit={}", exit);
             if (exit == IDC_OK)
             {
                 // Return to previous game is not availiable now
@@ -846,6 +847,8 @@ void DisplayMain::OnChildDestroyed(int idd, int exit)
                 int sel = lbox->GetCurSel();
                 if (sel < 0)
                 {
+                    LOG_WARN(Mission, "DIAG single PLAY: no list selection, page closed to menu (rows={})",
+                             lbox->GetSize());
                     Display::OnChildDestroyed(idd, exit);
                     break;
                 }
@@ -867,6 +870,7 @@ void DisplayMain::OnChildDestroyed(int idd, int exit)
                     snprintf(buffer, sizeof(buffer), "%s", (const char*)CreateSingleMissionBank(directory));
                     if (*buffer == 0)
                     {
+                        LOG_WARN(Mission, "DIAG single PLAY: CreateSingleMissionBank gave no bank for {}", (const char*)directory);
                         Display::OnChildDestroyed(idd, exit);
                         break;
                     }
@@ -893,6 +897,7 @@ void DisplayMain::OnChildDestroyed(int idd, int exit)
                     dir = ResolveSPMissionSubdir(disp->GetDirectory(), mission);
                     if (!ProcessTemplateName(mission, dir))
                     {
+                        LOG_WARN(Mission, "DIAG single PLAY: ProcessTemplateName failed for {} in {}", (const char*)mission, (const char*)dir);
                         Display::OnChildDestroyed(idd, exit);
                         break;
                     }
@@ -901,6 +906,9 @@ void DisplayMain::OnChildDestroyed(int idd, int exit)
                 GStats.ClearAll();
                 Display::OnChildDestroyed(idd, exit);
                 ApplyCurrentMissionViewDistance();
+                LOG_INFO(Mission, "DIAG single PLAY: starting intro, world={} dir={} file={}",
+                         (const char*)Glob.header.worldname, (const char*)GetMissionDirectory(),
+                         (const char*)Glob.header.filenameReal);
                 CreateChild(new DisplayIntro(this));
             }
             else if (exit == IDC_SINGLE_LOAD)
@@ -953,7 +961,13 @@ void DisplayMain::OnChildDestroyed(int idd, int exit)
                 }
 
                 //				CListBox *lbox = dynamic_cast<CListBox *>(_child->GetCtrl(IDC_SELECT_ISLAND));
-                C3DListBox* lbox = dynamic_cast<C3DListBox*>(_child->GetCtrl(IDC_SELECT_ISLAND));
+                // The selector list is a 2D CListBox (Proteus page); a null cast here used to crash.
+                CListBox* lbox = dynamic_cast<CListBox*>(_child->GetCtrl(IDC_SELECT_ISLAND));
+                if (!lbox || lbox->GetCurSel() < 0)
+                {
+                    Display::OnChildDestroyed(idd, exit);
+                    break;
+                }
                 RString world = lbox->GetData(lbox->GetCurSel());
 
                 RString userDir = GetUserMissionsBase();

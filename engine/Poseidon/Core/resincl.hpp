@@ -708,6 +708,7 @@ CMD_RADIO_CUSTOM_0
 #define IDC_ARCUNIT_TEXT							118
 #define IDC_ARCUNIT_LOCK							119
 #define IDC_ARCUNIT_INIT							120
+#define IDC_ARCUNIT_PREVIEW						122
 #define IDC_ARCUNIT_SKILL							121
 
 #define IDC_ARCGRP_SIDE								101

@@ -1144,6 +1144,9 @@ void CSkewStatic::OnDraw(float alpha)
 CEditContainer::CEditContainer(const ParamEntry& cls)
 {
     _ftColor = GetPackedColor(cls >> "colorText");
+    _frameColor = _ftColor;
+    if (const ParamEntry* frame = cls.FindEntry("colorFrame"))
+        _frameColor = GetPackedColor(*frame);
     _selColor = GetPackedColor(cls >> "colorSelection");
     _font = GLOB_ENGINE->LoadFont(GetFontID(cls >> "font"));
 
@@ -1936,11 +1939,12 @@ void CEdit::OnDraw(float alpha)
     float hh = toInt(_h * h);
 
     PackedColor ftColor = ModAlpha(_ftColor, alpha);
+    PackedColor frameColor = ModAlpha(_frameColor, alpha);
 
-    DrawLeft(0, ftColor);
-    DrawTop(0, ftColor);
-    DrawBottom(0, ftColor);
-    DrawRight(0, ftColor);
+    DrawLeft(0, frameColor);
+    DrawTop(0, frameColor);
+    DrawBottom(0, frameColor);
+    DrawRight(0, frameColor);
 
     float size = _scale * _size;
     float height = size;

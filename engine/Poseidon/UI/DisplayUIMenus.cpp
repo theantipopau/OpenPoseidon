@@ -1279,6 +1279,7 @@ void DisplayCutscene::OnSimulate(EntityAI* vehicle)
 
     if (BreakIntro() || GWorld->GetEndMode() != EMContinue /* || !GLOB_WORLD->GetCameraEffect() */)
     {
+        LOG_INFO(Mission, "DIAG cutscene exit: endMode={}", (int)GWorld->GetEndMode());
         //		GWorld->EnableSimulation(false);
         Exit(IDC_CANCEL);
     }

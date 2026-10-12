@@ -8,6 +8,7 @@
 #include <Poseidon/Core/Config/EngineConfig.hpp>
 #include <Poseidon/Core/Config/UserConfig.hpp>
 #include <Poseidon/UI/Map/UIMap.hpp>
+#include <Poseidon/UI/ProteusTheme.hpp>
 #include <Poseidon/UI/Locale/MissionHtmlLocalization.hpp>
 
 #include <Poseidon/World/Terrain/Landscape.hpp>
@@ -2060,7 +2061,10 @@ DisplayInterrupt::DisplayInterrupt(ControlsContainer* parent) : Display(parent)
 {
     _enableSimulation = false;
     _enableUI = false;
-    Load("RscDisplayInterrupt");
+    // Built in code in the Proteus style, as the single mission page is, so the retail
+    // RscDisplayInterrupt is not loaded. Built in code, so Load(resource) never sets the id.
+    EnableProteusTheme();
+    _idd = IDD_INTERRUPT;
     UnregisterLanguageChangedCallback(_langCbToken);
     _langCbToken = RegisterLanguageChangedCallback(
         [this]()
@@ -2069,24 +2073,50 @@ DisplayInterrupt::DisplayInterrupt(ControlsContainer* parent) : Display(parent)
             RefreshLanguage();
         });
 
-    if (GWorld->GetMode() == GModeNetware)
+    // Load and Save are one or the other, by whether a save exists. Netware has neither, and no Retry.
+    const bool netware = GWorld->GetMode() == GModeNetware;
+    const bool saveExists = !netware && QIFStream::FileExists(GetSaveDirectory() + RString("save.fps"));
+    struct Entry
     {
-        GetCtrl(IDC_INT_SAVE)->ShowCtrl(false);
-        GetCtrl(IDC_INT_LOAD)->ShowCtrl(false);
-        GetCtrl(IDC_INT_RETRY)->ShowCtrl(false);
-        //		GetCtrl(IDC_INT_RESTART)->ShowCtrl(false);
-    }
-    else
+        const char* name;
+        int idc;
+        const char* key;
+        bool shown;
+    };
+    const Entry entries[] = {
+        {"ProteusInterruptContinue", IDC_CANCEL, "$STR_DISP_INT_CONTINUE", true},
+        {"ProteusInterruptOptions", IDC_INT_OPTIONS, "$STR_DISP_INT_OPTIONS", true},
+        {"ProteusInterruptLoad", IDC_INT_LOAD, "$STR_DISP_INT_LOAD", saveExists},
+        {"ProteusInterruptSave", IDC_INT_SAVE, "$STR_DISP_INT_SAVE", !netware && !saveExists},
+        {"ProteusInterruptRetry", IDC_INT_RETRY, "$STR_DISP_INT_RETRY", !netware},
+        {"ProteusInterruptAbort", IDC_INT_ABORT, "$STR_DISP_INT_ABORT", true},
+    };
+
+    static ParamFile cfg;
+    cfg.Clear();
+    const float panelW = 0.36f, panelH = 0.64f;
+    const float panelX = 0.5f - 0.5f * panelW, panelY = 0.20f;
+    const float leftX = panelX + 0.04f, colW = panelW - 0.08f;
+    const float rowH = 42.0f / 639.0f, rowStep = 0.0751f;
+    const float firstRowY = panelY + 0.16f;
+    ProteusTheme::AddCentredPanel(this, cfg, 9790, panelX, panelY, panelW, panelH);
+    const RString title = ProteusTheme::Upper(LocalizeString(netware ? IDS_DISP_INT_TITLE_MP : IDS_DISP_INT_TITLE));
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusInterruptTitle", IDC_INT_TITLE, CT_STATIC, (const char*)title,
+                                          0.05f, leftX, panelY + 0.035f, colW, 0.07f, ProteusTheme::TITLE_TEXT));
+    LoadControl(*ProteusTheme::NewRule(cfg, "ProteusInterruptRule", 9796, leftX, panelY + 0.115f, colW));
+
+    int row = 0;
+    for (const Entry& e : entries)
     {
-        RString name = GetSaveDirectory() + RString("save.fps");
-        if (QIFStream::FileExists(name))
-        {
-            GetCtrl(IDC_INT_SAVE)->ShowCtrl(false);
-        }
-        else
-        {
-            GetCtrl(IDC_INT_LOAD)->ShowCtrl(false);
-        }
+        if (!e.shown)
+            continue;
+        const RString text = Localize(RString(e.key));
+        ParamClass* button = ProteusTheme::NewControl(cfg, e.name, e.idc, CT_BUTTON, (const char*)text, 0.034f, leftX,
+                                                      firstRowY + row * rowStep, colW, rowH, ProteusTheme::TEXT_PRIMARY);
+        if (e.idc == IDC_CANCEL)
+            button->Add("default", 1); // CONTINUE takes focus, as the retail page did
+        LoadControl(*button);
+        ++row;
     }
     InputSubsystem::Instance().ChangeGameFocus(+1);
 }
@@ -2106,11 +2136,11 @@ Control* DisplayInterrupt::OnCreateCtrl(int type, int idc, const ParamEntry& cls
             CStatic* text = new CStatic(this, idc, cls);
             if (GWorld->GetMode() == GModeNetware)
             {
-                text->SetText(LocalizeString(IDS_DISP_INT_TITLE_MP));
+                text->SetText(ProteusTheme::Upper(LocalizeString(IDS_DISP_INT_TITLE_MP)));
             }
             else
             {
-                text->SetText(LocalizeString(IDS_DISP_INT_TITLE));
+                text->SetText(ProteusTheme::Upper(LocalizeString(IDS_DISP_INT_TITLE)));
             }
             return text;
         }
@@ -2157,9 +2187,9 @@ void DisplayInterrupt::RefreshLanguage()
     if (auto* text = dynamic_cast<CStatic*>(GetCtrl(IDC_INT_TITLE)))
     {
         if (GWorld->GetMode() == GModeNetware)
-            text->SetText(LocalizeString(IDS_DISP_INT_TITLE_MP));
+            text->SetText(ProteusTheme::Upper(LocalizeString(IDS_DISP_INT_TITLE_MP)));
         else
-            text->SetText(LocalizeString(IDS_DISP_INT_TITLE));
+            text->SetText(ProteusTheme::Upper(LocalizeString(IDS_DISP_INT_TITLE)));
     }
 }
 

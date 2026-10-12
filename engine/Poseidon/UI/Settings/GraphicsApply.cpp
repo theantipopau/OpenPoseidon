@@ -165,6 +165,8 @@ void ApplyGraphicsConfigToEngine(const GraphicsConfig& cfg)
             const Engine::TemporalInfo info = GEngine->GetTemporalInfo();
             t.dlssOn = (cfg.dlssMode == -1 || cfg.dlssMode == 1);
             t.fsrOn = (cfg.dlssMode == -1 || cfg.dlssMode == 2);
+            // FSR 4 is chosen only explicitly (never by Auto): it needs the DX12 backend.
+            t.fsr4On = cfg.dlssMode == 3;
             t.fsrSharpness = std::clamp(cfg.fsrSharpness, 0.0f, 2.0f);
             t.dlssSharpen = cfg.dlssSharpen != 0;
             t.jitterPhases = std::clamp(cfg.jitterPhases, 0, 64);
@@ -180,12 +182,13 @@ void ApplyGraphicsConfigToEngine(const GraphicsConfig& cfg)
                 {
                     t.renderScalePct = cfg.upscalerQuality;
                 }
-                else if (cfg.dlssMode == 2 || (cfg.dlssMode == -1 && !info.dlssRoute))
+                else if (cfg.dlssMode == 2 || cfg.dlssMode == 3 || (cfg.dlssMode == -1 && !info.dlssRoute))
                 {
                     // FSR chosen (or Auto without DLSS): Quality point.
                     t.renderScalePct = 67;
                 }
-                if (cfg.dlssMode == 1 || (cfg.dlssMode == -1 && info.dlssRoute))
+                // FSR 4 is temporal (jitter and motion vectors), so it turns the path on too.
+                if (cfg.dlssMode == 1 || cfg.dlssMode == 3 || (cfg.dlssMode == -1 && info.dlssRoute))
                     t.temporalOn = true;
             }
             GEngine->SetTemporalTuning(t);

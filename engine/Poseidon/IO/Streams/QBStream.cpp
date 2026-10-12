@@ -2498,6 +2498,17 @@ void QIFStreamB::AutoOpen(const char* name, IQFBankContext* context)
         }
     }
 
+    // Loose file in an active mod folder (last-listed mod first). Banks were already tried above.
+    const std::string modOverride = ResolveModOverride(name0);
+    if (!modOverride.empty())
+    {
+        QIFStream::open(modOverride.c_str());
+        if (_sharedData && !_sharedData->GetError())
+        {
+            return;
+        }
+    }
+
     // A path can leave its own prefix and re-enter by mod folder name
     // ("voice\\..\\<mod>\\voice\\..."); only the collapsed form names a mod root.
     const std::string collapsed = CollapseParentDirs(name0);
@@ -2584,6 +2595,12 @@ bool QIFStreamB::FileExist(const char* name, IQFBankContext* context)
 
     std::string modAlias = ResolveModRootAlias(name);
     if (!modAlias.empty())
+    {
+        return true;
+    }
+
+    // Loose file in an active mod folder for a name no bank or alias claims (e.g. data\x.paa in @PRMOD\data).
+    if (!ResolveModOverride(name).empty())
     {
         return true;
     }

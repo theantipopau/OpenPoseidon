@@ -88,17 +88,18 @@ class DisplaySelectIsland : public Display
 {
   protected:
     int _exitWhenClose;
+    void BuildProteusPage();
+    void UpdatePreview(int index);
 
   public:
     DisplaySelectIsland(ControlsContainer* parent) : Display(parent)
     {
-        Load("RscDisplaySelectIsland");
         _exitWhenClose = -1;
-        if (!GameModuleRegistry::IsRegistered(GameModuleId::Editor))
-            GetCtrl(IDC_SELECT_ISLAND_WIZARD)->ShowCtrl(false);
+        BuildProteusPage();
     }
 
     Control* OnCreateCtrl(int type, int idc, const ParamEntry& cls) override;
+    void OnLBSelChanged(int idc, int curSel) override;
     void OnLBDblClick(int idc, int curSel) override;
     void OnButtonClicked(int idc) override;
     void OnChildDestroyed(int idd, int exit) override;

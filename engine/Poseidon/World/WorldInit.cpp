@@ -490,7 +490,8 @@ bool World::InitVehicles(GameMode gameMode, ArcadeTemplate& t)
     _firstFrame = true;
 
     Display* disp = new Display(nullptr);
-    disp->Load("RscDisplayLoadMission");
+    // The mission editor gets its own loading artwork; every other load keeps the mission screen.
+    disp->Load(gameMode == GModeArcade ? "RscDisplayLoadMissionEditor" : "RscDisplayLoadMission");
     disp->SetCursor(nullptr);
     CStatic* cName = static_cast<CStatic*>(disp->GetCtrl(IDC_LOAD_MISSION_NAME));
     CStatic* cDate = static_cast<CStatic*>(disp->GetCtrl(IDC_LOAD_MISSION_DATE));

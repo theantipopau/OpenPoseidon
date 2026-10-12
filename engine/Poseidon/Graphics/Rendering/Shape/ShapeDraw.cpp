@@ -1034,7 +1034,7 @@ LODShapeWithShadow* ShapeBank::NewFromModel(const char* name, bool reversed, boo
         }
         if (model && (model->sourceFormat == "ODOL" || model->sourceFormat == "MLOD") && !sp3xOnly)
         {
-            LOG_INFO(Graphics, "Shape loader: canonical {} adapter for {}{}", model->sourceFormat, lowName,
+            LOG_DEBUG(Graphics, "Shape loader: canonical {} adapter for {}{}", model->sourceFormat, lowName,
                      arrivedPreparsed ? " (pre-parsed)" : "");
             // ShapeAdapter sets shape name from model.sourcePath — must use
             // the original backslash path to match ShapeBank lookup key
@@ -1063,7 +1063,7 @@ LODShapeWithShadow* ShapeBank::NewFromModel(const char* name, bool reversed, boo
         }
         else
         {
-            LOG_INFO(Graphics, "Shape loader: legacy path for {} (canonical format={})", lowName,
+            LOG_DEBUG(Graphics, "Shape loader: legacy path for {} (canonical format={})", lowName,
                      model ? model->sourceFormat : "<unavailable>");
             shape = new LODShapeWithShadow(lowName, reversed);
             ownedShape.reset(shape);

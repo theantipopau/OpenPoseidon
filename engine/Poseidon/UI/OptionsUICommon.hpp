@@ -390,7 +390,9 @@ class CDifficulties : public C3DListBox
 class DisplayDifficulty : public Display
 {
   public:
-    CDifficulties* _diff;
+    // Working copy of the cadet and veteran flags, written back to USER_CONFIG on OK.
+    bool _cadet[DTN];
+    bool _veteran[DTN];
 
     bool _oldTitles;
     bool _oldRadio;

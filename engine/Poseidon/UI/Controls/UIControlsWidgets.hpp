@@ -14,6 +14,7 @@ protected:
 	Ref<IAutoComplete> _autoComplete;
 
 	PackedColor _ftColor;
+	PackedColor _frameColor; // outline; colorFrame when set, else colorText
 	PackedColor _selColor;
 	Ref<Font> _font;
 	float _size;
@@ -393,6 +394,7 @@ class CListBoxContainer : public AutoArray<CListBoxItem>
 {
 protected:
 	PackedColor _ftColor;
+	PackedColor _frameColor; // outline; colorFrame when set, else colorText
 	PackedColor _selColor;
 	int _selString;
 	float _topString;

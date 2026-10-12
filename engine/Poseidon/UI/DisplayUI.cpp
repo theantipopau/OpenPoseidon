@@ -53,6 +53,7 @@
 
 #include <Poseidon/Audio/DynSound.hpp>
 #include <Poseidon/UI/DisplayUI.hpp>
+#include <Poseidon/UI/ProteusTheme.hpp>
 
 #include <Poseidon/Foundation/Strings/Mbcs.hpp>
 
@@ -1191,52 +1192,109 @@ void DisplayConfigure::OnSliderPosChanged(int idc, float pos)
     }
 }
 
-// Select island game display
+// Mission editor selector, as a Proteus page: a centred panel with a 2D list of the islands that have a .wrp on disk.
+// The control ids and exit codes are the ones the resource version used, so the caller is unchanged.
 Control* DisplaySelectIsland::OnCreateCtrl(int type, int idc, const ParamEntry& cls)
 {
-    switch (idc)
-    {
-        case IDC_SELECT_ISLAND:
-        {
-            C3DListBox* lbox = new C3DListBox(this, idc, cls);
-            int sel = 0;
-            //				int m = (Pars>>"CfgWorlds">>"worlds").GetSize();
-            int m = (Pars >> "CfgWorldList").GetEntryCount();
-            for (int j = 0; j < m; j++)
-            {
-                const ParamEntry& entry = (Pars >> "CfgWorldList").GetEntry(j);
-                if (!entry.IsClass())
-                {
-                    continue;
-                }
-                RString name = entry.GetName();
-                //					RString name = (Pars>>"CfgWorlds">>"worlds")[j];
-
-                // ADDED - check if wrp file exists
-                RString fullname = GetWorldName(name);
-                if (!QIFStreamB::FileExist(fullname))
-                {
-                    continue;
-                }
-
-                int index = lbox->AddString(
-                    Poseidon::DecodeLegacyTextToRString(Pars >> "CfgWorlds" >> name >> "description", GLanguage));
-                lbox->SetData(index, name);
-                if (stricmp(name, Glob.header.worldname) == 0)
-                {
-                    sel = index;
-                }
-                RString textureName = Pars >> "CfgWorlds" >> name >> "icon";
-                RString fullName = FindPicture(textureName);
-                fullName.Lower();
-                Ref<Texture> texture = GlobLoadTexture(fullName);
-                lbox->SetTexture(index, texture);
-            }
-            lbox->SetCurSel(sel);
-            return lbox;
-        }
-    }
     return Display::OnCreateCtrl(type, idc, cls);
+}
+
+void DisplaySelectIsland::BuildProteusPage()
+{
+    EnableProteusTheme();
+    _idd = IDD_SELECT_ISLAND;
+    static ParamFile cfg;
+    cfg.Clear();
+    const float panelX = 0.14f, panelY = 0.12f, panelW = 0.72f, panelH = 0.76f;
+    const float leftX = panelX + 0.04f, innerW = panelW - 0.08f;
+    const float buttonH = 42.0f / 639.0f;
+    ProteusTheme::AddArtBackdrop(this, cfg, 9400);
+    ProteusTheme::AddCentredPanel(this, cfg, 9403, panelX, panelY, panelW, panelH);
+
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusEditorTitle", 9405, CT_STATIC, "MISSION EDITOR", 0.05f, leftX,
+                                          0.16f, 0.6f, 0.07f, ProteusTheme::TITLE_TEXT));
+    LoadControl(*ProteusTheme::NewRule(cfg, "ProteusEditorRule", 9406, leftX, 0.245f, innerW));
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusEditorHint", 9407, CT_STATIC, "SELECT AN ISLAND", 0.024f, leftX,
+                                          0.27f, 0.6f, 0.04f, ProteusTheme::TEXT_MUTED));
+    const float listW = 0.36f, previewX = leftX + listW + 0.03f, previewW = 0.26f;
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusIslands", IDC_SELECT_ISLAND, CT_LISTBOX, "", 0.03f, leftX, 0.31f,
+                                          listW, 0.44f, ProteusTheme::TEXT_PRIMARY));
+    // Island overview: the CfgWorlds icon (a 256px map of the island), swapped when the selection moves.
+    ParamClass* preview = cfg.AddClass("ProteusIslandPreview");
+    preview->Add("idc", 9408);
+    preview->Add("type", CT_STATIC);
+    preview->Add("style", ST_PICTURE);
+    preview->Add("text", RString(""));
+    preview->Add("x", previewX);
+    preview->Add("y", 0.31f);
+    preview->Add("w", previewW);
+    preview->Add("h", previewW * 816.0f / 639.0f);
+    ProteusTheme::Colour(preview, "colorBackground", ProteusTheme::Rgba{0.0f, 0.0f, 0.0f, 0.0f});
+    ProteusTheme::Colour(preview, "colorText", ProteusTheme::TEXT_PRIMARY);
+    LoadControl(*preview);
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusIslandName", 9409, CT_STATIC, "", 0.026f, previewX,
+                                          0.67f, previewW, 0.05f, ProteusTheme::TEXT_PRIMARY));
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusEditorWizard", IDC_SELECT_ISLAND_WIZARD, CT_BUTTON,
+                                          "NEW MISSION WIZARD", 0.030f, leftX, 0.80f, 0.30f, buttonH,
+                                          ProteusTheme::TEXT_PRIMARY));
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusEditorCancel", IDC_CANCEL, CT_BUTTON, "CANCEL", 0.034f,
+                                          panelX + panelW - 0.44f, 0.80f, 0.18f, buttonH, ProteusTheme::TEXT_PRIMARY));
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusEditorOK", IDC_OK, CT_BUTTON, "EDIT", 0.034f,
+                                          panelX + panelW - 0.22f, 0.80f, 0.18f, buttonH, ProteusTheme::TEXT_PRIMARY));
+
+    if (!GameModuleRegistry::IsRegistered(GameModuleId::Editor))
+    {
+        if (IControl* wizard = GetCtrl(IDC_SELECT_ISLAND_WIZARD))
+            wizard->ShowCtrl(false);
+    }
+
+    CListBox* list = dynamic_cast<CListBox*>(GetCtrl(IDC_SELECT_ISLAND));
+    if (list)
+    {
+        int sel = 0;
+        const int m = (Pars >> "CfgWorldList").GetEntryCount();
+        for (int j = 0; j < m; j++)
+        {
+            const ParamEntry& entry = (Pars >> "CfgWorldList").GetEntry(j);
+            if (!entry.IsClass())
+                continue;
+            RString name = entry.GetName();
+            // Only islands whose .wrp is on disk.
+            if (!QIFStreamB::FileExist(GetWorldName(name)))
+                continue;
+            const RString description =
+                Poseidon::DecodeLegacyTextToRString(Pars >> "CfgWorlds" >> name >> "description", GLanguage);
+            const int index = list->AddString(ProteusTheme::Upper(description));
+            list->SetData(index, name);
+            if (stricmp(name, Glob.header.worldname) == 0)
+                sel = index;
+        }
+        list->SetCurSel(sel);
+    }
+    UpdatePreview(list ? list->GetCurSel() : -1);
+    FocusCtrl(IDC_SELECT_ISLAND);
+}
+
+void DisplaySelectIsland::UpdatePreview(int index)
+{
+    CListBox* list = dynamic_cast<CListBox*>(GetCtrl(IDC_SELECT_ISLAND));
+    if (!list || index < 0)
+        return;
+    const RString world = list->GetData(index);
+    const RString icon = Pars >> "CfgWorlds" >> world >> "icon";
+    const RString description = Poseidon::DecodeLegacyTextToRString(Pars >> "CfgWorlds" >> world >> "description", GLanguage);
+    if (CStatic* picture = dynamic_cast<CStatic*>(GetCtrl(9408)))
+        picture->SetText(icon);
+    if (CStatic* name = dynamic_cast<CStatic*>(GetCtrl(9409)))
+        name->SetText(ProteusTheme::Upper(description));
+}
+
+void DisplaySelectIsland::OnLBSelChanged(int idc, int curSel)
+{
+    if (idc == IDC_SELECT_ISLAND)
+        UpdatePreview(curSel);
+    else
+        Display::OnLBSelChanged(idc, curSel);
 }
 
 void DisplaySelectIsland::OnLBDblClick(int idc, int curSel)
@@ -1256,20 +1314,14 @@ void DisplaySelectIsland::OnButtonClicked(int idc)
     switch (idc)
     {
             //	case IDC_OK:
+        case IDC_OK:
         case IDC_CANCEL:
-        {
             _exitWhenClose = idc;
-            ControlObjectContainerAnim* ctrl =
-                dynamic_cast<ControlObjectContainerAnim*>(GetCtrl(IDC_SELECT_ISLAND_NOTEBOOK));
-            if (ctrl)
-            {
-                ctrl->Close();
-            }
-        }
-        break;
+            Exit(idc);
+            break;
         case IDC_SELECT_ISLAND_WIZARD:
         {
-            C3DListBox* lbox = dynamic_cast<C3DListBox*>(GetCtrl(IDC_SELECT_ISLAND));
+            CListBox* lbox = dynamic_cast<CListBox*>(GetCtrl(IDC_SELECT_ISLAND));
             if (!lbox)
             {
                 break;

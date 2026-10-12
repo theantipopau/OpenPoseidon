@@ -90,8 +90,9 @@ public:
 	                                             // foliage) — grades sub-pixel features instead of the
 	                                             // hard alpha-test keeping/killing whole pixels
 	// Upscaler choice: -1 = AUTO (DLSS when the driver supports it, else FSR 1),
-	// 0 = off (pure native), 1 = DLSS, 2 = FSR 1. Persisted; seeds WGR_DLSS /
-	// WGR_RENDER_SCALE at boot and live-applies through the temporal tuning.
+	// 0 = off (pure native), 1 = DLSS, 2 = FSR 1, 3 = FSR 4 (DX12 backend only; never
+	// chosen by AUTO). Persisted; seeds WGR_DLSS / WGR_RENDER_SCALE at boot and
+	// live-applies through the temporal tuning.
 	// Tolerated as absent in old files (stays -1). Key name kept for compat.
 	int       dlssMode         = -1;
 	// Upscaler quality = internal render scale in percent: -1 = AUTO (67 when an

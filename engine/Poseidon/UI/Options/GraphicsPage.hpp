@@ -129,8 +129,8 @@ private:
 	std::array<const char*, 4>      m_msaaCStrs{};
 	std::array<std::string, 5>      m_renderScaleLabels;
 	std::array<const char*, 5>      m_renderScaleCStrs{};
-	std::array<std::string, 4>      m_upscalerLabels;
-	std::array<const char*, 4>      m_upscalerCStrs{};
+	std::array<std::string, 5>      m_upscalerLabels;
+	std::array<const char*, 5>      m_upscalerCStrs{};
 	std::array<std::string, 4>      m_upscalerQualityLabels;
 	std::array<const char*, 4>      m_upscalerQualityCStrs{};
 	std::array<std::string, 2>      m_offOnLabels;

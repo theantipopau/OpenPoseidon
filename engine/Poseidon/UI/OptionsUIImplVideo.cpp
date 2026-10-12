@@ -1040,87 +1040,157 @@ void DisplayOptionsAudio::OnButtonClicked(int idc)
     }
 }
 
-// Difficulty display
+// Difficulty display, in the Proteus style: a row per option with a cadet and a veteran toggle, subtitles and
+// radio under the list, and DEFAULT / CANCEL / OK along the bottom. Built in code, so RscDisplayDifficulty is
+// not loaded. The toggles are ProteusTheme buttons, which replaces the retail 3D list.
+namespace
+{
+// Cadet and veteran toggles: cadet = base + 2*i, veteran = base + 2*i + 1.
+constexpr int kDiffCellBase = 2000;
+
+void SetDiffCellText(ControlsContainer* page, int idc, bool on)
+{
+    if (auto* ctrl = dynamic_cast<CButton*>(page->GetCtrl(idc)))
+        ctrl->SetText(ProteusTheme::Upper(RString(on ? "on" : "off")));
+}
+
+void SetSubtitlesText(ControlsContainer* page, bool on)
+{
+    if (auto* ctrl = dynamic_cast<CButton*>(page->GetCtrl(IDC_OPTIONS_SUBTITLES)))
+        ctrl->SetText(LocalizeString(on ? IDS_OPT_SUBTITLES_ENABLED : IDS_OPT_SUBTITLES_DISABLED));
+}
+
+void SetRadioText(ControlsContainer* page, bool on)
+{
+    if (auto* ctrl = dynamic_cast<CButton*>(page->GetCtrl(IDC_OPTIONS_RADIO)))
+        ctrl->SetText(LocalizeString(on ? IDS_OPT_RADIO_ENABLED : IDS_OPT_RADIO_DISABLED));
+}
+} // namespace
+
 DisplayDifficulty::DisplayDifficulty(ControlsContainer* parent, bool enableSimulation) : Display(parent)
 {
     _enableSimulation = enableSimulation;
-    _diff = nullptr;
-    Load("RscDisplayDifficulty");
+    EnableProteusTheme();
+    _idd = IDD_DIFFICULTY;
 
+    for (int i = 0; i < DTN; i++)
+    {
+        _cadet[i] = USER_CONFIG.cadetDifficulty[i];
+        _veteran[i] = USER_CONFIG.veteranDifficulty[i];
+    }
     _oldTitles = USER_CONFIG.showTitles;
     _oldRadio = GChatList.Enabled();
 
-    {
-        C3DActiveText* ctrl = OptionalActiveText(this, IDC_OPTIONS_SUBTITLES, "SUBTITLES");
-        if (USER_CONFIG.showTitles)
-        {
-            if (ctrl)
-            {
-                ctrl->SetText(LocalizeString(IDS_OPT_SUBTITLES_ENABLED));
-            }
-        }
-        else
-        {
-            if (ctrl)
-            {
-                ctrl->SetText(LocalizeString(IDS_OPT_SUBTITLES_DISABLED));
-            }
-        }
+    static ParamFile cfg;
+    cfg.Clear();
+    const float panelX = 0.10f, panelY = 0.07f, panelW = 0.80f, panelH = 0.86f;
+    const float leftX = panelX + 0.04f, leftW = 0.50f;
+    const float cadetX = 0.60f, veteranX = 0.78f, cellW = 0.14f;
+    const float headerY = panelY + 0.13f;
+    const float rowY0 = panelY + 0.165f, rowStep = 0.040f, rowH = 0.034f;
+    const float bottomRowY = panelY + 0.70f, bottomH = 0.045f;
+    const float buttonRowY = panelY + 0.77f, buttonH = 42.0f / 639.0f;
 
-        ctrl = OptionalActiveText(this, IDC_OPTIONS_RADIO, "RADIO");
-        if (GChatList.Enabled())
-        {
-            if (ctrl)
-            {
-                ctrl->SetText(LocalizeString(IDS_OPT_RADIO_ENABLED));
-            }
-        }
-        else
-        {
-            if (ctrl)
-            {
-                ctrl->SetText(LocalizeString(IDS_OPT_RADIO_DISABLED));
-            }
-        }
+    ProteusTheme::AddCentredPanel(this, cfg, 9790, panelX, panelY, panelW, panelH);
+    LoadControl(*ProteusTheme::NewControl(
+        cfg, "ProteusDifficultyTitle", 9795, CT_STATIC,
+        (const char*)ProteusTheme::Upper(Localize(RString("$STR_DISP_OPTIONS_DIFFICULTY"))), 0.05f, leftX,
+        panelY + 0.035f, panelW - 0.08f, 0.07f, ProteusTheme::TITLE_TEXT));
+    LoadControl(*ProteusTheme::NewRule(cfg, "ProteusDifficultyRule", 9796, leftX, panelY + 0.115f, panelW - 0.08f));
+
+    // Column headers.
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusDifficultyNameHead", 9797, CT_STATIC,
+                                          (const char*)ProteusTheme::Upper(Localize(RString("$STR_DISP_DIFF_NAME"))),
+                                          0.026f, leftX, headerY, leftW, 0.03f, ProteusTheme::TEXT_MUTED));
+    LoadControl(*ProteusTheme::NewControl(
+        cfg, "ProteusDifficultyCadetHead", 9798, CT_STATIC,
+        (const char*)ProteusTheme::Upper(Localize(RString("$STR_DISP_DIFF_CADET"))), 0.026f, cadetX, headerY, cellW,
+        0.03f, ProteusTheme::TEXT_MUTED));
+    LoadControl(*ProteusTheme::NewControl(
+        cfg, "ProteusDifficultyVeteranHead", 9799, CT_STATIC,
+        (const char*)ProteusTheme::Upper(Localize(RString("$STR_DISP_DIFF_VETERAN"))), 0.026f, veteranX, headerY,
+        cellW, 0.03f, ProteusTheme::TEXT_MUTED));
+
+    // One row per option: name, then the cadet and veteran toggles.
+    for (int i = 0; i < DTN; i++)
+    {
+        const float y = rowY0 + i * rowStep;
+        const RString name = LocalizeString(Config::diffDesc[i].stringId);
+        LoadControl(*ProteusTheme::NewControl(cfg, "ProteusDifficultyName", 9800 + i, CT_STATIC, (const char*)name,
+                                              0.028f, leftX, y, leftW, rowH, ProteusTheme::TEXT_PRIMARY));
+        const int cadetIdc = kDiffCellBase + 2 * i, veteranIdc = cadetIdc + 1;
+        LoadControl(*ProteusTheme::NewControl(cfg, "ProteusDifficultyCadet", cadetIdc, CT_BUTTON,
+                                              _cadet[i] ? "on" : "off", 0.026f, cadetX, y, cellW, rowH,
+                                              ProteusTheme::TEXT_PRIMARY));
+        LoadControl(*ProteusTheme::NewControl(cfg, "ProteusDifficultyVeteran", veteranIdc, CT_BUTTON,
+                                              _veteran[i] ? "on" : "off", 0.026f, veteranX, y, cellW, rowH,
+                                              ProteusTheme::TEXT_PRIMARY));
     }
+
+    // Subtitles and radio, under the list.
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusDifficultySubtitles", IDC_OPTIONS_SUBTITLES, CT_BUTTON,
+                                          (const char*)LocalizeString(_oldTitles ? IDS_OPT_SUBTITLES_ENABLED
+                                                                                 : IDS_OPT_SUBTITLES_DISABLED),
+                                          0.028f, leftX, bottomRowY, leftW * 0.9f, bottomH,
+                                          ProteusTheme::TEXT_PRIMARY));
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusDifficultyRadio", IDC_OPTIONS_RADIO, CT_BUTTON,
+                                          (const char*)LocalizeString(_oldRadio ? IDS_OPT_RADIO_ENABLED
+                                                                                : IDS_OPT_RADIO_DISABLED),
+                                          0.028f, cadetX, bottomRowY, leftW * 0.9f, bottomH,
+                                          ProteusTheme::TEXT_PRIMARY));
+
+    // DEFAULT on the left; CANCEL and OK on the right. CANCEL is not the default: OK keeps the choices.
+    const float rightEdge = panelX + panelW - 0.04f;
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusDifficultyDefault", IDC_DIFFICULTIES_DEFAULT, CT_BUTTON,
+                                          (const char*)ProteusTheme::Upper(Localize(RString("$STR_DISP_DEFAULT"))),
+                                          0.034f, leftX, buttonRowY, 0.20f, buttonH, ProteusTheme::TEXT_PRIMARY));
+    LoadControl(*ProteusTheme::NewControl(cfg, "ProteusDifficultyCancel", IDC_CANCEL, CT_BUTTON,
+                                          (const char*)ProteusTheme::Upper(Localize(RString("$STR_DISP_CANCEL"))),
+                                          0.034f, rightEdge - 0.36f, buttonRowY, 0.16f, buttonH,
+                                          ProteusTheme::TEXT_PRIMARY));
+    ParamClass* ok = ProteusTheme::NewControl(cfg, "ProteusDifficultyOK", IDC_OK, CT_BUTTON,
+                                              (const char*)ProteusTheme::Upper(Localize(RString("$STR_DISP_OK"))), 0.034f,
+                                              rightEdge - 0.16f, buttonRowY, 0.16f, buttonH,
+                                              ProteusTheme::TEXT_PRIMARY);
+    ok->Add("default", 1);
+    LoadControl(*ok);
+
+    InputSubsystem::Instance().ChangeGameFocus(+1);
 }
 
 Control* DisplayDifficulty::OnCreateCtrl(int type, int idc, const ParamEntry& cls)
 {
-    switch (idc)
-    {
-        case IDC_DIFFICULTIES_DIFFICULTIES:
-            _diff = new CDifficulties(this, idc, cls);
-            for (int i = 0; i < DTN; i++)
-            {
-                _diff->AddString(LocalizeString(Config::diffDesc[i].stringId));
-                _diff->cadetDifficulty[i] = USER_CONFIG.cadetDifficulty[i];
-                _diff->veteranDifficulty[i] = USER_CONFIG.veteranDifficulty[i];
-            }
-            _diff->SetCurSel(0);
-            return _diff;
-        default:
-            return Display::OnCreateCtrl(type, idc, cls);
-    }
+    return Display::OnCreateCtrl(type, idc, cls);
 }
 
 void DisplayDifficulty::OnButtonClicked(int idc)
 {
+    if (idc >= kDiffCellBase && idc < kDiffCellBase + 2 * DTN)
+    {
+        const int offset = idc - kDiffCellBase;
+        const int i = offset / 2;
+        bool& flag = (offset % 2 == 0) ? _cadet[i] : _veteran[i];
+        flag = !flag;
+        SetDiffCellText(this, idc, flag);
+        return;
+    }
     switch (idc)
     {
         case IDC_DIFFICULTIES_DEFAULT:
             for (int i = 0; i < DTN; i++)
             {
-                _diff->cadetDifficulty[i] = Config::diffDesc[i].defaultCadet;
-                _diff->veteranDifficulty[i] = Config::diffDesc[i].defaultVeteran;
+                _cadet[i] = Config::diffDesc[i].defaultCadet;
+                _veteran[i] = Config::diffDesc[i].defaultVeteran;
+                SetDiffCellText(this, kDiffCellBase + 2 * i, _cadet[i]);
+                SetDiffCellText(this, kDiffCellBase + 2 * i + 1, _veteran[i]);
             }
             break;
         case IDC_OK:
         {
             for (int i = 0; i < DTN; i++)
             {
-                USER_CONFIG.cadetDifficulty[i] = _diff->cadetDifficulty[i];
-                USER_CONFIG.veteranDifficulty[i] = _diff->veteranDifficulty[i];
+                USER_CONFIG.cadetDifficulty[i] = _cadet[i];
+                USER_CONFIG.veteranDifficulty[i] = _veteran[i];
             }
             UserConfig_SaveDifficulties(USER_CONFIG);
         }
@@ -1132,45 +1202,13 @@ void DisplayDifficulty::OnButtonClicked(int idc)
             Exit(idc);
             break;
         case IDC_OPTIONS_SUBTITLES:
-        {
             USER_CONFIG.showTitles = !USER_CONFIG.showTitles;
-            C3DActiveText* ctrl = OptionalActiveText(this, IDC_OPTIONS_SUBTITLES, "SUBTITLES");
-            if (USER_CONFIG.showTitles)
-            {
-                if (ctrl)
-                {
-                    ctrl->SetText(LocalizeString(IDS_OPT_SUBTITLES_ENABLED));
-                }
-            }
-            else
-            {
-                if (ctrl)
-                {
-                    ctrl->SetText(LocalizeString(IDS_OPT_SUBTITLES_DISABLED));
-                }
-            }
-        }
-        break;
+            SetSubtitlesText(this, USER_CONFIG.showTitles);
+            break;
         case IDC_OPTIONS_RADIO:
-        {
             GChatList.Enable(!GChatList.Enabled());
-            C3DActiveText* ctrl = OptionalActiveText(this, IDC_OPTIONS_RADIO, "RADIO");
-            if (GChatList.Enabled())
-            {
-                if (ctrl)
-                {
-                    ctrl->SetText(LocalizeString(IDS_OPT_RADIO_ENABLED));
-                }
-            }
-            else
-            {
-                if (ctrl)
-                {
-                    ctrl->SetText(LocalizeString(IDS_OPT_RADIO_DISABLED));
-                }
-            }
-        }
-        break;
+            SetRadioText(this, GChatList.Enabled());
+            break;
         default:
             Display::OnButtonClicked(idc);
     }

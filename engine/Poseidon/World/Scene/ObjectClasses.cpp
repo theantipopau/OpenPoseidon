@@ -277,14 +277,16 @@ void StreetLampDiagReport()
     // Edge-triggered, not purely time-throttled. A 5-second throttle silently swallowed the
     // one report that mattered: --test-world-hour applies the clock ~17 ms after the lamps
     // first evaluate, so the re-decision landed inside the throttle window and the log kept
-    // showing the stale noon verdict. Always print when the counters move.
+    // showing the stale noon verdict. Print when the counters move, but at most once a second:
+    // every lamp that switches on moves the counter, and printing each one wrote ~2800 lines in
+    // a 20-second mission load.
     static float next = 0.0f;
     static long long lastSeen = -1, lastLit = -1, lastAdded = -1;
     const bool changed = (s_lampsLit != lastLit) || (s_lampsAdded != lastAdded);
     const float now = Glob.time.toFloat();
-    if (!changed && now < next)
+    if (now < next || (!changed && lastSeen >= 0))
         return;
-    next = now + 5.0f;
+    next = now + 1.0f;
     lastSeen = s_lampsSeen;
     lastLit = s_lampsLit;
     lastAdded = s_lampsAdded;

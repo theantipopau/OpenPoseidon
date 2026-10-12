@@ -1981,6 +1981,9 @@ class Engine : public IGraphicsEngine
         // FSR 1 (EASU+RCAS): the license-clean upscaler that ships in every build;
         // active when DLSS is off/unavailable and render scale < 100 %.
         bool fsrOn = true;
+        // FSR 4 (AMD's signed ML upscaler, DX12 backend only). Takes priority over DLSS
+        // and FSR 1 when set; off the DX12 backend the renderer reports why and falls back.
+        bool fsr4On = false;
         float fsrSharpness = 0.25f; // RCAS stops: 0 = sharpest, 2 = mildest
         // RCAS sharpen pass over the DLSS output (strength = fsrSharpness).
         // Default ON — the owner's pick: DLSS + 0.25-stop RCAS beats plain DLSS.
@@ -2004,7 +2007,7 @@ class Engine : public IGraphicsEngine
         // Active MSAA sample count of the scene targets (1 = off). Fixed at launch;
         // SetMsaaSamples changes the NEXT launch.
         int msaaSamples = 1;
-        // 0 none/native, 1 DLSS, 2 FSR1, 3 bilinear.
+        // 0 none/native, 1 DLSS, 2 FSR1, 3 bilinear, 4 FSR 4.
         int activeUpscaler = 0;
     };
 

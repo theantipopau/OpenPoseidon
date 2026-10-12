@@ -5548,10 +5548,10 @@ void DrawTemporalTab()
     Dev::PanelHelp("temporal %s | DLSS route %s | DLSS %s (quality %d)",
                    info.temporalActive ? "on" : "off", info.dlssRoute ? "up" : "down",
                    info.dlssActive ? "active" : "inactive", info.dlssQuality);
-    static const char* kUpscalerNames[] = {"native (no upscaler)", "DLSS", "FSR 1", "bilinear"};
+    static const char* kUpscalerNames[] = {"native (no upscaler)", "DLSS", "FSR 1", "bilinear", "FSR 4"};
     const std::string dlssVer = DlssRuntimeVersionString();
     Dev::PanelHelp("active upscaler: %s%s%s%s",
-                   kUpscalerNames[info.activeUpscaler >= 0 && info.activeUpscaler <= 3 ? info.activeUpscaler : 0],
+                   kUpscalerNames[info.activeUpscaler >= 0 && info.activeUpscaler <= 4 ? info.activeUpscaler : 0],
                    dlssVer.empty() ? "" : "  (DLSS runtime ",
                    dlssVer.c_str(),
                    dlssVer.empty() ? "" : ", FSR 1.0)");
@@ -5646,7 +5646,7 @@ void DrawTemporalTab()
             // surfaces stay coupled: upscaler choice from the DLSS/FSR switches,
             // sub-100% scale into upscalerQuality vs SSAA into renderScale, plus
             // sharpness and the DLSS sharpen pass.
-            cfg.dlssMode = t.dlssOn && t.fsrOn ? -1 : t.dlssOn ? 1 : t.fsrOn ? 2 : 0;
+            cfg.dlssMode = t.fsr4On ? 3 : t.dlssOn && t.fsrOn ? -1 : t.dlssOn ? 1 : t.fsrOn ? 2 : 0;
             const int samplesForChoice[] = {0, 2, 4, 8};
             cfg.msaaSamples = samplesForChoice[msaaChoice];
             if (t.renderScalePct < 100)

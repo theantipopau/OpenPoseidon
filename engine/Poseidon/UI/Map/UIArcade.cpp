@@ -14,6 +14,7 @@
 #include <Poseidon/Foundation/Containers/Array.hpp>
 #include <Poseidon/Foundation/Containers/RStringArray.hpp>
 #include <Poseidon/Foundation/Framework/DebugLog.hpp>
+#include <Poseidon/Foundation/Framework/Log.hpp>
 #include <Poseidon/Foundation/Math/Math3D.hpp>
 #include <Poseidon/Foundation/Math/Math3DP.hpp>
 #include <Poseidon/Foundation/Math/MathDefs.hpp>
@@ -166,6 +167,7 @@ void DisplayArcadeUnit::OnComboSelChanged(int idc, int curSel)
         break;
         case IDC_ARCUNIT_VEHICLE:
         {
+            UpdatePreview();
             CCombo* combo = dynamic_cast<CCombo*>(GetCtrl(IDC_ARCUNIT_CTRL));
             if (combo)
             {
@@ -352,6 +354,59 @@ void DisplayArcadeUnit::UpdateClasses(CCombo* combo, const char* vehicle)
         }
     }
     combo->SetCurSel(sel);
+}
+
+RString FindShape(RString name);
+
+// Shape for the 3D sample: the model of the vehicle class, or null when it has none.
+static LODShapeWithShadow* ArcadePreviewShape(RString vehicle)
+{
+    if (vehicle.GetLength() == 0)
+    {
+        return nullptr;
+    }
+    const ParamEntry* entry = (Pars >> "CfgVehicles").FindEntry(vehicle.Data());
+    if (!entry || !entry->IsClass() || !entry->FindEntry("model"))
+    {
+        return nullptr;
+    }
+    LODShapeWithShadow* shape = Shapes.New(FindShape((*entry) >> "model"), false, false);
+    if (shape && shape->NLevels() > 0)
+    {
+        shape->LevelOpaque(0)->MakeCockpit();
+        shape->OrSpecial(BestMipmap | NoDropdown | DisableSun);
+    }
+    return shape;
+}
+
+ControlObject* DisplayArcadeUnit::OnCreateObject(int type, int idc, const ParamEntry& cls)
+{
+    if (idc == IDC_ARCUNIT_PREVIEW)
+    {
+        _preview = new ControlObject(this, idc, cls);
+        LODShapeWithShadow* shape = ArcadePreviewShape(_unit.vehicle);
+        LOG_INFO(Core, "Insert unit 3D sample: vehicle '{}' shape levels {}", _unit.vehicle.Data(), shape ? shape->NLevels() : -1);
+        _preview->SetShape(shape);
+        return _preview;
+    }
+    return Display::OnCreateObject(type, idc, cls);
+}
+
+void DisplayArcadeUnit::UpdatePreview()
+{
+    if (!_preview)
+    {
+        return;
+    }
+    RString vehicle;
+    CCombo* combo = dynamic_cast<CCombo*>(GetCtrl(IDC_ARCUNIT_VEHICLE));
+    if (combo && combo->GetCurSel() >= 0)
+    {
+        vehicle = combo->GetData(combo->GetCurSel());
+    }
+    LODShapeWithShadow* shape = ArcadePreviewShape(vehicle);
+    LOG_INFO(Core, "Insert unit 3D sample: changed to '{}' shape levels {}", vehicle.Data(), shape ? shape->NLevels() : -1);
+    _preview->SetShape(shape);
 }
 
 void DisplayArcadeUnit::UpdateVehicles(CCombo* combo, const char* vehicle)
@@ -1139,6 +1194,7 @@ bool DisplayArcadeUnit::CanDestroy()
 
 void DisplayArcadeUnit::Destroy()
 {
+    _preview = nullptr;
     Display::Destroy();
 
     if (_exit != IDC_OK)
