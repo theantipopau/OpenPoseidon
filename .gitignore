@@ -30,3 +30,7 @@ imgui.ini
 /Worlds/
 /@ww4mod25/
 /@Evos/
+
+# Third-party full conversion (PR MOD) extracted for testing; not ours to commit
+/@PRMOD/
+/@ffsx2007/
