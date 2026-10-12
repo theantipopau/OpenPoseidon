@@ -44,7 +44,14 @@ rustc-hash = "2"
 # wrapped back into wgpu via wgpu-hal from_raw/device_from_raw. Version MUST match the
 # ash wgpu-hal 29 pins (0.38), or the two disagree about handle types.
 ash = { version = "0.38", optional = true }
-
-[dev-dependencies]
-# dlss bring-up diagnostics only (LoadLibrary probe of the NGX snippet DLL).
+# FSR 4 (fsr4.rs): opens AMD's signed FFX loader DLL at run time. Not linked.
 libloading = "0.8"
+
+# FSR 4 (fsr4.rs): the D3D12 COM types for the raw command list. The version MUST match
+# the windows crate wgpu-hal 29 pins (0.62), or the COM interfaces are two different types.
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Direct3D12",
+    "Win32_System_Threading",
+] }

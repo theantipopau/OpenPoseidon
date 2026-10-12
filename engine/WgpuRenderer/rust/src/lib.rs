@@ -4,6 +4,8 @@ mod dlss;
 #[cfg(feature = "dlss")]
 mod dlss_device;
 mod dlss_status;
+#[cfg(windows)]
+mod fsr4;
 mod dof;
 mod exposure;
 mod far;
@@ -885,6 +887,11 @@ pub struct Renderer {
     // FSR 1 backend switches (live; env-seeded). Sharpness in RCAS stops.
     fsr_runtime_on: bool,
     fsr_sharpness: f32,
+    // FSR 4 switch (live, from the tuning flags bit 6). Inert off the DX12 backend.
+    fsr4_runtime_on: bool,
+    // Column-major projection of the main scene camera, after jitter. The temporal
+    // upscalers read near/far/FOV from it (upscaler::camera_from_proj).
+    upscale_proj: [f32; 16],
     // Optional RCAS pass over the DLSS output (NVIDIA removed DLSS's own sharpening;
     // this is the standard external answer). Uses fsr_sharpness for strength.
     dlss_sharpen: bool,
@@ -1173,6 +1180,8 @@ impl Renderer {
         .map_err(|e| format!("request_adapter failed: {e}"))?;
 
         let info = adapter.get_info();
+        // FSR 4 needs the DX12 backend (fsr4.rs). Read once here: the chain is built below.
+        let dx12_backend = info.backend == wgpu::Backend::Dx12;
         log.log(
             log_level::INFO,
             &format!(
@@ -1723,6 +1732,7 @@ impl Renderer {
             &device,
             &textures,
             color_format,
+            config.format,
             sample_count,
             &mut composer,
             skin_bake_enabled,
@@ -1985,6 +1995,8 @@ impl Renderer {
                 if let Some((raw, ngx)) = ngx_raw {
                     v.push(Box::new(upscaler::DlssUpscaler::new(raw, ngx)));
                 }
+                #[cfg(windows)]
+                v.push(Box::new(fsr4::Fsr4Upscaler::new(dx12_backend)));
                 v.push(Box::new(upscaler::FsrUpscaler::new()));
                 v.push(Box::new(upscaler::BilinearUpscaler::new()));
                 v
@@ -2015,6 +2027,8 @@ impl Renderer {
                 .map(|v| v != "0")
                 .unwrap_or(true),
             main_cam_off: 0,
+            fsr4_runtime_on: false,
+            upscale_proj: [0.0; 16],
             fsr_runtime_on: std::env::var("WGR_FSR").map(|v| v != "0").unwrap_or(true),
             fsr_sharpness: std::env::var("WGR_FSR_SHARPNESS")
                 .ok()
@@ -2733,12 +2747,14 @@ impl Renderer {
                 render,
                 output,
                 jitter_px: self.temporal.jitter_px,
+                camera: upscaler::camera_from_proj(&self.upscale_proj),
                 reset: self.temporal.reset_this_frame(),
                 reset_reason: self.temporal.last_reset_reason(),
                 settings: upscaler::UpscaleSettings {
                     temporal_enabled: self.temporal.enabled,
                     fsr_on: self.fsr_runtime_on,
                     fsr_sharpness: self.fsr_sharpness,
+                    fsr4_on: self.fsr4_runtime_on,
                     dlss_runtime_on: self.dlss_runtime_on,
                     dlss_auto_exposure: self.dlss_auto_exposure,
                     jitter_y_flip: self.dlss_jy_flip,
@@ -3038,6 +3054,7 @@ impl Renderer {
         self.dlss_mv_flip = t.flags & 8 != 0;
         self.fsr_runtime_on = t.flags & 16 != 0;
         self.dlss_sharpen = t.flags & 32 != 0;
+        self.fsr4_runtime_on = t.flags & 64 != 0;
         self.fsr_sharpness = t.fsr_sharpness.clamp(0.0, 2.0);
     }
 
@@ -3893,6 +3910,7 @@ impl Renderer {
             self.temporal.set_output_width(self.config.width);
             self.temporal.begin_frame(cam, self.render_size());
             self.temporal.apply_jitter(&mut cam.proj);
+            self.upscale_proj = cam.proj;
         }
         // REN-TEMP-001H: absolute worlds of this frame's identified rigid draws, for the
         // object-velocity subset at tonemap time (and next frame's previous worlds).
@@ -5166,6 +5184,7 @@ impl Renderer {
                           depth_write_off: bool,
                           prepassed_filter: Option<bool>,
                           water_opaque_filter: Option<bool>| {
+            renderer.gfx3d.set_display_phase(display_2d);
             let mut st3d = crate::gfx3d::Pass3dState::default();
             for op in sub {
                 if matches!(op, Plan3dOp::Draw2D(_)) != want_2d {

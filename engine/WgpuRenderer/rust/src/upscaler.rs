@@ -25,6 +25,7 @@ pub const ID_NATIVE: u32 = 0;
 pub const ID_DLSS: u32 = 1;
 pub const ID_FSR1: u32 = 2;
 pub const ID_BILINEAR: u32 = 3;
+pub const ID_FSR4: u32 = 4;
 
 // REN-UPS-001 — the explicit capability description the roadmap asks for
 // (POST-DLSS-MODERNISATION-ROADMAP §1.1: "Add an explicit capability description so a
@@ -57,12 +58,53 @@ pub struct UpscaleSettings {
     // ships. sharpness is in RCAS stops (0 = sharpest, 2 = mildest).
     pub fsr_on: bool,
     pub fsr_sharpness: f32,
+    // FSR 4 (fsr4.rs): the user picked it on the Video page. Inert off the DX12 backend.
+    pub fsr4_on: bool,
     pub dlss_runtime_on: bool,
     pub dlss_auto_exposure: bool,
     pub jitter_y_flip: bool,
     pub mv_render_space: bool,
     pub mv_flip: bool,
     pub exposure_scale: f32,
+}
+
+// Camera values the temporal upscalers need for depth. Read back from the projection
+// (`camera_from_proj`), not from the game's camera settings.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CameraParams {
+    pub near: f32,
+    pub far: f32,
+    // Vertical field of view, radians.
+    pub fov_y: f32,
+}
+
+// Near, far and vertical FOV from a column-major reversed-Z perspective matrix (the
+// renderer's convention; DLSS and FSR 4 both take reversed depth). Finite far:
+// m22 = n/(f-n), m32 = f*n/(f-n), so f = m32/m22 and n = m32/(1+m22). Infinite far:
+// m22 = 0, m32 = n. Anything else is not reversed-Z, and the fallback is logged by the
+// caller. The values are only inputs to the upscaler's depth heuristics.
+pub fn camera_from_proj(p: &[f32; 16]) -> CameraParams {
+    let fov_y = if p[5] > 0.0 { 2.0 * (1.0 / p[5]).atan() } else { 1.0 };
+    let (m22, m32) = (p[10], p[14]);
+    if m22 > 0.0 && m32 > 0.0 {
+        return CameraParams {
+            near: m32 / (1.0 + m22),
+            far: m32 / m22,
+            fov_y,
+        };
+    }
+    if m22 == 0.0 && m32 > 0.0 {
+        return CameraParams {
+            near: m32,
+            far: 10000.0,
+            fov_y,
+        };
+    }
+    CameraParams {
+        near: 0.1,
+        far: 10000.0,
+        fov_y,
+    }
 }
 
 // All handles are cheap Arc clones, owned by the context so backends never fight the
@@ -84,6 +126,7 @@ pub struct UpscaleContext<'a> {
     pub render: (u32, u32),
     pub output: (u32, u32),
     pub jitter_px: [f32; 2],
+    pub camera: CameraParams,
     pub reset: bool,
     // REN-UPS-001 — the roadmap's "history-reset token AND REASON" (§1.1). The token
     // alone cannot tell a backend apart a camera teleport (discard history) from a
@@ -115,6 +158,13 @@ pub trait TemporalUpscaler {
     fn caps(&self) -> UpscalerCaps;
     fn evaluate(&mut self, ctx: &mut UpscaleContext) -> UpscaleOutcome;
 }
+
+// FSR 4 (fsr4.rs): temporal, like DLSS, and it sharpens with its own FFX pass.
+pub const FSR4_CAPS: UpscalerCaps = UpscalerCaps {
+    info_id: ID_FSR4,
+    needs_temporal_inputs: true,
+    wants_external_sharpen: false,
+};
 
 // ---------------------------------------------------------------------------------
 // Bilinear: the diagnostic-grade spatial fallback (and the native upscale when no
@@ -977,5 +1027,42 @@ mod tests {
         assert_eq!(caps.info_id, ID_DLSS);
         assert!(caps.needs_temporal_inputs);
         assert!(caps.wants_external_sharpen);
+    }
+
+    // FSR 4 owns its sharpening (FFX enableSharpening), so the renderer's RCAS must not
+    // run over it, and it needs the same temporal contract as DLSS.
+    #[test]
+    fn fsr4_id_and_caps_are_pinned() {
+        assert_eq!(ID_FSR4, 4);
+        assert_eq!(FSR4_CAPS.info_id, ID_FSR4);
+        assert!(FSR4_CAPS.needs_temporal_inputs);
+        assert!(!FSR4_CAPS.wants_external_sharpen);
+    }
+
+    // A reversed-Z projection with near 0.5, far 1000, vertical FOV 60 degrees
+    // (m11 = 1/tan(30 deg), m22 = n/(f-n), m32 = f*n/(f-n)) reads back exactly.
+    #[test]
+    fn camera_from_reversed_z_projection_round_trips() {
+        let (n, f) = (0.5f32, 1000.0f32);
+        let m11 = 1.0 / (30f32.to_radians()).tan();
+        let mut p = [0.0f32; 16];
+        p[5] = m11;
+        p[10] = n / (f - n);
+        p[14] = f * n / (f - n);
+        let c = camera_from_proj(&p);
+        assert!((c.near - n).abs() < 1e-3, "near {}", c.near);
+        assert!((c.far - f).abs() < 1e-1, "far {}", c.far);
+        assert!((c.fov_y - 60f32.to_radians()).abs() < 1e-4, "fov {}", c.fov_y);
+    }
+
+    // Not reversed-Z: the caller logs the fallback, the numbers stay sane.
+    #[test]
+    fn camera_from_standard_projection_falls_back() {
+        let mut p = [0.0f32; 16];
+        p[5] = 1.0;
+        p[10] = -1.001;
+        p[14] = -1.0;
+        let c = camera_from_proj(&p);
+        assert_eq!((c.near, c.far), (0.1, 10000.0));
     }
 }

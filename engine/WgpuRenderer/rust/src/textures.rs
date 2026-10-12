@@ -895,8 +895,10 @@ fn write_mip(
             // Rounded UP rather than skipped: the level exists in the file, the physical
             // size of a 2x2 BC7 level is one 4x4 block, and that block is what the file
             // holds. Skipping would leave the texture with fewer mips than it declared.
-            width: if format.is_block_compressed() { width.max(4) } else { width },
-            height: if format.is_block_compressed() { height.max(4) } else { height },
+            // Round up to a whole block count, not to a minimum of 4: a 150-row level is 38 block
+            // rows, and an extent of 150 is refused just as a 2-row one was.
+            width: if format.is_block_compressed() { width.max(1).div_ceil(4) * 4 } else { width },
+            height: if format.is_block_compressed() { height.max(1).div_ceil(4) * 4 } else { height },
             depth_or_array_layers: 1,
         },
     );

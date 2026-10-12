@@ -116,6 +116,9 @@ pub struct SkyBake {
     reduce_pipeline: wgpu::ComputePipeline,
     reduce_layout: wgpu::BindGroupLayout,
     sampler: wgpu::Sampler,
+    // One depth array shared by every bake of the same shape (see bake_begin). Behind a Mutex
+    // so bake_begin can stay &self.
+    depth_maps: std::sync::Mutex<Option<wgpu::Texture>>,
 }
 
 const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth32Float;
@@ -261,6 +264,7 @@ impl SkyBake {
                 compare: Some(wgpu::CompareFunction::LessEqual),
                 ..Default::default()
             }),
+            depth_maps: std::sync::Mutex::new(None),
         }
     }
 
@@ -383,20 +387,33 @@ impl SkyBake {
             .length();
 
         let n = dirs.len() as u32;
-        let maps = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("wgr_sky_bake_maps"),
-            size: wgpu::Extent3d {
-                width: s.map_res,
-                height: s.map_res,
-                depth_or_array_layers: n,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: DEPTH_FORMAT,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
-            view_formats: &[],
+        // One depth array serves every bake of this shape. At 41 layers of 1024^2 Depth32 it is
+        // ~172 MB, and allocating one per registration was most of the synchronous cost of a
+        // model register. Reuse is safe: every bake submits to the same queue, which executes in
+        // submission order, so a later bake's writes cannot land before an earlier bake's reduce
+        // has read the layers.
+        let mut maps_slot = self.depth_maps.lock().unwrap_or_else(|e| e.into_inner());
+        let reusable = maps_slot.as_ref().is_some_and(|t| {
+            let size = t.size();
+            size.width == s.map_res && size.depth_or_array_layers == n
         });
+        if !reusable {
+            *maps_slot = Some(device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("wgr_sky_bake_maps"),
+                size: wgpu::Extent3d {
+                    width: s.map_res,
+                    height: s.map_res,
+                    depth_or_array_layers: n,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: DEPTH_FORMAT,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+                view_formats: &[],
+            }));
+        }
+        let maps = maps_slot.as_ref().expect("depth maps created above");
 
         // One ortho VP per direction, model space -> that direction's clip space.
         let mut vps: Vec<[f32; 16]> = Vec::with_capacity(dirs.len());

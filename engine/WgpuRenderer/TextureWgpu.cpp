@@ -1111,6 +1111,9 @@ int TextureWgpu::Init()
         ITextureSourceFactory* factory = SelectTextureSourceFactory(SourceName());
         if (factory && factory->Check(SourceName()))
             _src = factory->Create(SourceName(), _mipmaps, MAX_MIPMAPS);
+        if (!_src && IsPaaName(SourceName())) // DIAG
+            LOG_WARN(Graphics, "PAA DIAG {}: factory {} check {} create null", SourceName(), factory ? 1 : 0,
+                     factory ? (factory->Check(SourceName()) ? 1 : 0) : -1);
     };
     loadSource();
     if (!_src && _sourceName.GetLength())

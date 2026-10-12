@@ -234,6 +234,8 @@ struct PipelineKey {
     // culling. Part of the key so single-sided draws keep their culled
     // pipeline; the variant only materialises for draws that ask for it.
     double_sided: bool,
+    // Drawn in the post-tonemap UI phase: swapchain colour target, single sample.
+    display: bool,
     // Colour-pass depth-write override for the depth prepass (decision 2/4): when the
     // prepass already laid down this segment's opaque depth, the colour pass draws the
     // prepassed set GreaterEqual + write-OFF. Same key otherwise, so post-ClearDepth
@@ -611,6 +613,7 @@ fn atmospheric_replay_only_moves_prepassed_objects() {
         skinned: false,
         double_sided: false,
         depth_write_off: false,
+        display: false,
     };
     assert!(key.prepassed());
     assert!(PipelineKey { alpha_ref_bits: 0.5f32.to_bits(), skinned: true, ..key }.prepassed());
@@ -645,6 +648,7 @@ impl PipelineKey {
             skinned,
             double_sided: d.flags & crate::ffi::WGR_DRAW3D_DOUBLE_SIDED != 0,
             depth_write_off: false,
+            display: false,
         }
     }
 
@@ -2236,12 +2240,14 @@ impl StorageArray {
         // into next_power_of_two) or the card was simply full, and the log had neither
         // number.
         crate::gfx3d::storage_array_note(self.label, cap);
+        let started = std::time::Instant::now();
         self.buf = Some(device.create_buffer(&wgpu::BufferDescriptor {
             label: Some(self.label),
             size: cap,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         }));
+        crate::gfx3d::storage_array_timing(started.elapsed().as_secs_f64() * 1.0e3, 0.0);
         self.cap = cap;
         true
     }
@@ -2253,18 +2259,24 @@ impl StorageArray {
         if self.cap >= bytes && self.buf.is_some() { return false; }
         let cap = bytes.next_power_of_two().max(4096);
         crate::gfx3d::storage_array_note(self.label, cap);
+        let started = std::time::Instant::now();
         let next = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some(self.label), size: cap,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
+        let create_ms = started.elapsed().as_secs_f64() * 1.0e3;
+        let mut copy_ms = 0.0;
         if let Some(old) = self.buf.as_ref() {
+            let copy_started = std::time::Instant::now();
             let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("wgr_atlas_grow"),
             });
             encoder.copy_buffer_to_buffer(old, 0, &next, 0, self.cap);
             queue.submit([encoder.finish()]);
+            copy_ms = copy_started.elapsed().as_secs_f64() * 1.0e3;
         }
+        crate::gfx3d::storage_array_timing(create_ms, copy_ms);
         self.buf = Some(next);
         self.cap = cap;
         true
@@ -3423,9 +3435,26 @@ pub(crate) fn storage_array_note(label: &'static str, bytes: u64) {
         }
     }
 }
+// Wall time of the most recent growth: the buffer create and the GPU copy of the old contents.
+// Measured so a slow grow can be told apart from the slow frame around it.
+static STORAGE_ARRAY_MS: std::sync::Mutex<(f64, f64)> = std::sync::Mutex::new((0.0, 0.0));
+pub(crate) fn storage_array_timing(create_ms: f64, copy_ms: f64) {
+    if let Ok(mut g) = STORAGE_ARRAY_MS.lock() {
+        *g = (create_ms, copy_ms);
+    }
+}
 pub(crate) fn storage_array_log_line() -> Option<String> {
     let taken = STORAGE_ARRAY_MAX.lock().ok().and_then(|mut g| g.take());
-    taken.map(|(label, bytes)| format!("storage array grew: {} to {:.1} MB", label, bytes as f64 / 1048576.0))
+    let (create_ms, copy_ms) = STORAGE_ARRAY_MS.lock().map(|g| *g).unwrap_or((0.0, 0.0));
+    taken.map(|(label, bytes)| {
+        format!(
+            "storage array grew: {} to {:.1} MB (create {:.1} ms, copy submit {:.1} ms)",
+            label,
+            bytes as f64 / 1048576.0,
+            create_ms,
+            copy_ms
+        )
+    })
 }
 
 pub(crate) fn normal_relief_log_line() -> String {
@@ -4318,6 +4347,10 @@ pub struct Gfx3d {
     plain_layout: wgpu::PipelineLayout,
     skinned_layout: wgpu::PipelineLayout,
     surface_format: wgpu::TextureFormat,
+    // Swapchain format of the display-referred UI phase (after the tonemap resolve).
+    display_format: wgpu::TextureFormat,
+    // True while the UI phase records draws; selects the display pipelines.
+    display_phase: std::cell::Cell<bool>,
     // MSAA sample count of the scene targets (1 = no MSAA). Every scene-targeting object
     // pipeline (colour + prepass + GPU-driven) is built with it; the shadow-depth pipelines
     // stay single-sample (the shadow map is never multisampled).
@@ -4744,11 +4777,17 @@ pub struct Gfx3d {
 }
 
 impl Gfx3d {
+    // Called by the frame recorder before each segment: true for the post-tonemap UI phase.
+    pub fn set_display_phase(&self, on: bool) {
+        self.display_phase.set(on);
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         device: &wgpu::Device,
         textures: &SharedTextures,
         surface_format: wgpu::TextureFormat,
+        display_format: wgpu::TextureFormat,
         sample_count: u32,
         composer: &mut naga_oil::compose::Composer,
         skin_bake_enabled: bool,
@@ -5309,6 +5348,8 @@ impl Gfx3d {
             plain_layout: pipeline_layout,
             skinned_layout,
             surface_format,
+            display_format,
+            display_phase: std::cell::Cell::new(false),
             sample_count,
             foliage_a2c,
             vbuf_attrs,
@@ -5822,7 +5863,7 @@ impl Gfx3d {
                 bias,
             }),
             multisample: wgpu::MultisampleState {
-                count: self.sample_count,
+                count: if key.display { 1 } else { self.sample_count },
                 alpha_to_coverage_enabled: a2c,
                 ..Default::default()
             },
@@ -5834,7 +5875,7 @@ impl Gfx3d {
                     ..Default::default()
                 },
                 targets: &[Some(wgpu::ColorTargetState {
-                    format: self.surface_format,
+                    format: if key.display { self.display_format } else { self.surface_format },
                     blend: Self::blend_state(key.blend),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
@@ -8809,10 +8850,16 @@ impl Gfx3d {
             let skinned = d.palette_slot != NO_PALETTE && has_skin && !baked;
             let key = PipelineKey::from_draw(d, skinned);
             self.ensure_pipeline(device, key);
+            let mut display_key = key;
+            display_key.display = true;
+            self.ensure_pipeline(device, display_key);
             // Opaque draws are prepassed: also build their colour write-off variant (used
             // in the prepassed segment) and their depth+normal prepass pipeline.
             if key.prepassed() {
                 self.ensure_pipeline(device, key.with_write_off());
+                let mut display_wo = key.with_write_off();
+                display_wo.display = true;
+                self.ensure_pipeline(device, display_wo);
                 self.ensure_prepass_pipeline(
                     device,
                     PrepassKey {
@@ -8831,6 +8878,9 @@ impl Gfx3d {
                     },
                 );
                 self.ensure_pipeline(device, solid_blend_write_key(key));
+                let mut display_sb = solid_blend_write_key(key);
+                display_sb.display = true;
+                self.ensure_pipeline(device, display_sb);
             }
         }
         if self.weather_cover.view.is_some() {
@@ -9096,7 +9146,8 @@ impl Gfx3d {
             return;
         }
         let skinned = d.palette_slot != NO_PALETTE && mesh.skin.is_some() && baked.is_none();
-        let base_key = PipelineKey::from_draw(d, skinned);
+        let mut base_key = PipelineKey::from_draw(d, skinned);
+        base_key.display = self.display_phase.get();
         if matches!(mode, Pass3dMode::Color { .. }) && draw_solid_blend_prepassed(d) {
             self.draw_one(pass, textures, d, base, count, st, Pass3dMode::SolidBlendWrite);
         }
@@ -9272,7 +9323,8 @@ impl Gfx3d {
         };
         // Eligible buckets are always plain opaque-rigid (see plan_3d): never skinned,
         // never baked, so pipeline + bind selection is the plain, non-skinned path.
-        let base_key = PipelineKey::from_draw(d, false);
+        let mut base_key = PipelineKey::from_draw(d, false);
+        base_key.display = self.display_phase.get();
         let pipeline = match mode {
             Pass3dMode::Weather | Pass3dMode::WeatherFar => return, // weather replays exact direct source slots
             Pass3dMode::Prepass => {
@@ -9441,6 +9493,7 @@ impl Gfx3d {
         textures: &SharedTextures,
         name: Option<&str>,
     ) -> u32 {
+        let t_total = std::time::Instant::now(); // DIAG: per-model register cost
         let gpu_lods: Vec<cull::LodGpu> = lods
             .iter()
             .map(|l| cull::LodGpu {
@@ -9557,7 +9610,17 @@ impl Gfx3d {
         if let Some(line) = self.cull.note_committed_lod_reuse(model, previous_lod_len) {
             self.queued_log.push(line);
         }
+        let t_bake = std::time::Instant::now();
         self.bake_model_sky_visibility(device, queue, model, lods, sections, name);
+        let bake_ms = t_bake.elapsed().as_secs_f64() * 1e3;
+        let total_ms = t_total.elapsed().as_secs_f64() * 1e3;
+        if total_ms >= 2.0 {
+            self.queued_log.push(format!(
+                "[wgr] DIAG model register {}: {total_ms:.1} ms (sky bake {bake_ms:.1} ms, {} sections)",
+                name.unwrap_or("-"),
+                srcs.len(),
+            ));
+        }
         model
     }
 

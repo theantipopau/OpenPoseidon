@@ -3607,11 +3607,13 @@ void EngineWgpu::DrainResourceOps(std::vector<ResourceOp>& ops)
     const auto drainStart = std::chrono::steady_clock::now();
     const size_t operationCount = ops.size();
     std::array<uint32_t, 7> kindCounts{};
+    std::array<double, 7> kindMs{}; // DIAG: per-kind drain time, for the slow-block log
     for (ResourceOp& op : ops)
     {
         const size_t kind = static_cast<size_t>(op.kind);
         if (kind < kindCounts.size())
             ++kindCounts[kind];
+        const auto opStart = std::chrono::steady_clock::now();
         switch (op.kind)
         {
         case ResourceOp::MeshCreate:
@@ -4113,6 +4115,8 @@ void EngineWgpu::DrainResourceOps(std::vector<ResourceOp>& ops)
             wgr_cancel_lod_demand(_renderer, op.lodDemand->epoch);
             break;
         }
+        if (kind < kindMs.size())
+            kindMs[kind] += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - opStart).count();
     }
     if (_geometryOwnerLedger) _geometryOwnerLedger->DrainDetachMailbox();
     ops.clear();
@@ -4120,11 +4124,12 @@ void EngineWgpu::DrainResourceOps(std::vector<ResourceOp>& ops)
     if (_slowBlockMs > 0.0 && drainMs >= _slowBlockMs)
     {
         LOG_INFO(Graphics,
-                 "Wgpu resource drain: {:.1f} ms | ops={} meshCreate={} meshDestroy={} modelRegister={} "
-                 "cpuMeshCreate={} meshSetSkin={}",
-                 drainMs, operationCount, kindCounts[ResourceOp::MeshCreate], kindCounts[ResourceOp::MeshDestroy],
-                 kindCounts[ResourceOp::ModelRegister], kindCounts[ResourceOp::CpuMeshCreate],
-                 kindCounts[ResourceOp::MeshSetSkin]);
+                 "Wgpu resource drain: {:.1f} ms | ops={} meshCreate={} ({:.1f} ms) meshDestroy={} modelRegister={} ({:.1f} ms) "
+                 "cpuMeshCreate={} ({:.1f} ms) meshSetSkin={}",
+                 drainMs, operationCount, kindCounts[ResourceOp::MeshCreate], kindMs[ResourceOp::MeshCreate],
+                 kindCounts[ResourceOp::MeshDestroy], kindCounts[ResourceOp::ModelRegister],
+                 kindMs[ResourceOp::ModelRegister], kindCounts[ResourceOp::CpuMeshCreate],
+                 kindMs[ResourceOp::CpuMeshCreate], kindCounts[ResourceOp::MeshSetSkin]);
     }
     // The overlay drain is NOT called from here any more. It is one step of the consumer
     // block's explicit sequence in NextFrame, where the order it depends on is visible --
@@ -5120,12 +5125,11 @@ void EngineWgpu::AccumulateRenderThreadTiming(double busyMs, double waitMs, doub
     _rtLazyWaitMsAccum = 0.0;
     _rtLazyWaitCountAccum = 0;
     // PERF-021 follow-up: the capture JSON read these as 0 while the tab showed them; one
-    // line a second says what this window actually computed.
-    static uint32_t windows = 0;
-    if ((windows++ % 10) == 0)
-        LOG_INFO(Graphics,
-                 "Wgpu render thread window: frames={} busy={:.2f} ms wait={:.2f} lazyWait={:.2f} ms x{:.2f}/frame",
-                 _rtWindowFrames, _rtBusyMs, _rtWaitMs, _rtLazyWaitMs, _rtLazyWaitsPerFrame);
+    // line a second says what this window actually computed. The window is one second of wall
+    // time, so its frame count is the frame rate.
+    LOG_INFO(Graphics,
+             "Wgpu render thread window: fps={} frames={} busy={:.2f} ms wait={:.2f} lazyWait={:.2f} ms x{:.2f}/frame",
+             _rtWindowFrames, _rtWindowFrames, _rtBusyMs, _rtWaitMs, _rtLazyWaitMs, _rtLazyWaitsPerFrame);
     _rtBusyMsAccum = _rtWaitMsAccum = _rtWindowMsAccum = 0.0;
     _rtWindowFrames = 0;
     _renderLagShown = static_cast<float>(_renderLagFrames);
@@ -9719,7 +9723,7 @@ static void TraceClassifyReject(const ShapeSection& sec, const char* why)
     const char* faceName = face && face->GetName().Data() ? face->GetName().Data() : "(none)";
     const char* mat = sec.surfMat && sec.surfMat->GetName().Data() ? sec.surfMat->GetName().Data() : "(null)";
     if (said.insert(std::string(why) + "|" + faceName).second)
-        LOG_INFO(Graphics, "Wgpu material: classifier REFUSED ({}) surfMat='{}' face='{}'", why, mat, faceName);
+        LOG_DEBUG(Graphics, "Wgpu material: classifier REFUSED ({}) surfMat='{}' face='{}'", why, mat, faceName);
 }
 
 // One line per `.emat` behind a Blend-class section, saying WHY the opaque
@@ -13178,7 +13182,7 @@ bool EngineWgpu::ResolveMaterialLayers(const ShapeSection& section, WgrModelMate
     const auto skip = [&](const char* why, const char* what)
     {
         if (saidSkip.insert(std::string(why) + "|" + what).second)
-            LOG_INFO(Graphics, "Wgpu material: layers SKIPPED ({}) for {}", why, what);
+            LOG_DEBUG(Graphics, "Wgpu material: layers SKIPPED ({}) for {}", why, what);
     };
     if (!section.surfMat)
     {
@@ -15162,7 +15166,7 @@ uint32_t EngineWgpu::RegisterGpuModel(LODShapeWithShadow* shape)
                 static std::unordered_set<std::string> saidClassified;
                 const char* nm = (shape != nullptr && shape->Name() != nullptr) ? shape->Name() : "(unnamed)";
                 if (saidClassified.insert(nm).second)
-                    LOG_INFO(Graphics, "Wgpu material: retained classifier reached shape {}", nm);
+                    LOG_DEBUG(Graphics, "Wgpu material: retained classifier reached shape {}", nm);
             }
             // RFG-074: for one named shape, print every (level, section) with the surfMat
             // name the classifier actually sees. The church's LOD0 materials never appear
@@ -16459,7 +16463,7 @@ void EngineWgpu::SetTemporalTuning(const TemporalSettings& t)
     w.reactive_water = std::clamp(t.reactiveWater, 0.0f, 1.0f);
     w.flags = (t.dlssAutoExposure ? 1u : 0u) | (t.jitterYFlip ? 2u : 0u) |
               (t.mvRenderSpace ? 4u : 0u) | (t.mvFlip ? 8u : 0u) | (t.fsrOn ? 16u : 0u) |
-              (t.dlssSharpen ? 32u : 0u);
+              (t.dlssSharpen ? 32u : 0u) | (t.fsr4On ? 64u : 0u);
     w.fsr_sharpness = std::clamp(t.fsrSharpness, 0.0f, 2.0f);
     _pendingSet.temporal = w;
     _pendingSet.temporalDirty = true;
