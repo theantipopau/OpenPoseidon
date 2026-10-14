@@ -3274,6 +3274,44 @@ fn gtao_slice_integral_darkens_as_horizons_close_in() {
 }
 
 #[test]
+fn gtao_half_res_march_stays_pinned_to_the_bilateral_upsample_contract() {
+    // A1 (LIT-010 lever): the half-resolution march is one invocation per 2x2 block
+    // replicated over a FULL-resolution target, and the full-resolution bilateral blur
+    // is what resolves it back to per-pixel detail. Each arm below is load-bearing:
+    // dropping the replication without adding a dedicated upsample halves AO resolution
+    // with no filter to hide it, and weakening either blur rejection term turns the
+    // upsample into a bleed (halos at silhouettes, smeared creases).
+    let src = include_str!("gtao.wgsl");
+    // The march stride comes from the same `limits.z` the Rust side sets from
+    // `Gfx3d::gtao_scale` next to the dispatch grid size — the two cannot disagree.
+    assert!(
+        src.contains("let scale = max(i32(params.limits.z), 1)"),
+        "GTAO march stride must come from params.limits.z (the gtao_scale value)"
+    );
+    // One marched result replicated over every pixel of its block (identity at scale 1,
+    // which is the legacy full-res off-switch via WGR_GTAO_SCALE=1 / set_gtao_scale(1)).
+    assert!(
+        src.contains("store_block(block, dims, scale,"),
+        "GTAO must replicate each block result over the full-res target"
+    );
+    // The block's representative is the NEAREST surface, not a blind corner pick — the
+    // classic half-res silhouette fix. A sky/far representative would hand background
+    // AO to foreground pixels where the denoise cannot reject it.
+    assert!(
+        src.contains("if (zq < z)"),
+        "GTAO block representative must be the nearest surface in the block"
+    );
+    // The upsample arm: the blur runs at full resolution and rejects on BOTH full-res
+    // depth and normal divergence (pinned again here so neither term can be dropped
+    // without this test naming it).
+    let blur = include_str!("gtao_blur.wgsl");
+    assert!(
+        blur.contains("w_depth") && blur.contains("w_normal"),
+        "GTAO blur must stay edge-aware on both depth and normal (it is the upsample)"
+    );
+}
+
+#[test]
 fn normal_resolve_takes_a_single_sample_rather_than_averaging() {
     let src = include_str!("normal_resolve.wgsl");
     let module = naga::front::wgsl::parse_str(src).expect("normal_resolve.wgsl parse");

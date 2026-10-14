@@ -1,0 +1,31 @@
+# Proteus ticket ledger — the single ledger for background work.
+# Status values: proposed | in-progress | done-unverified | verified.
+# gpu_verified: true only after a real-GPU run of the ticket's own evidence.
+# Per-ticket .md records in this folder are the PR descriptions.
+
+tickets:
+  - id: STEP-0
+    title: State-of-repo baseline
+    branch: dev/matt-fork-main
+    status: done-unverified
+    files:
+      - docs/proteus/STATE_OF_REPO.md
+      - docs/proteus/CHANGELOG_BACKGROUND.md
+    toggle: n/a (docs only)
+    evidence: Read-only survey; claims marked VERIFIED (ran/read) vs ASSUMED. No build or game run attempted.
+    gpu_verified: false
+    follow_ups: []
+
+  - id: A1
+    title: Half-resolution GTAO with bilateral upsample (LIT-010 lever)
+    branch: proteus/ao-half-res
+    status: done-unverified
+    files:
+      - engine/WgpuRenderer/rust/src/gfx3d/mod.rs
+      - docs/proteus/A1-gtao-half-res.md
+    toggle: WGR_GTAO_SCALE=1 restores legacy per-pixel march; dev-panel AO control drives set_gtao_scale live (clamped 1..=2); GtaoSettings.enabled gates the pass.
+    evidence: cargo test -p wgpu_renderer --lib (8 GTAO CPU tests) 8 passed 0 failed; new hunk rustfmt-clean. Half-res march was already implemented default-on, so this ticket pins it with gtao_half_res_march_stays_pinned_to_the_bilateral_upsample_contract.
+    gpu_verified: false
+    follow_ups:
+      - ticket-18 flyby at 1080p/1440p/4K with WGR_GTAO_SCALE=1 vs 2 (GtaoCompute/GtaoBlur columns)
+      - ticket-19 golden-image A/B of scale 1 vs 2 (forest/interior)
