@@ -22,6 +22,7 @@
 | ID | Title | Status | GPU | Branch |
 | --- | --- | --- | --- | --- |
 | T18a | Machine-readable GPU/CPU timing line (PERF-CAP) | done-unverified | no | `proteus/T18-perf-capture` |
+| T18b | Perf capture script + scene/region definitions | done-unverified | no | `proteus/T18b-capture-script` |
 
 ## Phase A — Renderer issues
 

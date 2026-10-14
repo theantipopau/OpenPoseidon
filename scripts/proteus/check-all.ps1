@@ -15,6 +15,10 @@ Write-Host '== roadmap freshness =='
 python "$root/scripts/proteus/gen-roadmap.py" --check
 if ($LASTEXITCODE -ne 0) { $failed = $true }
 
+Write-Host '== perf parser selftest =='
+python "$root/scripts/proteus/perf_parse.py" --selftest
+if ($LASTEXITCODE -ne 0) { $failed = $true }
+
 Write-Host '== format (changed files vs proteus/main) =='
 Set-Location $root
 $base = (git merge-base HEAD proteus/main 2>$null)
