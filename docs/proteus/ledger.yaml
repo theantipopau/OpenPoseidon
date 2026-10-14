@@ -16,6 +16,20 @@ tickets:
     gpu_verified: false
     follow_ups: []
 
+  - id: G1
+    title: Agent guide (AGENTS.md + CLAUDE.md pointer)
+    branch: proteus/G1-agent-guide
+    status: done-unverified
+    files:
+      - AGENTS.md
+      - CLAUDE.md
+      - docs/proteus/G1-agent-guide.md
+    toggle: n/a (docs only)
+    evidence: Docs-only; content cross-checked against presets, workspace Cargo.toml, Build.ps1, KNOWN_ISSUES. No compiled file touched.
+    gpu_verified: false
+    follow_ups:
+      - G3 CI exercises the documented commands; fix guide on drift
+
   - id: A1
     title: Half-resolution GTAO with bilateral upsample (LIT-010 lever)
     branch: proteus/ao-half-res
