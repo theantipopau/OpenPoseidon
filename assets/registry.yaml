@@ -1,0 +1,508 @@
+# Proteus asset registry (G2). Every file under the asset dirs must be listed here.
+# Asset dirs: assets/, resources/sky/, resources/icon-*, screenshots/.
+# Check: scripts/proteus/check-assets.py (via scripts/proteus/check-all).
+assets:
+  - path: assets/inventory/ak_rifle.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/ak_rifle.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/binoculars.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/binoculars.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/curved_magazine.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/curved_magazine.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/grenade.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/grenade.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/launcher.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/launcher.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/m16.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/m16.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/machinegun.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/machinegun.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/magazine.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/magazine.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/mine.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/mine.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/nvg.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/nvg.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/pistol.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/pistol.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/rifle.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/rifle.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/rocket.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/rocket.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/satchel.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/satchel.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/scoped_rifle.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/scoped_rifle.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/smg.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/smg.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/smoke.paa
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/inventory/smoke.png
+    source: content/inventory-icons (manifest.json, realistic-prompts.json, vector-draft/)
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Original illustration; .paa is the converted runtime copy. See docs ASSETS.md."
+  - path: assets/ui/logo.png
+    source: Project-authored Proteus artwork
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: assets/ui/openposeidon_logo.paa
+    source: Inherited from upstream koosoli/OpenPoseidon (predates fork)
+    author: Upstream OpenPoseidon project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Superseded by Proteus art; do not use for new surfaces."
+  - path: assets/ui/openposeidon_logo.png
+    source: Inherited from upstream koosoli/OpenPoseidon (predates fork)
+    author: Upstream OpenPoseidon project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Superseded by Proteus art; do not use for new surfaces."
+  - path: assets/ui/proteus.png
+    source: Project-authored Proteus artwork
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: assets/ui/proteus_background.paa
+    source: Project-authored Proteus artwork
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: assets/ui/proteus_background.png
+    source: Project-authored Proteus artwork
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: assets/ui/vignette.paa
+    source: Project-authored Proteus artwork
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: assets/ui/vignette.png
+    source: Project-authored Proteus artwork
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: assets/fonts/BarlowCondensed-Regular.ttf
+    source: Barlow Condensed by Jeremy Tribby (bundled, OFL allows)
+    author: Jeremy Tribby
+    licence: SIL Open Font License 1.1
+    spdx: OFL-1.1
+    date_added: unknown
+    notes: ""
+  - path: assets/fonts/BarlowCondensed-SemiBold.ttf
+    source: Barlow Condensed by Jeremy Tribby (bundled, OFL allows)
+    author: Jeremy Tribby
+    licence: SIL Open Font License 1.1
+    spdx: OFL-1.1
+    date_added: unknown
+    notes: ""
+  - path: assets/fonts/OFL.txt
+    source: Barlow Condensed by Jeremy Tribby (bundled, OFL allows)
+    author: Jeremy Tribby
+    licence: SIL Open Font License 1.1
+    spdx: OFL-1.1
+    date_added: unknown
+    notes: ""
+  - path: resources/sky/bright_stars.pstar
+    source: Yale Bright Star Catalogue 5th ed. via CDS/ADC V/50; converted by tools/sky/make_star_catalogue.py (original not kept)
+    author: Hoffleit & Warren / CDS
+    licence: Public domain
+    spdx: LicenseRef-Public-Domain
+    date_added: unknown
+    notes: "Converted, not verbatim."
+  - path: resources/sky/milkyway.pskytex
+    source: NASA SVS Deep Star Maps 2020 (ESA Gaia DR2); converted by tools/sky/make_milkyway.py (original not kept)
+    author: NASA/Goddard SVS, ESA/Gaia/DPAC
+    licence: Public domain
+    spdx: LicenseRef-Public-Domain
+    date_added: unknown
+    notes: "Credit: Milky Way imagery courtesy NASA/GSFC SVS, from ESA/Gaia/DPAC data."
+  - path: resources/icon-demo.ico
+    source: Project-authored application icons
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: resources/icon-demo.rc
+    source: Project-authored application icons
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: resources/icon-game.ico
+    source: Project-authored application icons
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: resources/icon-game.rc
+    source: Project-authored application icons
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: resources/icon-launcher.ico
+    source: Project-authored application icons
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: resources/icon-launcher.rc
+    source: Project-authored application icons
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: resources/icon-openposeidon.ico
+    source: Project-authored application icons
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: resources/icon-server.ico
+    source: Project-authored application icons
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: resources/icon-server.rc
+    source: Project-authored application icons
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: resources/icon-tool.ico
+    source: Project-authored application icons
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: resources/icon-tool.rc
+    source: Project-authored application icons
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: ""
+  - path: screenshots/GTAO.png
+    source: Project-owner captures of development builds
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Documents engine features; grants no rights to depicted game assets/trademarks."
+  - path: screenshots/OpenPoseidonEngine.png
+    source: Project-owner captures of development builds
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Documents engine features; grants no rights to depicted game assets/trademarks."
+  - path: screenshots/armareforger.png
+    source: Project-owner captures of development builds
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Documents engine features; grants no rights to depicted game assets/trademarks."
+  - path: screenshots/box3d.png
+    source: Project-owner captures of development builds
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Documents engine features; grants no rights to depicted game assets/trademarks."
+  - path: screenshots/destrucableterrain.jpg
+    source: Project-owner captures of development builds
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Documents engine features; grants no rights to depicted game assets/trademarks."
+  - path: screenshots/newgrass.png
+    source: Project-owner captures of development builds
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Documents engine features; grants no rights to depicted game assets/trademarks."
+  - path: screenshots/newocean.png
+    source: Project-owner captures of development builds
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Documents engine features; grants no rights to depicted game assets/trademarks."
+  - path: screenshots/newshadowsystem.png
+    source: Project-owner captures of development builds
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Documents engine features; grants no rights to depicted game assets/trademarks."
+  - path: screenshots/proteus/campaign.png
+    source: Project-owner captures of development builds
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Documents engine features; grants no rights to depicted game assets/trademarks."
+  - path: screenshots/proteus/main-menu.png
+    source: Project-owner captures of development builds
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Documents engine features; grants no rights to depicted game assets/trademarks."
+  - path: screenshots/proteus/options.png
+    source: Project-owner captures of development builds
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Documents engine features; grants no rights to depicted game assets/trademarks."
+  - path: screenshots/puddles.png
+    source: Project-owner captures of development builds
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Documents engine features; grants no rights to depicted game assets/trademarks."
+  - path: screenshots/volumetricfog.png
+    source: Project-owner captures of development builds
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Documents engine features; grants no rights to depicted game assets/trademarks."
+  - path: screenshots/volumetricsnow.png
+    source: Project-owner captures of development builds
+    author: Proteus project
+    licence: Project licence (GPL-3.0-or-later, see LICENSE)
+    spdx: GPL-3.0-or-later
+    date_added: unknown
+    notes: "Documents engine features; grants no rights to depicted game assets/trademarks."
