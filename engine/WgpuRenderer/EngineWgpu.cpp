@@ -18617,6 +18617,49 @@ void EngineWgpu::PublishRendererStats()
                 n = 0;
             }
         }
+        // T18: full per-region capture line for perf-capture (POSEIDON_GPU_STATS=1). 120-frame
+        // means of every published GPU region plus the worker CPU rows, as index:value pairs
+        // (indices are WgrGpuTimerRegion; -1/absent regions count as 0, like the blocks above).
+        // One line per 120 frames keeps logs small; perf-capture takes the last complete window.
+        // Default off: unset POSEIDON_GPU_STATS restores the previous log exactly.
+        static const bool kSayPerfCap = []
+        {
+            const char* e = std::getenv("POSEIDON_GPU_STATS");
+            return e != nullptr && std::atoi(e) != 0;
+        }();
+        if (kSayPerfCap && gpuN > 0)
+        {
+            static std::vector<double> gSum, cSum;
+            static int nCap = 0;
+            if ((int)gSum.size() < gpuN)
+                gSum.assign(gpuN, 0.0);
+            if ((int)cSum.size() < cpuN)
+                cSum.assign(cpuN, 0.0);
+            for (int r = 0; r < gpuN; ++r)
+                gSum[r] += gpu[r] >= 0.0f ? (double)gpu[r] : 0.0;
+            for (int r = 0; r < cpuN; ++r)
+                cSum[r] += cpu[r] > 0.0f ? (double)cpu[r] : 0.0;
+            if (++nCap >= 120)
+            {
+                std::string line = "PERF-CAP gpu120";
+                char cell[32];
+                for (int r = 0; r < gpuN; ++r)
+                {
+                    std::snprintf(cell, sizeof(cell), " g%d=%.3f", r, gSum[r] / nCap);
+                    line += cell;
+                }
+                line += " | cpu120";
+                for (int r = 0; r < cpuN; ++r)
+                {
+                    std::snprintf(cell, sizeof(cell), " c%d=%.3f", r, cSum[r] / nCap);
+                    line += cell;
+                }
+                LOG_INFO(Graphics, "{}", line);
+                std::fill(gSum.begin(), gSum.end(), 0.0);
+                std::fill(cSum.begin(), cSum.end(), 0.0);
+                nCap = 0;
+            }
+        }
         // TW-WATER W7: frame statistics for the backend comparison (WGR_FRAME_STATS=1): every 5 s,
         // the wall-clock frame interval and the GPU frame (p50 / p95 / p99), the water's GPU cost
         // for either backend (Current OP: its regions 0-18 outermost sum; Tidewater: its compute +
