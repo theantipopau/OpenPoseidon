@@ -30,6 +30,23 @@ tickets:
     follow_ups:
       - G3 CI exercises the documented commands; fix guide on drift
 
+  - id: G2
+    title: Asset and licence registry
+    branch: proteus/G2-asset-registry
+    status: done-unverified
+    files:
+      - assets/registry.yaml
+      - scripts/proteus/check-assets.py
+      - scripts/proteus/check-all.ps1
+      - docs/proteus/PROVENANCE.md
+      - docs/proteus/G2-asset-registry.md
+    toggle: n/a (tooling only; check is strict by default)
+    evidence: check-assets.py OK (72 files) exit 0; negative probe FAIL exit 1 then OK after removal. No compiled code touched.
+    gpu_verified: false
+    follow_ups:
+      - G3 wires check-assets.py into CI and extends check-all
+      - owner confirms 72 registry rows and openposeidon_logo retirement
+
   - id: A1
     title: Half-resolution GTAO with bilateral upsample (LIT-010 lever)
     branch: proteus/ao-half-res
