@@ -30,6 +30,20 @@ tickets:
     follow_ups:
       - G3 CI exercises the documented commands; fix guide on drift
 
+  - id: T18a
+    title: Machine-readable GPU/CPU timing line (PERF-CAP)
+    branch: proteus/T18-perf-capture
+    status: done-unverified
+    files:
+      - engine/WgpuRenderer/EngineWgpu.cpp
+      - docs/proteus/T18a-perfcap-line.md
+    toggle: POSEIDON_GPU_STATS=1 on; unset/0 restores previous log (default off)
+    evidence: WgpuRenderer + PoseidonGame targets build green (only pre-existing warning). No unit test (10-line loop over published arrays); parser tests in T18b.
+    gpu_verified: false
+    follow_ups:
+      - T18b capture script + scenes + parser
+      - GPU run must show PERF-CAP lines with g25 frame total > 0
+
   - id: G4
     title: Roadmap and renderer-systems ledger
     branch: proteus/G4-roadmap-ledger

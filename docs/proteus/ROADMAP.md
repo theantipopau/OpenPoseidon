@@ -17,6 +17,12 @@
 | G3 | CI workflow + local check-all parity | done-unverified | no | `proteus/G3-ci` |
 | G4 | Roadmap and renderer-systems ledger | done-unverified | no | `proteus/G4-roadmap-ledger` |
 
+## Phase T — GPU verification tooling
+
+| ID | Title | Status | GPU | Branch |
+| --- | --- | --- | --- | --- |
+| T18a | Machine-readable GPU/CPU timing line (PERF-CAP) | done-unverified | no | `proteus/T18-perf-capture` |
+
 ## Phase A — Renderer issues
 
 | ID | Title | Status | GPU | Branch |

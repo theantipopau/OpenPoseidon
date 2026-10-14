@@ -12,4 +12,8 @@
 - 2026-10-15 09:10 FINISH G3: proteus.yml (5 jobs, YAML-valid) + check-all parity (OK/FAIL/OK controls green). Workflow never observed green on runners — owner's first run flips that. Merged to proteus/main as 5960c39.
 - 2026-10-15 09:15 START G4 (roadmap + renderer ledger).
 - 2026-10-15 09:20 DECISION: renderer-systems.yaml lists 32 major systems only (not every WGR_ knob); unverified defaults marked UNVERIFIED for owning tickets to confirm.
-- 2026-10-15 09:25 FINISH G4: renderer-systems.yaml (32) + gen-roadmap.py (write/check round-trip OK) + check-all OK. Verified AoSettings.enabled=true from source (GTAO default-on confirmed). Merging to proteus/main next.
+- 2026-10-15 09:25 FINISH G4: renderer-systems.yaml (32) + gen-roadmap.py (write/check round-trip OK) + check-all OK. Verified AoSettings.enabled=true from source (GTAO default-on confirmed). Merged to proteus/main as 5531e62.
+- 2026-10-15 09:30 PHASE G CHECKPOINT: G1 (26f496f), G2 (d35a634), G3 (4dbcccb), G4 (2286b02) merged. No stop condition hit. Continuing to Phase T.
+- 2026-10-15 09:30 START T18. Finding: no full-region timing dump exists in the log (only gated summaries) — T18 needs an engine line first.
+- 2026-10-15 09:35 DECISION: split T18 into T18a (engine PERF-CAP line, this branch) + T18b (capture script + scenes + parser). Branch proteus/T18-perf-capture holds T18a; T18b gets its own branch.
+- 2026-10-15 09:45 FINISH T18a: kSayPerfCap block (+38 EngineWgpu.cpp); WgpuRenderer + PoseidonGame build green, only pre-existing warning. Merging to proteus/main next.
