@@ -1,0 +1,45 @@
+# T19 golden-image shots. One shot = one mission + one time trigger + thresholds.
+# Determinism: each mission.sqm pins randomSeed + Intel (time/weather); the camera is
+# static (spawn view). Triggers are TIME-based ("30s"), not frame-based: what matters is
+# that streaming has settled, and load hitches shift frame counts but not wall-clock
+# settle time. If a shot flakes on streaming, raise its trigger — don't bless a half-loaded frame.
+# Thresholds are starting points; tighten them after the first real bless (see T19 record).
+# Capture resolution is fixed at 1080p (smaller/faster than perf's 1440p; goldens test
+# pixels, not fill rate). Baselines live OUTSIDE the repo (see golden-capture.ps1).
+shots:
+  - name: open
+    mission: dev-missions/terrain-brush.Intro/mission.sqm
+    trigger: 30s
+    desc: open terrain, cascades + GTAO on bare ground
+    max_dissim: 0.02
+    max_color_mae: 3.0
+  - name: woodland
+    mission: dev-missions/snow-crawl.Intro/mission.sqm
+    trigger: 30s
+    desc: alpha-cutout vegetation, contact shadows
+    max_dissim: 0.03
+    max_color_mae: 4.0
+  - name: ride
+    mission: dev-missions/jeep-ride.Intro/mission.sqm
+    trigger: 20s
+    desc: vehicle in frame, temporal stability spot-check
+    max_dissim: 0.03
+    max_color_mae: 4.0
+  - name: interior
+    mission: dev-missions/smoke-room.noe/mission.sqm
+    trigger: 30s
+    desc: interior sky map, local lights, smoke
+    max_dissim: 0.03
+    max_color_mae: 4.0
+  - name: coast
+    mission: dev-missions/foam-ocean.noe/mission.sqm
+    trigger: 40s
+    desc: ocean FFT + foam + shore (water sim needs longest settle)
+    max_dissim: 0.04
+    max_color_mae: 5.0
+  - name: manual
+    mission: dev-missions/jeep-manual.Intro/mission.sqm
+    trigger: 30s
+    desc: second Intro viewpoint, A/B sanity framing
+    max_dissim: 0.02
+    max_color_mae: 3.0

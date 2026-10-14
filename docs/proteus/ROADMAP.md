@@ -23,6 +23,7 @@
 | --- | --- | --- | --- | --- |
 | T18a | Machine-readable GPU/CPU timing line (PERF-CAP) | done-unverified | no | `proteus/T18-perf-capture` |
 | T18b | Perf capture script + scene/region definitions | done-unverified | no | `proteus/T18b-capture-script` |
+| T19 | Golden-image harness (shots + SSIM compare + capture) | done-unverified | no | `proteus/T19-golden-harness` |
 
 ## Phase A — Renderer issues
 
