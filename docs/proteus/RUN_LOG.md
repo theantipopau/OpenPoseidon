@@ -17,3 +17,7 @@
 - 2026-10-15 09:30 START T18. Finding: no full-region timing dump exists in the log (only gated summaries) — T18 needs an engine line first.
 - 2026-10-15 09:35 DECISION: split T18 into T18a (engine PERF-CAP line, this branch) + T18b (capture script + scenes + parser). Branch proteus/T18-perf-capture holds T18a; T18b gets its own branch.
 - 2026-10-15 09:45 FINISH T18a: kSayPerfCap block (+38 EngineWgpu.cpp); WgpuRenderer + PoseidonGame build green, only pre-existing warning. Merging to proteus/main next.
+- 2026-10-15 09:50 START T18b (capture script + scenes).
+- 2026-10-15 10:15 DECISION: record first drafted from stale memory (regions.json/camera-region CLI that don't exist) — rewrote from actual files: scenes.yaml has 6 scenes over dev-missions, determinism via fixed randomSeed/Intel, perf_run.py is logs-to-CSV, gen-regions.py emits gpu_regions.py.
+- 2026-10-15 10:15 DECISION: fix real bug found while reading own output — sidecar JSON BOM (Out-File utf8) breaks Python json.load; switched to [IO.File]::WriteAllText BOM-less, probe-verified (7B first byte, parses). Committed sample sidecars predate the fix.
+- 2026-10-15 10:20 FINISH T18b: capture stack + 2 live RX 9070 XT captures + selftest in CI/check-all. check-all green except pre-existing EngineWgpu.cpp clang-format drift.

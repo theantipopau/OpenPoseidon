@@ -1,0 +1,26 @@
+# T18b perf scenes. All missions ship in-repo under dev-missions/ on STOCK terrains
+# (.Intro = Intro island, .noe = Nogova), so they load from any retail install.
+# Fixed randomSeed + fixed Intel per mission.sqm make the 300-frame --benchmark window
+# deterministic for a given binary + GPU + resolution. Static camera (no auto-keys):
+# movement would add run-to-run variance the summary cannot separate from real change.
+# Night/rain variants: copy the mission dir, set Intel hour/startWeather in mission.sqm
+# (exact fields documented in T18b record); do NOT edit these files in place.
+scenes:
+  - name: open
+    mission: dev-missions/terrain-brush.Intro/mission.sqm
+    stresses: terrain prepass/colour, cascades, GTAO on open ground
+  - name: woodland
+    mission: dev-missions/snow-crawl.Intro/mission.sqm
+    stresses: alpha-cutout prepass/colour, contact shadows (vegetation density UNVERIFIED — confirm on GPU)
+  - name: ride
+    mission: dev-missions/jeep-ride.Intro/mission.sqm
+    stresses: vehicle + moving camera, temporal stability of AO/fog
+  - name: interior
+    mission: dev-missions/smoke-room.noe/mission.sqm
+    stresses: interior sky map, local lights, smoke containment
+  - name: coast
+    mission: dev-missions/foam-ocean.noe/mission.sqm
+    stresses: ocean FFT + foam + shore sim (adds Tw* regions vs inland scenes)
+  - name: manual
+    mission: dev-missions/jeep-manual.Intro/mission.sqm
+    stresses: second Intro viewpoint for A/B sanity (same island, different framing)

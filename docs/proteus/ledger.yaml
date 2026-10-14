@@ -93,6 +93,25 @@ tickets:
       - G3 wires check-assets.py into CI and extends check-all
       - owner confirms 72 registry rows and openposeidon_logo retirement
 
+  - id: T18b
+    title: Perf capture script + scene/region definitions
+    branch: proteus/T18b-capture-script
+    status: done-unverified
+    files:
+      - scripts/proteus/scenes.yaml
+      - scripts/proteus/perf-capture.ps1
+      - scripts/proteus/perf_run.py
+      - scripts/proteus/gen-regions.py
+      - scripts/proteus/gpu_regions.py
+      - scripts/proteus/perf_parse.py
+      - docs/proteus/T18b-capture-script.md
+    toggle: n/a (tooling; defaults 1440p/1-iter/vulkan/open)
+    evidence: perf_parse selftest PASS (CI+local); 2 live captures on RX 9070 XT Vulkan 1440p (bench 133fps/300f, 188-col rows, sidecar); launch pitfalls fixed; sidecar BOM bug fixed+verified.
+    gpu_verified: false
+    follow_ups:
+      - T19 reuses scenes.yaml missions as shot list
+      - night + rain scene variants; perf/ retention decision
+
   - id: A1
     title: Half-resolution GTAO with bilateral upsample (LIT-010 lever)
     branch: proteus/ao-half-res
