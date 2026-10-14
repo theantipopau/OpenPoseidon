@@ -5,4 +5,8 @@
 - 2026-10-15 08:40 START G1 (agent guide).
 - 2026-10-15 08:45 FINISH G1: AGENTS.md + CLAUDE.md + record; ledger + changelog updated. Docs-only, no build/test surface. Merged to proteus/main as 8bee23c.
 - 2026-10-15 08:50 START G2 (asset registry).
-- 2026-10-15 08:55 FINISH G2: registry.yaml (72 files) + check-assets.py (OK exit 0, probe FAIL exit 1, clean OK) + check-all.ps1 + PROVENANCE.md; ledger + changelog updated. Merging to proteus/main next.
+- 2026-10-15 08:55 FINISH G2: registry.yaml (72 files) + check-assets.py (OK exit 0, probe FAIL exit 1, clean OK) + check-all.ps1 + PROVENANCE.md; ledger + changelog updated. Merged to proteus/main as f254049.
+- 2026-10-15 09:00 START G3 (CI).
+- 2026-10-15 09:00 DECISION: rust fmt checks use per-path edition (wgpu crate 2024, rest 2021); re-verified A1 hunk clean under edition 2024 (938 pre-existing diffs elsewhere, none in the hunk).
+- 2026-10-15 09:05 DECISION: check-all ignores purely-untracked files (require `git add -N` for new files) after an untracked third-party header tripped the C++ arm. Documented in script header.
+- 2026-10-15 09:10 FINISH G3: proteus.yml (5 jobs, YAML-valid) + check-all parity (OK/FAIL/OK controls green). Workflow never observed green on runners — owner's first run flips that. Merging to proteus/main next.

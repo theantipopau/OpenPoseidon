@@ -1,0 +1,138 @@
+# Proteus CI (G3). Fast gates on every push/PR; heavy builds on main + manual dispatch.
+# No GPU jobs: device tests run on Lavapipe (Mesa software Vulkan) in rust-tests.
+# Format checks cover CHANGED files only, so pre-existing drift never fails the build.
+name: proteus
+
+on:
+  push:
+    branches:
+      - 'proteus/**'
+      - 'dev/**'
+  pull_request:
+  workflow_dispatch:
+
+env:
+  VCPKG_BINARY_SOURCES: 'clear;x-gha,read-write'
+
+jobs:
+  assets:
+    name: asset registry
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pyyaml
+      - run: python scripts/proteus/check-assets.py
+
+  fmt-changed:
+    name: format (changed files)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: changed files vs base
+        id: changed
+        run: |
+          BASE="$(git merge-base HEAD origin/main 2>/dev/null || git rev-parse HEAD~1)"
+          echo "base=$BASE"
+          git diff --name-only --diff-filter=ACMRT "$BASE" HEAD > /tmp/changed.txt
+          cat /tmp/changed.txt
+      - name: rustfmt (changed .rs files)
+        run: |
+          RS="$(grep '\.rs$' /tmp/changed.txt || true)"
+          if [ -z "$RS" ]; then echo 'no changed .rs files'; exit 0; fi
+          rustup component add rustfmt
+          FAIL=0
+          for f in $RS; do
+            case "$f" in
+              engine/WgpuRenderer/rust/*) ED=2024 ;;
+              *) ED=2021 ;;
+            esac
+            rustfmt --edition "$ED" --check "$f" || FAIL=1
+          done
+          exit $FAIL
+      - name: clang-format (changed C++ files)
+        run: |
+          CPP="$(grep -E '\.(cpp|hpp|h|c|cc)$' /tmp/changed.txt || true)"
+          if [ -z "$CPP" ]; then echo 'no changed C++ files'; exit 0; fi
+          sudo apt-get update -qq && sudo apt-get install -y -qq clang-format
+          echo "$CPP" | xargs clang-format --dry-run --Werror
+
+  rust-tests:
+    name: rust unit tests (Lavapipe)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/rustup@v1
+        with:
+          toolchain: stable
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: software Vulkan for device tests
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq mesa-vulkan-drivers
+      - run: cargo test -p wgpu_renderer --lib
+        env:
+          WGPU_BACKEND: vulkan
+
+  build-linux:
+    name: build (linux-x64-clang-rwdi)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # vcpkg pinned baseline predates shallow clones; need full history.
+          fetch-depth: 0
+      - name: toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq clang ninja-build cmake ccache python3-pip pkg-config \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxinerama-dev libxi-dev \
+            libxss-dev libgl1-mesa-dev libasound2-dev libpulse-dev
+          python3 -m pip install Pillow numpy
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git "$RUNNER_TEMP/vcpkg"
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+      - run: cmake --preset linux-x64-clang-rwdi
+      - run: cmake --build --preset linux-x64-clang-rwdi --target PoseidonGame
+      - run: ctest --test-dir build/linux-x64-clang-rwdi --output-on-failure
+
+  build-windows:
+    # Windows runners + full vcpkg build are slow: main pushes and manual runs only.
+    name: build (win-x64-clang-rwdi)
+    if: github.ref == 'refs/heads/proteus/main' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git "$env:RUNNER_TEMP/vcpkg"
+          echo "VCPKG_ROOT=$env:RUNNER_TEMP/vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "VCPKG_KEEP_ENV_VARS=LLVM_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - run: cmake --preset win-x64-clang-rwdi
+      - run: cmake --build --preset win-x64-clang-rwdi --target PoseidonGame
+      - run: ctest --test-dir build/win-x64-clang-rwdi --output-on-failure
