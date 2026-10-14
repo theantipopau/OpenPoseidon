@@ -30,6 +30,21 @@ tickets:
     follow_ups:
       - G3 CI exercises the documented commands; fix guide on drift
 
+  - id: G3
+    title: CI workflow + local check-all parity
+    branch: proteus/G3-ci
+    status: done-unverified
+    files:
+      - .github/workflows/proteus.yml
+      - scripts/proteus/check-all.ps1
+      - docs/proteus/G3-ci.md
+    toggle: n/a (tooling only)
+    evidence: YAML parses (5 jobs); check-all OK exit 0 clean, FAIL exit 1 on planted bad .rs, OK after removal; C++ arm proven by untracked-header incident. Workflow never observed green on runners.
+    gpu_verified: false
+    follow_ups:
+      - owner runs workflow once; fix fallout as G3a
+      - T18/T19 add CI jobs reusing these patterns
+
   - id: G2
     title: Asset and licence registry
     branch: proteus/G2-asset-registry
