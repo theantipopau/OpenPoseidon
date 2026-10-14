@@ -30,6 +30,23 @@ tickets:
     follow_ups:
       - G3 CI exercises the documented commands; fix guide on drift
 
+  - id: G4
+    title: Roadmap and renderer-systems ledger
+    branch: proteus/G4-roadmap-ledger
+    status: done-unverified
+    files:
+      - docs/proteus/renderer-systems.yaml
+      - scripts/proteus/gen-roadmap.py
+      - docs/proteus/ROADMAP.md
+      - scripts/proteus/check-all.ps1
+      - docs/proteus/G4-roadmap-ledger.md
+    toggle: n/a (tooling/docs only)
+    evidence: yaml parses (32 systems); gen-roadmap write/check round-trip OK; check-all OK exit 0. Several defaults UNVERIFIED by design.
+    gpu_verified: false
+    follow_ups:
+      - owning tickets confirm UNVERIFIED rows as they land
+      - CI job for gen-roadmap --check (G3a batch)
+
   - id: G3
     title: CI workflow + local check-all parity
     branch: proteus/G3-ci
