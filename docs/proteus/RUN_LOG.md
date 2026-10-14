@@ -9,4 +9,7 @@
 - 2026-10-15 09:00 START G3 (CI).
 - 2026-10-15 09:00 DECISION: rust fmt checks use per-path edition (wgpu crate 2024, rest 2021); re-verified A1 hunk clean under edition 2024 (938 pre-existing diffs elsewhere, none in the hunk).
 - 2026-10-15 09:05 DECISION: check-all ignores purely-untracked files (require `git add -N` for new files) after an untracked third-party header tripped the C++ arm. Documented in script header.
-- 2026-10-15 09:10 FINISH G3: proteus.yml (5 jobs, YAML-valid) + check-all parity (OK/FAIL/OK controls green). Workflow never observed green on runners — owner's first run flips that. Merging to proteus/main next.
+- 2026-10-15 09:10 FINISH G3: proteus.yml (5 jobs, YAML-valid) + check-all parity (OK/FAIL/OK controls green). Workflow never observed green on runners — owner's first run flips that. Merged to proteus/main as 5960c39.
+- 2026-10-15 09:15 START G4 (roadmap + renderer ledger).
+- 2026-10-15 09:20 DECISION: renderer-systems.yaml lists 32 major systems only (not every WGR_ knob); unverified defaults marked UNVERIFIED for owning tickets to confirm.
+- 2026-10-15 09:25 FINISH G4: renderer-systems.yaml (32) + gen-roadmap.py (write/check round-trip OK) + check-all OK. Verified AoSettings.enabled=true from source (GTAO default-on confirmed). Merging to proteus/main next.

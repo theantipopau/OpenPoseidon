@@ -1,0 +1,196 @@
+# Proteus renderer systems (G4). Filled by reading the code, not upstream docs.
+# default: shipped behaviour with no env/config override. "UNVERIFIED" = read but not
+# traced end-to-end; fix as tickets touch each system. Timer regions mirror gpu_timers.rs.
+systems:
+  - name: gtao
+    file: engine/WgpuRenderer/rust/src/gfx3d/gtao.wgsl
+    toggle: WGR_GTAO=0 off / WGR_GTAO_SCALE=1 full-res march / AoSettings.enabled
+    default: on (AoSettings.enabled=true, Engine.hpp; scale 2 half-res march)
+    timer: GtaoPrep/GtaoCompute/GtaoBlur
+    ticket: A1
+  - name: gtao-bilateral-blur
+    file: engine/WgpuRenderer/rust/src/gfx3d/gtao_blur.wgsl
+    toggle: AoSettings blur_radius/depth_scale/normal_power (0-ish disables effect, pass still runs)
+    default: on (radius 6, depth 24, normal ^8)
+    timer: GtaoBlur
+    ticket: A1
+  - name: interior-sky
+    file: engine/WgpuRenderer/rust/src/gfx3d/sky_vis.rs
+    toggle: WGR_INTERIOR_SKY=1 enables (C++ gate, default off)
+    default: off
+    timer: InteriorSkyCull/InteriorSkyDraw
+    ticket: predates-Proteus
+  - name: gi-probes
+    file: engine/WgpuRenderer/rust/src/gfx3d/gi_probes.wgsl
+    toggle: GiSettings enabled (dev panel GI tab)
+    default: UNVERIFIED (see gfx3d/gi.rs)
+    timer: GiProbes
+    ticket: predates-Proteus
+  - name: gi-rsm
+    file: engine/WgpuRenderer/rust/src/gfx3d/mod.rs
+    toggle: GiSettings RSM enable
+    default: UNVERIFIED
+    timer: GiRsm
+    ticket: predates-Proteus
+  - name: tidewater-ocean
+    file: engine/WgpuRenderer/rust/src/water/
+    toggle: WGR_WATER_BACKEND=0|1 (0 CurrentOp, 1 Tidewater); Water-tab selection when unset
+    default: UNVERIFIED (see water_backend.rs startup_kind)
+    timer: TwOceanSpectrum/TwOceanFft/TwShoreSim/TwWake/TwCaustics/TwBreakers + WaterDraw
+    ticket: A2
+  - name: current-op-water
+    file: engine/WgpuRenderer/rust/src/water/
+    toggle: WGR_WATER_BACKEND=0 selects; WGR_WATER_FFT=0 disables FFT spectra
+    default: FFT on unless WGR_WATER_FFT=0
+    timer: SpectrumInit/SpectrumEvolve/FftHorizontal/FftVertical/FftCompose/Interaction/Foam/WaterDraw
+    ticket: A2
+  - name: water-ripple-strength
+    file: engine/WgpuRenderer/rust/src/water/
+    toggle: WGR_WATER_RIPPLE=<0..8> (0 = glassy, restores pre-DZ-005)
+    default: 1.0
+    timer: WaterDraw
+    ticket: A2b
+  - name: underwater
+    file: engine/WgpuRenderer/rust/src/underwater.wgsl
+    toggle: UNVERIFIED
+    default: UNVERIFIED
+    timer: UnderwaterFroxel/UnderwaterComposite/Caustics
+    ticket: predates-Proteus
+  - name: rain-water-puddles
+    file: engine/WgpuRenderer/rust/src/rain_water.rs
+    toggle: wetness system + WGR_RAIN_WATER_TRACE (diag)
+    default: on (driven by weather)
+    timer: none dedicated (in-shader in terrain draws)
+    ticket: B9
+  - name: layered-fog
+    file: engine/WgpuRenderer/rust/src/layered_fog.wgsl
+    toggle: layer-fog request flag; legacy-fog option restores classic
+    default: UNVERIFIED
+    timer: LayeredFog
+    ticket: predates-Proteus
+  - name: sky-atmosphere
+    file: engine/WgpuRenderer/rust/src/sky/
+    toggle: UNVERIFIED (atmosphere rebuild on change)
+    default: on
+    timer: SkyLuts/SkyFroxel/SkyEnv/SkySh/SkyDraw
+    ticket: A3
+  - name: clouds
+    file: engine/WgpuRenderer/rust/src/sky/
+    toggle: overcast controls; WGR_WEATHER_COVER*
+    default: on
+    timer: CloudMarch/CloudComposite + WeatherCover* cull/draw
+    ticket: predates-Proteus
+  - name: godrays
+    file: engine/WgpuRenderer/rust/src/godrays.wgsl
+    toggle: god-rays setting (dev panel)
+    default: UNVERIFIED
+    timer: GodRays
+    ticket: predates-Proteus
+  - name: grass
+    file: engine/WgpuRenderer/rust/src/grass/
+    toggle: WGR_GRASS=0 off; GrassSettings enabled/density/radius (tier-mapped in GraphicsApply.cpp)
+    default: on (WGR_GRASS unset = on)
+    timer: GrassPlaceNear/Mid/Far + GrassPrepass/GrassColor/GrassShadow
+    ticket: A4
+  - name: terrain
+    file: engine/WgpuRenderer/rust/src/terrain/
+    toggle: terrain detail tier (GraphicsApply)
+    default: on
+    timer: TerrainPrepass/TerrainColor
+    ticket: C15
+  - name: objects-gpu-driven
+    file: engine/WgpuRenderer/rust/src/gfx3d/cull.rs
+    toggle: WGR_NO_CULL=1 disables culling (debug)
+    default: on
+    timer: ObjCullMain/ObjCullShadow/ObjCullColor + ObjPrepass/ColorSolid/Alpha + segment containers
+    ticket: C16
+  - name: far-instances
+    file: engine/WgpuRenderer/rust/src/far/
+    toggle: UNVERIFIED
+    default: UNVERIFIED
+    timer: FarCull/FarDraw
+    ticket: C16
+  - name: shadows-cascades
+    file: engine/WgpuRenderer/rust/src/gfx3d/shadow_depth.wgsl
+    toggle: shadow quality tier (GraphicsApply; Off disables)
+    default: on
+    timer: ShadowCascade0-3 + LocalShadow
+    ticket: B10
+  - name: exposure
+    file: engine/WgpuRenderer/rust/src/exposure.rs
+    toggle: exposure settings; brightness/gamma in GraphicsApply
+    default: on (eased auto-exposure)
+    timer: ExposureAdapt
+    ticket: B7
+  - name: tonemap
+    file: engine/WgpuRenderer/rust/src/tonemap.rs
+    toggle: WGR_TONEMAP=<mode> (unsetmarked default 1.0)
+    default: mode 1.0
+    timer: TonemapResolve
+    ticket: B7
+  - name: bloom
+    file: engine/WgpuRenderer/rust/src/bloom.rs
+    toggle: bloom settings enable
+    default: UNVERIFIED
+    timer: Bloom
+    ticket: B8
+  - name: dof
+    file: engine/WgpuRenderer/rust/src/dof.rs
+    toggle: dof settings enable
+    default: UNVERIFIED
+    timer: none (inside WorkerEncPost; add region if it becomes a lever)
+    ticket: B8
+  - name: temporal-taa
+    file: engine/WgpuRenderer/rust/src/temporal.rs
+    toggle: WGR_TEMPORAL=1 enables (default off); jitter path
+    default: off
+    timer: none dedicated
+    ticket: B6
+  - name: upscaler-fsr1
+    file: engine/WgpuRenderer/rust/src/fsr1.wgsl
+    toggle: upscaler choice (Auto = DLSS if up else FSR1 Quality; Off = native)
+    default: on (Auto)
+    timer: none dedicated
+    ticket: B6
+  - name: upscaler-fsr4
+    file: engine/WgpuRenderer/rust/src/fsr4.rs
+    toggle: Video page FSR4 choice; DX12 only; DLLs or WGR_FSR4_DIR; dlssMode=3
+    default: off (opt-in)
+    timer: none dedicated
+    ticket: predates-Proteus
+  - name: upscaler-dlss
+    file: engine/WgpuRenderer/rust/src/dlss.rs
+    toggle: optional NGX SDK build; off without runtime (falls back like FSR4)
+    default: off in distributable builds
+    timer: none dedicated
+    ticket: B6
+  - name: smoke-volume
+    file: engine/WgpuRenderer/rust/src/smoke_volume.rs
+    toggle: smoke settings enable
+    default: on
+    timer: none dedicated (inside WorkerEncEarly/Main)
+    ticket: predates-Proteus
+  - name: soft-particles
+    file: engine/WgpuRenderer/rust/src/soft_particles.rs
+    toggle: UNVERIFIED
+    default: UNVERIFIED
+    timer: none dedicated
+    ticket: predates-Proteus
+  - name: planar-reflection
+    file: engine/WgpuRenderer/rust/src/sky/
+    toggle: planar reflection pad/mode
+    default: UNVERIFIED
+    timer: PlanarSky/PlanarTerrain/PlanarObjects/PlanarClouds/PlanarMips
+    ticket: B9
+  - name: hdr-resolve
+    file: engine/WgpuRenderer/rust/src/gfx3d/mod.rs
+    toggle: MSAA sample count (1 = no resolve work)
+    default: on when MSAA > 1
+    timer: HdrResolve
+    ticket: B7
+  - name: ui-2d
+    file: engine/WgpuRenderer/rust/src/gfx2d/
+    toggle: none (always drawn)
+    default: on
+    timer: Ui2d
+    ticket: E25
