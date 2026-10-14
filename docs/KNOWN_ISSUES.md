@@ -13,7 +13,7 @@ Build and runtime issues found during setup. Each entry notes whether it is fixe
 - `AddonSystem::ParseAddonConfig` only sees a prefix's `config.cpp` through the file server, and it does not find `kozl\config.cpp`. Its `config.bin` fallback then returns true without registering anything. A stream parse of the bank's `config.cpp` returned zero entries, because `ParamFile::Parse(QIStream&)` skips the preprocessing that `Parse(name)` does, and `Preprocess` opens files by name.
 - Fix options, not yet done: (a) remove the two older `kozl.pbo` copies from the game folder, which the mod layer should make unnecessary; (b) give the preprocessor an input-buffer entry point, so a bank's `config.cpp` can be parsed while it is mounted. (a) is a data change for the owner to make; (b) is an engine change.
 
-## Open: DX12 renderer stalls or crashes on this machine
+## Fixed: DX12 renderer crashed on this machine
 
 - `scripts/Start.ps1 -Dx12` (`WGPU_BACKEND=dx12`) on the RX 9070 XT: once run crashed with an access violation in `amdxc64.dll` about 4 seconds after renderer start; a control run with FSR 1 and no FSR 4 stalled after `prepass discard parity` with no frames. The Vulkan path renders normally. FSR 4 needs DX12, so it cannot be tested until this is fixed. Next step: check whether the stall predates the FSR 4 changes (build the previous commit).
 
@@ -55,3 +55,13 @@ Build and runtime issues found during setup. Each entry notes whether it is fixe
 - **Picture lookup ignored absolute paths.** `FindPicture` only searched the mission directory, `dtaExt\`, and PBO banks under `data\`. Menu art shipped in `assets\ui` never resolved. Fixed: an absolute path to an existing file is now used as-is.
 - **2048-pixel background hangs the renderer.** A 2048-wide PAA in a picture control produced `wgr_bindless_texture_bind` validation errors, and the window stopped at "Wait a moment…". `CStatic` caps pictures at 1024 (`SetMaxSize(1024)`), so oversized art should be rejected or downscaled rather than hang. The menu art is kept at 1024 wide. Not fixed in the engine.
 - **Art packed in a mod PBO does not resolve.** `GetPictureName` looks in `data\` through the bank selected by path prefix, and the base game's `data` bank wins. A `data`-prefixed PBO in a mod is never checked. Art therefore ships loose beside the executable.
+
+## Status update 2026-10-14
+
+- **Launch works on this machine.** The game builds (`scripts\Build.ps1 -Target PoseidonGame`, wrapped as `cmd /c "powershell -NoProfile -File ..."` to avoid the cargo-stderr abort) and runs with `scripts\Start.ps1 --window`. The "Runtime" and "Game data and launch" entries above that say launch is blocked are out of date for this machine. Logs are in `Documents\Cold War Assault\logs`.
+- **Mod order.** `mods.json` lists `@proteus-units` last, so it wins over FFUR/PR. Its `bin/resource.cpp` and `STRINGTABLE.CSV` load at runtime and need no rebuild.
+- **Editor and debriefing UI** (Proteus theme, 3D unit preview, flat after-action report) live in `@proteus-units` plus `UIArcade.cpp`, `UIMapDialogs.cpp`, `resincl.hpp`. They are untested in a full mission.
+- **Wgpu display phase.** The UI pass format mismatch (`Rgba8Unorm` vs `Rgba16Float`) validation loop is fixed.
+- **Profiling.** `World.cpp` logs `frame avg/p95 ms ...` with per-phase timings every 300 frames. No gameplay baseline captured yet.
+- **Still open:** DX12 crash (blocks FSR 4), 2048px picture hang, missing `.rtm` animation files, no `CLAUDE.md`.
+- **DX12 crash fixed (2026-10-14).** Cause: AMD's shader compiler (`amdxc64`, RX 9070 XT) crashed compiling the main object shader when `frame.wgsl::fog_sun_reach` did four `textureLoad`s of the fog ground grid (the same crash hit the terrain pipeline). It now loads three corners and picks the fourth by triangle, which gives the same result. `WGPU_DX12_COMPILER=fxc` does not help (it only delays the same crash). Separately, `fsr4.rs` passed the FFX context handle to `ffxDispatch` instead of a pointer to it, which crashed in the AMD loader once DX12 got that far. `Start.ps1 -Dx12` now runs and the log shows `FSR 4 context created ... (FFX upscaler 4.1.1)`. DX12 shader compile makes the first start slower.

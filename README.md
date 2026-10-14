@@ -32,6 +32,9 @@ and replaces the original menus with a streamlined, resolution-aware design.
   | Options (main page) | Done. Video, Audio, Controls and Difficulty pages are still the original look |
   | Campaign select | Done. Campaign list on the left, overview and mission history on the right |
   | Single missions | Done. Mission list on the left, overview on the right |
+  | Mission editor | Dialogs restyled (unit, group, marker, sensor, waypoint, effects), with a 3D sample of the selected unit in Insert Unit and its own loading image |
+  | Debriefing | Rebuilt as a flat after-action report: verdict banner, score, time, enemy killed and losses cards, then objectives, report and statistics panels |
+  | In-game unit info | Restyled with the Proteus font, colours and bars |
   | Multiplayer, Mission Editor launcher | Planned |
 
 - **Fonts and art.** Barlow Condensed (SIL Open Font License, included in `assets/fonts`)
@@ -39,8 +42,31 @@ and replaces the original menus with a streamlined, resolution-aware design.
 - **Cleaner options.** The Mods and Local Maps entries are removed from the main menu for
   now. Local Maps crashes when opened and Mods has no working route yet.
 
-Gameplay, the in-game HUD, the renderer and the mission scripting are unchanged in this
-fork. The restyling covers menus only.
+Gameplay and the mission scripting are unchanged in this fork. The editor, debriefing and
+unit info restyling is a mix of engine code (in this repository) and dialog layouts
+(`resource.cpp` in a content mod, not included here). Those screens have not yet been
+tested through a full mission.
+
+## Renderer and backend work
+
+- **DirectX 12 now runs on AMD RDNA 4.** `Start.ps1 -Dx12` used to crash inside AMD's
+  shader compiler on an RX 9070 XT. Bisecting the shaders found it: four texture loads in
+  the fog sun-reach function. It now loads three and derives the fourth, with an identical
+  result. The terrain and object pipelines both compile.
+- **FSR 4.1.1 works.** The engine's FSR 4 backend targets FidelityFX SDK 2.3. Fixing a
+  call that passed the context handle where the API wants a pointer to it let it reach a
+  working upscale. Copy `amd_fidelityfx_loader_dx12.dll` and `amd_fidelityfx_upscaler_dx12.dll`
+  from the SDK's `signedbin` folder beside the exe (not included, AMD licence).
+- **UI over the tonemapped image.** 3D models in menus (the editor unit sample) now draw in
+  a display-referred pass after tonemapping, fixing the validation errors that stalled it.
+- **Performance telemetry.** Every 300 frames the log prints average and 95th-percentile
+  milliseconds per phase (sim, draw prep, landscape, objects, post, HUD, sound, swap),
+  frames per second and draw calls, so optimisation starts from measurements.
+- **Better crash reports.** Stack traces go 120 frames deep instead of 40.
+
+The renderer already includes ambient occlusion, bounced-light probes, GPU-driven culling,
+temporal anti-aliasing, volumetric smoke, layered fog, water, bloom and several upscalers.
+Planned: a gameplay performance baseline, then optimisation of the hottest phase.
 
 <p align="center">
   <img src="screenshots/proteus/options.png" alt="Proteus options page" width="48%">

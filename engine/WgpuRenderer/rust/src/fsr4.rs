@@ -181,7 +181,8 @@ struct DispatchUpscale {
 
 type CreateContextFn = unsafe extern "C" fn(*mut *mut c_void, *const Header, *const c_void) -> u32;
 type DestroyContextFn = unsafe extern "C" fn(*mut *mut c_void, *const c_void) -> u32;
-type DispatchFn = unsafe extern "C" fn(*mut c_void, *const Header) -> u32;
+// ffxDispatch takes a POINTER to the context handle (ffxContext*), like ffxDestroyContext.
+type DispatchFn = unsafe extern "C" fn(*mut *mut c_void, *const Header) -> u32;
 
 struct Runtime {
     create: CreateContextFn,
@@ -675,7 +676,7 @@ impl TemporalUpscaler for Fsr4Upscaler {
             view_space_to_meters_factor: 1.0,
             flags: 0,
         };
-        let rc = unsafe { (rt.dispatch)(self.ctx, &desc.header) };
+        let rc = unsafe { (rt.dispatch)(&mut self.ctx, &desc.header) };
         if rc != FFX_OK {
             // Nothing is submitted for this slot; the allocator is simply recycled next time.
             let _ = unsafe { ring.list.Close() };

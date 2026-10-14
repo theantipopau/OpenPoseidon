@@ -549,7 +549,8 @@ DisplayDebriefing::DisplayDebriefing(ControlsContainer* parent, bool animation, 
     _animation = animation;
     _enableSimulation = false;
 
-    GetCtrl(IDC_DEBRIEFING_PAD2)->ShowCtrl(false);
+    if (IControl* pad = GetCtrl(IDC_DEBRIEFING_PAD2))
+        pad->ShowCtrl(false);
 
     if (!_disconnectOnly && (GetNetworkManager().IsServer() || GetNetworkManager().IsGameMaster()))
     {
@@ -614,11 +615,13 @@ void DisplayDebriefing::RefreshLanguage()
     const RString leftSection = GetCurrentHtmlSectionName(_left);
     const RString rightSection = GetCurrentHtmlSectionName(_right);
     const RString statsSection = GetCurrentHtmlSectionName(_stats);
-    const bool statsVisible = GetCtrl(IDC_DEBRIEFING_PAD2)->IsVisible();
+    IControl* pad = GetCtrl(IDC_DEBRIEFING_PAD2);
+    const bool statsVisible = pad && pad->IsVisible();
 
     CreateDebriefing();
     UpdateDebriefingActionLabels(this);
-    GetCtrl(IDC_DEBRIEFING_PAD2)->ShowCtrl(statsVisible);
+    if (pad)
+        pad->ShowCtrl(statsVisible);
 
     if (leftSection.GetLength() > 0 && _left->FindSection(leftSection) >= 0)
         _left->SwitchSection(leftSection);
@@ -634,6 +637,12 @@ Control* DisplayDebriefing::OnCreateCtrl(int type, int idc, const ParamEntry& cl
     {
         case IDC_DEBRIEFING_LEFT:
         {
+            if (type == CT_HTML)
+            {
+                CHTML* flat = new CHTML(this, idc, cls);
+                _left = flat;
+                return flat;
+            }
             C3DHTML* html = new C3DHTML(this, idc, cls);
             _left = html;
             return html;
@@ -641,6 +650,12 @@ Control* DisplayDebriefing::OnCreateCtrl(int type, int idc, const ParamEntry& cl
         break;
         case IDC_DEBRIEFING_RIGHT:
         {
+            if (type == CT_HTML)
+            {
+                CHTML* flat = new CHTML(this, idc, cls);
+                _right = flat;
+                return flat;
+            }
             C3DHTML* html = new C3DHTML(this, idc, cls);
             _right = html;
             return html;
@@ -648,6 +663,12 @@ Control* DisplayDebriefing::OnCreateCtrl(int type, int idc, const ParamEntry& cl
         break;
         case IDC_DEBRIEFING_STAT:
         {
+            if (type == CT_HTML)
+            {
+                CHTML* flat = new CHTML(this, idc, cls);
+                _stats = flat;
+                return flat;
+            }
             C3DHTML* html = new C3DHTML(this, idc, cls);
             _stats = html;
             return html;
@@ -716,7 +737,8 @@ void DisplayDebriefing::OnHTMLLink(int idc, RString link)
     {
         if (stricmp(link, "stat:open") == 0)
         {
-            GetCtrl(IDC_DEBRIEFING_PAD2)->ShowCtrl(true);
+            if (IControl* pad = GetCtrl(IDC_DEBRIEFING_PAD2))
+                pad->ShowCtrl(true);
             return;
         }
     }
@@ -724,7 +746,8 @@ void DisplayDebriefing::OnHTMLLink(int idc, RString link)
     {
         if (stricmp(link, "stat:close") == 0)
         {
-            GetCtrl(IDC_DEBRIEFING_PAD2)->ShowCtrl(false);
+            if (IControl* pad = GetCtrl(IDC_DEBRIEFING_PAD2))
+                pad->ShowCtrl(false);
             return;
         }
     }
@@ -1463,11 +1486,101 @@ void DisplayDebriefing::CreateDebriefing()
         }
     }
 
-    _right->AddText(rSection, LocalizeString(IDS_BRIEF_STAT_OPEN), HFP, HALeft, false, false, "Stat:open");
-    _right->AddBreak(rSection, false);
+    if (GetCtrl(IDC_DEBRIEFING_PAD2))
+    {
+        // book + PDA layout: the statistics page is opened from a link
+        _right->AddText(rSection, LocalizeString(IDS_BRIEF_STAT_OPEN), HFP, HALeft, false, false, "Stat:open");
+        _right->AddBreak(rSection, false);
 
-    _stats->AddText(sSection, LocalizeString(IDS_BRIEF_STAT_CLOSE), HFP, HALeft, false, false, "Stat:close");
-    _stats->AddBreak(sSection, false);
+        _stats->AddText(sSection, LocalizeString(IDS_BRIEF_STAT_CLOSE), HFP, HALeft, false, false, "Stat:close");
+        _stats->AddBreak(sSection, false);
+    }
+
+    // summary banner and stat cards of the flat layout (absent controls are skipped)
+    {
+        auto setText = [this](int idc, const char* value, const PackedColor* color = nullptr)
+        {
+            if (CStatic* ctrl = dynamic_cast<CStatic*>(GetCtrl(idc)))
+            {
+                ctrl->SetText(value);
+                if (color)
+                    ctrl->SetFtColor(*color);
+            }
+        };
+        const EndMode endMode = GWorld->GetEndMode();
+        const char* verdict = "MISSION ENDED";
+        PackedColor verdictColor = PackedColor(Color(0.95, 0.72, 0.25, 1));
+        if (endMode == EMKilled)
+        {
+            verdict = "KILLED IN ACTION";
+            verdictColor = PackedColor(Color(0.92, 0.32, 0.30, 1));
+        }
+        else if (endMode == EMLoser)
+        {
+            verdict = "MISSION FAILED";
+            verdictColor = PackedColor(Color(0.92, 0.32, 0.30, 1));
+        }
+        else if (endMode >= EMEnd1)
+        {
+            verdict = points >= 0 ? "MISSION COMPLETE" : "MISSION INCOMPLETE";
+            verdictColor = points >= 0 ? PackedColor(Color(0.35, 0.85, 0.5, 1)) : PackedColor(Color(0.95, 0.72, 0.25, 1));
+        }
+        setText(IDC_DEBRIEFING_BANNER, verdict, &verdictColor);
+
+        RString who = LocalizeString(IDS_PRIVATE + ClampRankIndex(newInfo.rank)) + RString("  ") + playerName;
+        setText(IDC_DEBRIEFING_SUBTITLE, who);
+
+        int enemyKills = 0, friendlyKills = 0, civilKills = 0, losses = 0;
+        for (int i = 0; i < events.Size(); i++)
+        {
+            switch (events[i].type)
+            {
+                case SETKillsEnemyInfantry:
+                case SETKillsEnemySoft:
+                case SETKillsEnemyArmor:
+                case SETKillsEnemyAir:
+                    enemyKills++;
+                    break;
+                case SETKillsFriendlyInfantry:
+                case SETKillsFriendlySoft:
+                case SETKillsFriendlyArmor:
+                case SETKillsFriendlyAir:
+                    friendlyKills++;
+                    break;
+                case SETKillsCivilInfantry:
+                case SETKillsCivilSoft:
+                case SETKillsCivilArmor:
+                case SETKillsCivilAir:
+                    civilKills++;
+                    break;
+                case SETUnitLost:
+                    losses++;
+                    break;
+                default:
+                    break;
+            }
+        }
+        char card[64];
+        snprintf(card, sizeof(card), "%d", (int)score);
+        setText(IDC_DEBRIEFING_CARD_SCORE, card);
+        snprintf(card, sizeof(card), "%d:%02d", hours, minutes);
+        setText(IDC_DEBRIEFING_CARD_TIME, card);
+        snprintf(card, sizeof(card), "%d", enemyKills);
+        setText(IDC_DEBRIEFING_CARD_KILLS, card);
+        snprintf(card, sizeof(card), "%d", losses);
+        setText(IDC_DEBRIEFING_CARD_LOSSES, card);
+        // friendly-fire and civilian kills are flagged only when they happened
+        PackedColor warn = PackedColor(Color(0.92, 0.32, 0.30, 1));
+        if (friendlyKills + civilKills > 0)
+        {
+            snprintf(card, sizeof(card), "FRIENDLY FIRE %d   CIVILIAN %d", friendlyKills, civilKills);
+            setText(IDC_DEBRIEFING_WARNING, card, &warn);
+        }
+        else
+        {
+            setText(IDC_DEBRIEFING_WARNING, "");
+        }
+    }
 
     // complete and switch to debriefing
     _left->FormatSection(lSection);

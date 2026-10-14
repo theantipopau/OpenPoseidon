@@ -379,6 +379,23 @@ static LODShapeWithShadow* ArcadePreviewShape(RString vehicle)
     return shape;
 }
 
+// Sets the shape and fits it into the free corner of the dialog (UI coords) whatever its size.
+static void PlaceArcadePreview(ControlObject* preview, LODShapeWithShadow* shape)
+{
+    preview->SetShape(shape);
+    if (!shape || shape->BoundingSphere() <= 0)
+    {
+        return;
+    }
+    const float z = 6;
+    Vector3 pos = ControlObject::Convert2DTo3D(Point2DFloat(0.77f, 0.54f), z);
+    Vector3 top = ControlObject::Convert2DTo3D(Point2DFloat(0.77f, 0.54f - 0.085f), z);
+    preview->SetPosition(pos);
+    // three-quarter rear view from slightly above
+    preview->SetOrient(Vector3(0.7f, -0.3f, 0.65f).Normalized(), Vector3(0, 1, 0));
+    preview->SetScale((top.Y() - pos.Y()) / shape->BoundingSphere());
+}
+
 ControlObject* DisplayArcadeUnit::OnCreateObject(int type, int idc, const ParamEntry& cls)
 {
     if (idc == IDC_ARCUNIT_PREVIEW)
@@ -386,7 +403,7 @@ ControlObject* DisplayArcadeUnit::OnCreateObject(int type, int idc, const ParamE
         _preview = new ControlObject(this, idc, cls);
         LODShapeWithShadow* shape = ArcadePreviewShape(_unit.vehicle);
         LOG_INFO(Core, "Insert unit 3D sample: vehicle '{}' shape levels {}", _unit.vehicle.Data(), shape ? shape->NLevels() : -1);
-        _preview->SetShape(shape);
+        PlaceArcadePreview(_preview, shape);
         return _preview;
     }
     return Display::OnCreateObject(type, idc, cls);
@@ -406,7 +423,7 @@ void DisplayArcadeUnit::UpdatePreview()
     }
     LODShapeWithShadow* shape = ArcadePreviewShape(vehicle);
     LOG_INFO(Core, "Insert unit 3D sample: changed to '{}' shape levels {}", vehicle.Data(), shape ? shape->NLevels() : -1);
-    _preview->SetShape(shape);
+    PlaceArcadePreview(_preview, shape);
 }
 
 void DisplayArcadeUnit::UpdateVehicles(CCombo* combo, const char* vehicle)

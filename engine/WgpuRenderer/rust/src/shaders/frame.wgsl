@@ -1353,9 +1353,15 @@ fn fog_sun_reach(world_pos_rel: vec3<f32>) -> f32 {
     let extent=vec2<f32>(layer_fog_packet.native_size.xy)-1.0;
     if(any(cell<vec2<f32>(0.0)) || any(cell>=extent)){return 1.0;}
     let ij=vec2<i32>(floor(cell));let q=fract(cell);
-    let a=textureLoad(layer_fog_native_tex,ij,0).r;let b=textureLoad(layer_fog_native_tex,ij+vec2<i32>(1,0),0).r;
-    let c=textureLoad(layer_fog_native_tex,ij+vec2<i32>(0,1),0).r;let d=textureLoad(layer_fog_native_tex,ij+vec2<i32>(1,1),0).r;
-    let ground=select(b+c-d+(d-c)*q.x+(d-b)*q.y,a+(b-a)*q.x+(c-a)*q.y,q.x+q.y<=1.0);
+    // Three loads, not four: each triangle of the cell uses only three of its four corners, so
+    // the odd corner is `a` in the lower triangle and `d` in the upper. Same result as loading
+    // all four, but four textureLoads here made the full shade() crash AMD's shader compiler
+    // (amdxc64, RX 9070 XT, DX12) -- see docs/KNOWN_ISSUES.md.
+    let lower=q.x+q.y<=1.0;
+    let b=textureLoad(layer_fog_native_tex,ij+vec2<i32>(1,0),0).r;
+    let c=textureLoad(layer_fog_native_tex,ij+vec2<i32>(0,1),0).r;
+    let e=textureLoad(layer_fog_native_tex,select(ij+vec2<i32>(1,1),ij,lower),0).r;
+    let ground=select(b+c-e+(e-c)*q.x+(e-b)*q.y,e+(b-e)*q.x+(c-e)*q.y,lower);
     let agl=absolute.y-ground;
     if(agl < -0.05 || agl>=layer_fog_packet.solar_domain.w){return 1.0;}
     let uv=(absolute.xz-layer_fog_packet.solar_domain.xy)*layer_fog_packet.solar_domain.z;

@@ -132,7 +132,7 @@ LONG WINAPI CrashFilter(EXCEPTION_POINTERS* ep)
     sym->SizeOfStruct = sizeof(SYMBOL_INFO);
     sym->MaxNameLen = 255;
 
-    for (int i = 0; i < 40; ++i)
+    for (int i = 0; i < 120; ++i)
     {
         if (!StackWalk64(machineType, proc, GetCurrentThread(), &frame, ctx, nullptr, SymFunctionTableAccess64,
                          SymGetModuleBase64, nullptr))

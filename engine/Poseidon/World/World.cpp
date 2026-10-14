@@ -2316,6 +2316,23 @@ void World::Simulate(float deltaT, bool& enableDraw)
 
     perf.Mark(Dev::FrameProfiler::PhaseSwap);
     perf.EndFrame(Poseidon::gPerfDrawCalls);
+    {
+        // One line of per-phase avg/p95 ms every ~5 s of play, so any gameplay log carries a CPU breakdown.
+        static int summaryFrames = 0;
+        if (++summaryFrames >= 300)
+        {
+            summaryFrames = 0;
+            char buf[512];
+            int off = snprintf(buf, sizeof(buf), "frame avg/p95 ms %.1f/%.1f (%.0f fps, %.0f draws)", perf.TotalStats().avgMs,
+                               perf.TotalStats().p95Ms, perf.AvgFps(), perf.AvgDrawCalls());
+            for (int p = 0; p < Dev::FrameProfiler::PhaseCount && off < (int)sizeof(buf) - 24; p++)
+            {
+                const Dev::FrameProfiler::PhaseStats s = perf.Stats(Dev::FrameProfiler::Phase(p));
+                off += snprintf(buf + off, sizeof(buf) - off, " %s=%.1f/%.1f", Dev::FrameProfiler::PhaseName(p), s.avgMs, s.p95Ms);
+            }
+            LOG_INFO(World, "{}", buf);
+        }
+    }
 #if POSEIDON_DIAG
     {
         // DIAG-001: frame_slow / perf events, the pollers and diag_camera follow
