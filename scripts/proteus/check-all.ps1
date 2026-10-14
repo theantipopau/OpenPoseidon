@@ -19,6 +19,10 @@ Write-Host '== perf parser selftest =='
 python "$root/scripts/proteus/perf_parse.py" --selftest
 if ($LASTEXITCODE -ne 0) { $failed = $true }
 
+Write-Host '== imgdiff selftest =='
+python "$root/scripts/proteus/imgdiff.py" --selftest
+if ($LASTEXITCODE -ne 0) { $failed = $true }
+
 Write-Host '== format (changed files vs proteus/main) =='
 Set-Location $root
 $base = (git merge-base HEAD proteus/main 2>$null)

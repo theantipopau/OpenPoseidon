@@ -112,6 +112,25 @@ tickets:
       - T19 reuses scenes.yaml missions as shot list
       - night + rain scene variants; perf/ retention decision
 
+  - id: T19
+    title: Golden-image harness (shots + SSIM compare + capture)
+    branch: proteus/T19-golden-harness
+    status: done-unverified
+    files:
+      - scripts/proteus/shots.yaml
+      - scripts/proteus/imgdiff.py
+      - scripts/proteus/golden-compare.py
+      - scripts/proteus/golden-capture.ps1
+      - docs/proteus/PROVENANCE.md
+      - docs/proteus/T19-golden-harness.md
+    toggle: n/a (tooling; defaults 1080p/all-shots/vulkan/candidate-only)
+    evidence: imgdiff selftest PASS (0/0.004/0.0001/0.98 separation, 0.3s); compare exits 0/1/5 verified on synthetics; live engine open.png (1920x1080) captured + reads natively; 2 script bugs found-by-running and fixed.
+    gpu_verified: false
+    follow_ups:
+      - first bless + threshold confirmation (owner, on GPU)
+      - night + rain shot variants; crash-watch POSEIDON_USER_CONTENT_DIR override
+      - Oct 14 crash cluster unexplained (10 dumps)
+
   - id: A1
     title: Half-resolution GTAO with bilateral upsample (LIT-010 lever)
     branch: proteus/ao-half-res

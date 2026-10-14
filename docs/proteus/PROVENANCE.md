@@ -14,3 +14,11 @@ If the licence can't be confirmed, the ticket becomes a proposal instead.
   converted public-domain data (Yale BSC via CDS/ADC; NASA SVS/ESA Gaia DR2); converters in
   `tools/sky/`. See THIRD_PARTY_NOTICES.md and `assets/registry.yaml`.
 - `assets/fonts/BarlowCondensed-*.ttf` — Jeremy Tribby, SIL OFL 1.1 (bundled; OFL allows).
+
+## Algorithm choices (no code taken, recorded per ticket spec)
+
+- T19 `scripts/proteus/imgdiff.py` — SSIM (Wang, Bovik, Sheikh & Simoncelli, 2004)
+  implemented from scratch from the published formula; no copied code, no dependency.
+  FLIP (Netflix) considered and rejected: needs a display model and heavier numerics
+  for no benefit at golden-threshold use. PNG codec likewise hand-written (zlib + struct
+  only). Nothing to license.

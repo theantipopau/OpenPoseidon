@@ -26,6 +26,7 @@ jobs:
       - run: python -m pip install pyyaml
       - run: python scripts/proteus/check-assets.py
       - run: python scripts/proteus/perf_parse.py --selftest
+      - run: python scripts/proteus/imgdiff.py --selftest
 
   fmt-changed:
     name: format (changed files)
