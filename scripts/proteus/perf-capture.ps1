@@ -45,14 +45,14 @@ $minAdmitted = 100
 $blk = [regex]::Match($scenes, "(?ms)- name: $Scene\b(.*?)(?=- name:|\z)").Groups[1].Value
 $mm = [regex]::Match($blk, 'min_admitted:\s*(\d+)')
 if ($mm.Success) { $minAdmitted = [int]$mm.Groups[1].Value }
-$rejDir = Join-Path $outDir 'rejected'
-$rejected = @()
 
 $env:POSEIDON_GPU_STATS = '1'
 if ($Backend -eq 'dx12') { $env:WGPU_BACKEND = 'dx12' } else { $env:WGPU_BACKEND = 'vulkan' }
 $w, $h = $Sizes[$Res]
 $outDir = Join-Path $root 'docs/proteus/perf'
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+$rejDir = Join-Path $outDir 'rejected'
+$rejected = @()
 
 $configs = if ($Ab) { $Ab -split ',' } else { @('baseline') }
 $logs = @()
