@@ -121,6 +121,16 @@ changes defaults. DLSS/FSR4 paths untouched (compile-verified only).
   would sail through golden-compare as "stable" — the bless flow needs the
   admitted-count check (W0-ORDER proposes it).
 
+## Addendum 2026-10-15 (W0-ORDER proof runs)
+
+Populated Native-TAA off/on A/B at 1440p, Native mode, all sides VALID
+(boot-proof + admitted gate): open dissim 1.4e-06 / mae 0.005, woodland
+3.4e-06 / 0.036 — static-scene convergence, exactly as predicted; ride
+(motion) dissim 0.248 / mae 6.5, dominated by cross-run vehicle timing, so
+it bounds but does not isolate the TAA effect. The earlier e139-vs-e248
+0.0040 number is superseded by these guarded runs. Motion-isolated proof
+moves to W0c ghosting shots.
+
 ## Follow-ups
 
 - **W0-ORDER (proposed, blocks W0.4 + T19 goldens)**: intermittent
