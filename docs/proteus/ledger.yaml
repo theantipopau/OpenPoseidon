@@ -209,3 +209,17 @@ tickets:
       - fresh vcpkg configure + full build to pick up the CLI11 C++20 port
       - check Oct 14 crash dumps for CLI11 frames (startup crash vs mid-game bug)
       - upstream C++ formatting unverified locally (no clang-format on box; CI judges on next push)
+
+  - id: BACKEND-VERIFY-1
+    title: Build + test verification of merged upstream backend; Oct-14 crash triage
+    branch: proteus/main (direct, follows UPSTREAM-SYNC-1)
+    status: done-unverified
+    files: []
+    toggle: n/a (verification only; no source changes)
+    evidence: "win-x64-clang-rwdi configure OK (LLVM_ROOT=VS-Llvm/x64 + VCPKG_KEEP_ENV_VARS=LLVM_ROOT, env-only, no repo change); PoseidonTests links, filtered run 645 assertions/12 cases PASS (matches upstream doc); PoseidonGame links green exit 0, ProteusGame.exe --help exit 0 (CLI11 path live). Crash triage via build/mini-triage.py (untracked helper): 9/10 Oct-14 dumps AV at same amdxc64.dll+0x7c66c0, 1/10 in amd_fidelityfx_loader_dx12.dll+0x152d — AMD DX12/FSR4 crashes, NOT the CLI11 startup crash."
+    gpu_verified: false
+    follow_ups:
+      - PoseidonTests fixture-copy post-build fails (tests/fixtures/font + pac/jpg/pbo/rtm omitted from source release; pre-existing, upstream-documented) — blocks a green tests target build
+      - toolchain FindLLVMSanitizer knows only C:/D:/Program Files/LLVM, not VS-bundled LLVM — consider adding the VS path as a candidate
+      - Oct-14 cluster implicates AMD DX12 shader compiler + FSR4 loader (see CHANGELOG open risks); retest FSR4 path after driver/SDK update
+      - T18b fps re-baseline still owed (menu-era numbers)
