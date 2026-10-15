@@ -780,7 +780,26 @@ std::string StageTestMissionForGame(const std::string& testMission)
     else if (fs::is_directory(srcPath, ec))
         fs::copy(srcPath, dest, fs::copy_options::overwrite_existing | fs::copy_options::recursive, ec);
     else
-        fs::copy_file(srcPath, dest, fs::copy_options::overwrite_existing, ec);
+    {
+        // W0-ORDER: a file input is usually .../<MissionDir>/mission.sqm and
+        // the stage must keep the Missions/<name>/ structure ProcessFullName
+        // boots. Staging the bare file as Missions/mission.sqm never boots:
+        // the game idles in the menu cutscene with no world loaded.
+        fs::path fileDest = dest;
+        const fs::path parentName = srcPath.parent_path().filename();
+        if (!parentName.empty() && parentName.string() != GameDirs::Missions)
+        {
+            fileDest = missionsDir / parentName / srcPath.filename();
+            fs::create_directories(fileDest.parent_path(), ec);
+            if (ec)
+                return testMission;
+        }
+        fs::copy_file(srcPath, fileDest, fs::copy_options::overwrite_existing, ec);
+        if (ec)
+            return testMission;
+        s_testMissionStageRoot = stageRoot;
+        return fileDest.string();
+    }
     if (ec)
         return testMission;
 

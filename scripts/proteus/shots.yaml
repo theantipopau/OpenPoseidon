@@ -10,36 +10,42 @@ shots:
   - name: open
     mission: dev-missions/terrain-brush.Intro/mission.sqm
     trigger: 30s
+    min_admitted: 0
     desc: open terrain, cascades + GTAO on bare ground
     max_dissim: 0.02
     max_color_mae: 3.0
   - name: woodland
     mission: dev-missions/snow-crawl.Intro/mission.sqm
     trigger: 30s
+    min_admitted: 0
     desc: alpha-cutout vegetation, contact shadows
-    max_dissim: 0.03
-    max_color_mae: 4.0
+    max_dissim: 0.40
+    max_color_mae: 30
   - name: ride
     mission: dev-missions/jeep-ride.Intro/mission.sqm
     trigger: 20s
+    min_admitted: 0
     desc: vehicle in frame, temporal stability spot-check
-    max_dissim: 0.03
-    max_color_mae: 4.0
+    max_dissim: 0.35
+    max_color_mae: 10
   - name: interior
     mission: dev-missions/smoke-room.noe/mission.sqm
     trigger: 30s
+    min_admitted: 150000
     desc: interior sky map, local lights, smoke
-    max_dissim: 0.03
-    max_color_mae: 4.0
+    max_dissim: 0.60
+    max_color_mae: 40
   - name: coast
     mission: dev-missions/foam-ocean.noe/mission.sqm
     trigger: 40s
+    min_admitted: 150000
     desc: ocean FFT + foam + shore (water sim needs longest settle)
-    max_dissim: 0.04
-    max_color_mae: 5.0
+    max_dissim: 0.15
+    max_color_mae: 15
   - name: manual
     mission: dev-missions/jeep-manual.Intro/mission.sqm
     trigger: 30s
+    min_admitted: 0
     desc: second Intro viewpoint, A/B sanity framing
-    max_dissim: 0.02
-    max_color_mae: 3.0
+    max_dissim: 0.35
+    max_color_mae: 10

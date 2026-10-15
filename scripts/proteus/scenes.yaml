@@ -8,19 +8,25 @@
 scenes:
   - name: open
     mission: dev-missions/terrain-brush.Intro/mission.sqm
+    min_admitted: 0
     stresses: terrain prepass/colour, cascades, GTAO on open ground
   - name: woodland
     mission: dev-missions/snow-crawl.Intro/mission.sqm
+    min_admitted: 0
     stresses: alpha-cutout prepass/colour, contact shadows (vegetation density UNVERIFIED — confirm on GPU)
   - name: ride
     mission: dev-missions/jeep-ride.Intro/mission.sqm
+    min_admitted: 0
     stresses: vehicle + moving camera, temporal stability of AO/fog
   - name: interior
     mission: dev-missions/smoke-room.noe/mission.sqm
+    min_admitted: 150000
     stresses: interior sky map, local lights, smoke containment
   - name: coast
     mission: dev-missions/foam-ocean.noe/mission.sqm
+    min_admitted: 150000
     stresses: ocean FFT + foam + shore sim (adds Tw* regions vs inland scenes)
   - name: manual
     mission: dev-missions/jeep-manual.Intro/mission.sqm
+    min_admitted: 0
     stresses: second Intro viewpoint for A/B sanity (same island, different framing)
