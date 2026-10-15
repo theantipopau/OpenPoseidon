@@ -29,39 +29,26 @@ jobs:
       - run: python scripts/proteus/imgdiff.py --selftest
 
   fmt-changed:
-    name: format (changed files)
+    name: format (changed hunks)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: changed files vs base
-        id: changed
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # Hunk-scoped (check-format.py): plain rustfmt recurses from a crate root
+      # into every module and clang-format flags whole files, so both fail on
+      # drift the ticket never touched. Same script as local check-all.ps1.
+      - name: toolchains for format check
+        run: |
+          rustup component add rustfmt
+          sudo apt-get update -qq && sudo apt-get install -y -qq clang-format
+      - name: check format of changed hunks
         run: |
           BASE="$(git merge-base HEAD origin/main 2>/dev/null || git rev-parse HEAD~1)"
-          echo "base=$BASE"
-          git diff --name-only --diff-filter=ACMRT "$BASE" HEAD > /tmp/changed.txt
-          cat /tmp/changed.txt
-      - name: rustfmt (changed .rs files)
-        run: |
-          RS="$(grep '\.rs$' /tmp/changed.txt || true)"
-          if [ -z "$RS" ]; then echo 'no changed .rs files'; exit 0; fi
-          rustup component add rustfmt
-          FAIL=0
-          for f in $RS; do
-            case "$f" in
-              engine/WgpuRenderer/rust/*) ED=2024 ;;
-              *) ED=2021 ;;
-            esac
-            rustfmt --edition "$ED" --check "$f" || FAIL=1
-          done
-          exit $FAIL
-      - name: clang-format (changed C++ files)
-        run: |
-          CPP="$(grep -E '\.(cpp|hpp|h|c|cc)$' /tmp/changed.txt || true)"
-          if [ -z "$CPP" ]; then echo 'no changed C++ files'; exit 0; fi
-          sudo apt-get update -qq && sudo apt-get install -y -qq clang-format
-          echo "$CPP" | xargs clang-format --dry-run --Werror
+          python scripts/proteus/check-format.py --base "$BASE"
 
   rust-tests:
     name: rust unit tests (Lavapipe)

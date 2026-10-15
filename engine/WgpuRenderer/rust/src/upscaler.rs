@@ -26,6 +26,9 @@ pub const ID_DLSS: u32 = 1;
 pub const ID_FSR1: u32 = 2;
 pub const ID_BILINEAR: u32 = 3;
 pub const ID_FSR4: u32 = 4;
+// W0a: Native TAA — the 100%-scale temporal reference. A NEW id, not ID_NATIVE:
+// ID_NATIVE means "the chain did not run at all" (see the never-native test).
+pub const ID_NATIVE_TAA: u32 = 5;
 
 // REN-UPS-001 — the explicit capability description the roadmap asks for
 // (POST-DLSS-MODERNISATION-ROADMAP §1.1: "Add an explicit capability description so a
@@ -61,6 +64,9 @@ pub struct UpscaleSettings {
     // FSR 4 (fsr4.rs): the user picked it on the Video page. Inert off the DX12 backend.
     pub fsr4_on: bool,
     pub dlss_runtime_on: bool,
+    // W0a: the Native TAA reference (WGR_NATIVE_TAA=1). Opt-in; default off preserves
+    // the legacy direct-resolve look until W0c promotes the temporal default.
+    pub native_taa_on: bool,
     pub dlss_auto_exposure: bool,
     pub jitter_y_flip: bool,
     pub mv_render_space: bool,
@@ -121,6 +127,9 @@ pub struct UpscaleContext<'a> {
     pub velocity: Option<(wgpu::Texture, wgpu::TextureView)>,
     pub exposure: Option<(wgpu::Texture, wgpu::TextureView)>,
     pub history_control: Option<(wgpu::Texture, wgpu::TextureView)>,
+    // W0a: the temporal resolve accumulator's latest-written slot (render-res HDR).
+    // Only Some when the renderer pre-ran the resolve for Native TAA this frame.
+    pub native_history: Option<(wgpu::Texture, wgpu::TextureView)>,
     pub output_tex: wgpu::Texture,
     pub output_view: wgpu::TextureView,
     pub render: (u32, u32),
@@ -166,6 +175,17 @@ pub const FSR4_CAPS: UpscalerCaps = UpscalerCaps {
     wants_external_sharpen: false,
 };
 
+// W0a Native TAA capabilities — a constant, so tests assert them without a device
+// (the backend needs live velocity/history textures to evaluate at all).
+pub const NATIVE_TAA_CAPS: UpscalerCaps = UpscalerCaps {
+    info_id: ID_NATIVE_TAA,
+    // Accumulates history: without the temporal path (jitter + velocity) it would
+    // smear the frame, so like DLSS it holds the contract down to its own level.
+    needs_temporal_inputs: true,
+    // The resolve output is final; no sharpening pass runs over the reference.
+    wants_external_sharpen: false,
+};
+
 // ---------------------------------------------------------------------------------
 // Bilinear: the diagnostic-grade spatial fallback (and the native upscale when no
 // temporal backend is active). Never fails.
@@ -203,6 +223,69 @@ impl TemporalUpscaler for BilinearUpscaler {
         blitter.copy(ctx.device, ctx.encoder, &ctx.color_view, &ctx.output_view);
         ctx.encoder.pop_debug_group();
         UpscaleOutcome::Done { quality: -1 }
+    }
+}
+
+// ---------------------------------------------------------------------------------
+// W0a Native TAA: the temporal reference at 100% scale. The accumulation itself
+// runs BEFORE the chain (Temporal::render_debug_resolve, promoted to production by
+// native_history_wanted); this backend only moves the finished accumulator into the
+// output target. Skips unless render == output — Native never upscales, so under
+// render scale the chain falls through to the spatial backends. WebGPU-safe by
+// construction: one texture blit, no vendor API, no storage-atomics tricks.
+//
+// This deliberately promotes the REN-TEMP-001K debug resolve (whose header forbids
+// polishing it into a production TAA) — the Proteus direction update overrules that
+// plan note: a TAA-only reference is now required, and rebuilding the same pass
+// elsewhere would fork the one accumulator every temporal backend must agree on.
+
+pub struct NativeTaaUpscaler {
+    blitter: Option<wgpu::util::TextureBlitter>,
+}
+
+impl NativeTaaUpscaler {
+    pub fn new() -> Self {
+        NativeTaaUpscaler { blitter: None }
+    }
+}
+
+impl TemporalUpscaler for NativeTaaUpscaler {
+    fn label(&self) -> &'static str {
+        "native-taa"
+    }
+
+    fn caps(&self) -> UpscalerCaps {
+        NATIVE_TAA_CAPS
+    }
+
+    fn evaluate(&mut self, ctx: &mut UpscaleContext) -> UpscaleOutcome {
+        if !ctx.settings.native_taa_on || !ctx.settings.temporal_enabled {
+            return UpscaleOutcome::Skip;
+        }
+        // Native is 1:1 only. Above output (SSAA) the bilinear downsample runs;
+        // below output a spatial/temporal upscaler owns the frame.
+        if ctx.render != ctx.output {
+            return UpscaleOutcome::Skip;
+        }
+        let Some((_, hist_view)) = ctx.native_history.as_ref() else {
+            return UpscaleOutcome::Skip;
+        };
+        let blitter = self.blitter.get_or_insert_with(|| {
+            wgpu::util::TextureBlitterBuilder::new(ctx.device, crate::HDR_FORMAT)
+                .sample_type(wgpu::FilterMode::Linear)
+                .build()
+        });
+        ctx.encoder.push_debug_group("wgr_native_taa");
+        blitter.copy(ctx.device, ctx.encoder, hist_view, &ctx.output_view);
+        ctx.encoder.pop_debug_group();
+        // One-time liveness witness (same VEG_LIVE pattern as the velocity subsets):
+        // proves the whole Native chain — flag, 100% scale, pre-run resolve — fired.
+        static NATIVE_LIVE: std::sync::Once = std::sync::Once::new();
+        NATIVE_LIVE.call_once(|| {
+            ctx.notes
+                .push("[wgr] native TAA live: accumulating at 100%".to_string());
+        });
+        UpscaleOutcome::Done { quality: 0 }
     }
 }
 
@@ -1027,6 +1110,20 @@ mod tests {
         assert_eq!(caps.info_id, ID_DLSS);
         assert!(caps.needs_temporal_inputs);
         assert!(caps.wants_external_sharpen);
+    }
+
+    // W0a Native TAA: id 5 (ID_NATIVE stays "chain did not run"), temporal contract
+    // held, no external sharpening over the reference output.
+    #[test]
+    fn native_taa_id_and_caps_are_pinned() {
+        assert_eq!(ID_NATIVE_TAA, 5);
+        let caps = NativeTaaUpscaler::new().caps();
+        assert_eq!(caps, NATIVE_TAA_CAPS);
+        assert_eq!(caps.info_id, ID_NATIVE_TAA);
+        assert_ne!(caps.info_id, ID_NATIVE);
+        assert!(caps.needs_temporal_inputs);
+        assert!(!caps.wants_external_sharpen);
+        assert_eq!(NativeTaaUpscaler::new().label(), "native-taa");
     }
 
     // FSR 4 owns its sharpening (FFX enableSharpening), so the renderer's RCAS must not

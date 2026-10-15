@@ -2007,7 +2007,7 @@ class Engine : public IGraphicsEngine
         // Active MSAA sample count of the scene targets (1 = off). Fixed at launch;
         // SetMsaaSamples changes the NEXT launch.
         int msaaSamples = 1;
-        // 0 none/native, 1 DLSS, 2 FSR1, 3 bilinear, 4 FSR 4.
+        // 0 none/native, 1 DLSS, 2 FSR1, 3 bilinear, 4 FSR 4, 5 native TAA (W0a).
         int activeUpscaler = 0;
     };
 

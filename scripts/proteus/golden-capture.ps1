@@ -58,11 +58,14 @@ foreach ($s in ($shotList | Where-Object { $want -contains $_.Name })) {
   $missionPath = Join-Path $root $s.Mission
   if (-not (Test-Path $missionPath)) { Write-Host "golden-capture: shot '$($s.Name)' mission missing: $missionPath"; exit 3 }
   $out = Join-Path $candDir ($s.Name + '.png')
+  # Always keep a game log next to the candidate: without it a broken PNG (black
+  # frame, early capture, crash without dump) is undiagnosable after the fact.
+  $glog = Join-Path $candDir ($s.Name + '.log')
   Write-Host "== shot $($s.Name) [$($s.Trigger)] =="
   # PS 5.1 Start-Process splits ARRAY elements on spaces — quote every path explicitly.
   $args = ($modArgs + @('--window', '--width', $w, '--height', $h,
     '--test-mission', $missionPath, '--auto-screenshot', "$($s.Trigger):$out",
-    '--no-dev') | ForEach-Object {
+    '--no-dev', '--log-file', $glog) | ForEach-Object {
       if ($_ -match '\s') { '"' + ($_ -replace '"', '\"') + '"' } else { $_ }
     }) -join ' '
   Push-Location (Split-Path $exe -Parent)

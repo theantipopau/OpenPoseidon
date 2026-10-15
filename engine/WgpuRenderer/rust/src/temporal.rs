@@ -167,6 +167,11 @@ pub struct Temporal {
     // WGR_REACTIVE_SKY / WGR_REACTIVE_WATER strengths (0 disables a term). Live-tunable.
     pub reactive_sky: f32,
     pub reactive_water: f32,
+    // W0a: production consumer for the resolve accumulator. render_debug_resolve runs
+    // when this is set (not only for WGR_TEMPORAL_DEBUG=2) and native_history_view
+    // exposes the latest-written slot for the Native TAA backend to blit to output.
+    // Set per frame by the renderer; false preserves the old diagnostic-only path.
+    pub native_history_wanted: bool,
     // 0 = auto (~8 x (out/render)^2). Live-tunable (dev panel).
     pub jitter_phase_override: u64,
     // REN-TEMP-001H: ABSOLUTE world matrices of identified rigid draws, this frame and
@@ -237,6 +242,7 @@ impl Temporal {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(0),
+            native_history_wanted: false,
             cur_worlds: FxHashMap::default(),
             prev_worlds: FxHashMap::default(),
             cur_skin_bases: FxHashMap::default(),
@@ -729,6 +735,22 @@ impl Temporal {
         self.velocity.as_ref().map(|v| &v.target)
     }
 
+    // W0a: the resolve accumulator slot the last render_debug_resolve WROTE (the
+    // other is read). render_debug_resolve flips write_slot after drawing, so the
+    // fresh frame is history[1 - write_slot]. None until the first resolve runs.
+    pub fn native_history_view(&self) -> Option<&wgpu::TextureView> {
+        self.resolve
+            .as_ref()
+            .map(|r| &r.history[1 - r.write_slot].1)
+    }
+
+    // The matching texture handle (contexts carry owned texture+view pairs).
+    pub fn native_history_texture(&self) -> Option<&wgpu::Texture> {
+        self.resolve
+            .as_ref()
+            .map(|r| &r.history[1 - r.write_slot].0)
+    }
+
     pub fn reset_this_frame(&self) -> bool {
         self.reset
     }
@@ -1154,7 +1176,7 @@ impl Temporal {
         cur_color: &wgpu::TextureView,
         render_size: (u32, u32),
     ) {
-        if !self.enabled || self.debug_view != 2 {
+        if !self.enabled || (self.debug_view != 2 && !self.native_history_wanted) {
             return;
         }
         let Some(velocity_view) = self.velocity.as_ref().map(|v| v.view.clone()) else {

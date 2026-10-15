@@ -889,6 +889,10 @@ pub struct Renderer {
     fsr_sharpness: f32,
     // FSR 4 switch (live, from the tuning flags bit 6). Inert off the DX12 backend.
     fsr4_runtime_on: bool,
+    // W0a Native TAA reference switch. Env-seeded (WGR_NATIVE_TAA=1), default off:
+    // at 100% the legacy path reads the resolve directly, and TAA changes the pixels.
+    // Panel wiring comes with the W0c mode selection; env is enough for A/B.
+    native_taa_on: bool,
     // Column-major projection of the main scene camera, after jitter. The temporal
     // upscalers read near/far/FOV from it (upscaler::camera_from_proj).
     upscale_proj: [f32; 16],
@@ -1997,6 +2001,10 @@ impl Renderer {
                 }
                 #[cfg(windows)]
                 v.push(Box::new(fsr4::Fsr4Upscaler::new(dx12_backend)));
+                // W0a: Native runs at 100% only (Skips otherwise), ahead of the
+                // spatial backends — an explicit opt-in beats EASU+RCAS. DLSS-DLAA
+                // keeps priority above it when the NGX route is up.
+                v.push(Box::new(upscaler::NativeTaaUpscaler::new()));
                 v.push(Box::new(upscaler::FsrUpscaler::new()));
                 v.push(Box::new(upscaler::BilinearUpscaler::new()));
                 v
@@ -2028,6 +2036,9 @@ impl Renderer {
                 .unwrap_or(true),
             main_cam_off: 0,
             fsr4_runtime_on: false,
+            native_taa_on: std::env::var("WGR_NATIVE_TAA")
+                .map(|v| v != "0")
+                .unwrap_or(false),
             upscale_proj: [0.0; 16],
             fsr_runtime_on: std::env::var("WGR_FSR").map(|v| v != "0").unwrap_or(true),
             fsr_sharpness: std::env::var("WGR_FSR_SHARPNESS")
@@ -2640,9 +2651,13 @@ impl Renderer {
             self.gpu_timers.end(encoder, TimerRegion::HdrResolve);
         }
         // REN-TEMP-001K: temporal debug resolve (WGR_TEMPORAL_DEBUG=2) — accumulate the
-        // resolved HDR frame along velocity. Diagnostic only; nothing downstream reads it.
+        // resolved HDR frame along velocity. W0a: also the Native TAA production
+        // accumulator when native_history_wanted is set (100% scale only — running
+        // the pass under render scale would burn a fullscreen resolve nobody reads).
         if self.temporal.enabled {
             let render_size = self.render_size();
+            let out = (self.config.width, self.config.height);
+            self.temporal.native_history_wanted = self.native_taa_active() && render_size == out;
             self.temporal.render_debug_resolve(
                 &self.device,
                 &self.queue,
@@ -2742,6 +2757,11 @@ impl Renderer {
                     .history_control_texture()
                     .cloned()
                     .zip(self.temporal.history_control_view().cloned()),
+                native_history: self
+                    .temporal
+                    .native_history_texture()
+                    .cloned()
+                    .zip(self.temporal.native_history_view().cloned()),
                 output_tex: up_tex,
                 output_view: up_view.clone(),
                 render,
@@ -2756,6 +2776,7 @@ impl Renderer {
                     fsr_sharpness: self.fsr_sharpness,
                     fsr4_on: self.fsr4_runtime_on,
                     dlss_runtime_on: self.dlss_runtime_on,
+                    native_taa_on: self.native_taa_on,
                     dlss_auto_exposure: self.dlss_auto_exposure,
                     jitter_y_flip: self.dlss_jy_flip,
                     mv_render_space: self.dlss_mv_render_space,
@@ -3138,6 +3159,12 @@ impl Renderer {
         self.ngx_route && self.dlss_runtime_on && self.temporal.enabled
     }
 
+    // W0a: Native TAA needs the same 100%-scale upscale target DLAA uses — the
+    // resolve accumulator must land in an output-size target the post chain reads.
+    fn native_taa_active(&self) -> bool {
+        self.native_taa_on && self.temporal.enabled
+    }
+
     fn ensure_hdr(&mut self, width: u32, height: u32) {
         if !self.hdr_enabled || width == 0 || height == 0 {
             return;
@@ -3150,7 +3177,8 @@ impl Renderer {
         // REN-TEMP-001N: at 100% scale the upscale target normally does not exist — except
         // for DLAA, where DLSS runs at render == output purely as a temporal AA pass and
         // still needs its own storage-image output to write into.
-        let want_upscaled = (width, height) != out || self.dlaa_active();
+        let want_upscaled =
+            (width, height) != out || self.dlaa_active() || self.native_taa_active();
         let upscaled_current = match self.hdr_upscaled.as_ref() {
             Some((t, _)) => want_upscaled && (t.width(), t.height()) == out,
             None => !want_upscaled,

@@ -131,6 +131,44 @@ tickets:
       - night + rain shot variants; crash-watch POSEIDON_USER_CONTENT_DIR override
       - Oct 14 crash cluster unexplained (10 dumps)
 
+  - id: W0a
+    title: Upscaler interface + Native TAA backend
+    branch: proteus/W0-upscaler
+    status: done-unverified
+    files:
+      - engine/WgpuRenderer/rust/src/upscaler.rs
+      - engine/WgpuRenderer/rust/src/temporal.rs
+      - engine/WgpuRenderer/rust/src/lib.rs
+      - engine/Poseidon/Dev/Debug/DebugOverlay.cpp
+      - engine/Poseidon/Graphics/Core/Engine.hpp
+      - docs/proteus/PROVENANCE.md
+      - scripts/proteus/golden-capture.ps1
+      - scripts/proteus/check-format.py
+      - scripts/proteus/check-all.ps1
+      - .github/workflows/proteus.yml
+      - docs/proteus/W0a-native-upscaler.md
+    toggle: WGR_NATIVE_TAA=1 + upscalerQuality=100 selects the Native TAA accumulator; 0/unset restores previous behaviour
+    evidence: WgpuRenderer + PoseidonGame build green; cargo 716 pass + 4 fail all proven pre-existing on clean HEAD (stale ABI-21-vs-22 test, aerial-perspective role test, 2 GI device tests; full-run segfault identical). Populated Native-TAA render on RX 9070 XT (173,564 admitted, real 1080p scene). Empty-world TAA on/off byte-identical (f191 x5, correct convergence, no-drift smoke). e139-vs-e248 dissim 0.0040 is evidence only (off-run population UNVERIFIED). check-format selftest PASS, changeset OK, check-all OK.
+    gpu_verified: true
+    follow_ups:
+      - W0-ORDER race fix + admitted-count gate, then W0c populated A/B re-verify
+      - W0b ProteusTemporal (per-file PROVENANCE record first if porting passes)
+      - W0c Spatial + Quality/Balanced/Performance modes + T18/T19 verify at 1440p/4K
+      - cargo failures to owning tickets (ABI constant, aerial-perspective, GI device x2 + segfault)
+
+  - id: W0-ORDER
+    title: Retained-admission race intermittently renders empty worlds
+    branch: proposed
+    status: proposed
+    files: []
+    toggle: n/a (bug hunt)
+    evidence: 5/9 W0a captures rendered byte-identical empty scene (f191f13a); logs show 0 objects offered/admitted + engine warning that the world was placed before the GPU-driven path existed and nothing re-offers it. Hypothesis - SceneObjectCreated events emitted before listener registration are lost (hot-cache timing); needs owner/gfx confirmation.
+    gpu_verified: false
+    follow_ups:
+      - re-offer existing objects when the renderer path comes live (or register listener before placement)
+      - golden-capture: fail/warn the shot when the admitted count is 0 (empty captures must never become goldens)
+      - blocks W0.4 motion-vector work validation + T19 first-bless confidence
+
   - id: A1
     title: Half-resolution GTAO with bilateral upsample (LIT-010 lever)
     branch: proteus/ao-half-res

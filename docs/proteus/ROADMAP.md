@@ -30,3 +30,8 @@
 | ID | Title | Status | GPU | Branch |
 | --- | --- | --- | --- | --- |
 | A1 | Half-resolution GTAO with bilateral upsample (LIT-010 lever) | done-unverified | no | `proteus/ao-half-res` |
+
+## Unsorted
+
+- W0a: Upscaler interface + Native TAA backend
+- W0-ORDER: Retained-admission race intermittently renders empty worlds

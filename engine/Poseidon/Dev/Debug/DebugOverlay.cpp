@@ -5548,10 +5548,11 @@ void DrawTemporalTab()
     Dev::PanelHelp("temporal %s | DLSS route %s | DLSS %s (quality %d)",
                    info.temporalActive ? "on" : "off", info.dlssRoute ? "up" : "down",
                    info.dlssActive ? "active" : "inactive", info.dlssQuality);
-    static const char* kUpscalerNames[] = {"native (no upscaler)", "DLSS", "FSR 1", "bilinear", "FSR 4"};
+    // W0a: index 5 = Native TAA (ID_NATIVE_TAA). Keep in sync with upscaler.rs ids.
+    static const char* kUpscalerNames[] = {"native (no upscaler)", "DLSS", "FSR 1", "bilinear", "FSR 4", "native TAA"};
     const std::string dlssVer = DlssRuntimeVersionString();
     Dev::PanelHelp("active upscaler: %s%s%s%s",
-                   kUpscalerNames[info.activeUpscaler >= 0 && info.activeUpscaler <= 4 ? info.activeUpscaler : 0],
+                   kUpscalerNames[info.activeUpscaler >= 0 && info.activeUpscaler <= 5 ? info.activeUpscaler : 0],
                    dlssVer.empty() ? "" : "  (DLSS runtime ",
                    dlssVer.c_str(),
                    dlssVer.empty() ? "" : ", FSR 1.0)");

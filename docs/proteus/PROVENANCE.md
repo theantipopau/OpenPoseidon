@@ -22,3 +22,16 @@ If the licence can't be confirmed, the ticket becomes a proposal instead.
   FLIP (Netflix) considered and rejected: needs a display model and heavier numerics
   for no benefit at golden-threshold use. PNG codec likewise hand-written (zlib + struct
   only). Nothing to license.
+
+## Study references (no code taken, design influence only)
+
+- W0 `pmndrs/upscaler` (https://github.com/pmndrs/upscaler), MIT licence —
+  WebGPU temporal upscaler for three.js, FSR 2/3-style architecture. Reference commit
+  `96184a6812bc5fd5e5fd7898257788a1663105a9` (main, 2026-10-12; commit/date via web
+  lookup 2026-10-15, UNVERIFIED against a local clone). Files studied (design only):
+  `src/Upscaler.ts` (pass orchestration), `src/shaders/accumulate.ts` (history
+  reprojection, variance clipping, reactive response), `src/shaders/reconstruct.ts`
+  (depth/motion reconstruction, disocclusion), `src/shaders/generateReactive.ts`
+  (reactive mask), `src/shaders/easu.ts` + `src/shaders/rcas.ts` (spatial path).
+  No code copied or ported in W0a; if W0b ports any pass, this entry grows a
+  per-file record first.
