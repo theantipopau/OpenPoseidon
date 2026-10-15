@@ -182,3 +182,30 @@ tickets:
     follow_ups:
       - ticket-18 flyby at 1080p/1440p/4K with WGR_GTAO_SCALE=1 vs 2 (GtaoCompute/GtaoBlur columns)
       - ticket-19 golden-image A/B of scale 1 vs 2 (forest/interior)
+
+  - id: UPSTREAM-SYNC-1
+    title: Merge upstream/main (CLI11 C++20 overlay + DB/loadout scripting)
+    branch: proteus/main (direct merge of upstream/main 94e84f0, no ticket branch)
+    status: done-unverified
+    files:
+      - cmake/vcpkg-overlay-ports/cli11/portfile.cmake
+      - cmake/vcpkg-overlay-ports/cli11/vcpkg.json
+      - cmake/vcpkg-overlay-ports/cli11/README.md
+      - cmake/vcpkg-overlay-ports/cli11/LICENSE-vcpkg.txt
+      - engine/Poseidon/Game/Commands/GameStateExtDatabase.cpp
+      - engine/Poseidon/Game/Commands/GameStateExt.cpp
+      - engine/Poseidon/Game/Commands/GameStateExt.hpp
+      - engine/Poseidon/Game/Commands/GameStateExtObj.cpp
+      - engine/Poseidon/Game/test_game_state_ext.cpp
+      - dev-missions/database-loadout.Intro/
+      - docs/scripting/in_memory_database.md
+      - docs/scripting/in_memory_database_review.md
+      - docs/scripting/unit_loadout_commands.md
+      - CREDITS.md
+    toggle: n/a (upstream code taken as-is; overlay activates via cmake/presets/base.json VCPKG_OVERLAY_PORTS on next configure)
+    evidence: clean merge, no conflicts (16 files, +2056/-3); check-all OK post-merge; no renderer/GPU changes in delta so Proteus graphics track unaffected.
+    gpu_verified: false
+    follow_ups:
+      - fresh vcpkg configure + full build to pick up the CLI11 C++20 port
+      - check Oct 14 crash dumps for CLI11 frames (startup crash vs mid-game bug)
+      - upstream C++ formatting unverified locally (no clang-format on box; CI judges on next push)
