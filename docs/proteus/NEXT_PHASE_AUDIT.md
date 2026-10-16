@@ -106,3 +106,8 @@ lookups; the proposal below marks exactly where those inputs land.
 - **New evidence against proposal item 1d**: the live benchmark was judged
   VALID with `admitted=0` — T18b re-baseline must wait for the admitted-count
   gate, or its numbers are menu-cutscene fps.
+- **FIXTURE-FONT-1** (proposal item 3, continued): authored `dummy.ttf` +
+  legacy FXY/PAA pair close the font gap; `copy-fixtures.cmake` makes staging
+  warn-not-fail so the tests target builds green. Full binary now stops at
+  `paa/synthetic_ai88_lzss.pac`; remaining gaps (`pac`, `jpg`, `pbo`, `rtm`,
+  synthetic `paa`/`p3d`/`mlod`) each need the FIXTURE-VOICE-1 treatment.

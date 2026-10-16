@@ -823,22 +823,17 @@ target_include_directories(PoseidonTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# Copy shared test fixtures to output directory
+# Copy shared test fixtures to output directory. The copy tolerates the source
+# release's deliberate binary-fixture omissions (see ASSET_SOURCES.md):
+# scripts/proteus/copy-fixtures.cmake copies what exists and warns on the rest,
+# so one missing dir no longer fails the whole tests-target build. Tests that
+# need unrestored data abort at runtime via GetTestFixturePath (documented).
 set(FIXTURES_ROOT ${CMAKE_SOURCE_DIR}/tests/fixtures)
 add_custom_command(TARGET PoseidonTests POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/audio       $<TARGET_FILE_DIR:PoseidonTests>/fixtures/audio
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/cfg         $<TARGET_FILE_DIR:PoseidonTests>/fixtures/cfg
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/font        $<TARGET_FILE_DIR:PoseidonTests>/fixtures/font
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/mlod        $<TARGET_FILE_DIR:PoseidonTests>/fixtures/mlod
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/p3d         $<TARGET_FILE_DIR:PoseidonTests>/fixtures/p3d
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/paa         $<TARGET_FILE_DIR:PoseidonTests>/fixtures/texture/paa
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/pac         $<TARGET_FILE_DIR:PoseidonTests>/fixtures/texture/pac
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/jpg         $<TARGET_FILE_DIR:PoseidonTests>/fixtures/jpg
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/pbo         $<TARGET_FILE_DIR:PoseidonTests>/fixtures/pbo
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/rtm         $<TARGET_FILE_DIR:PoseidonTests>/fixtures/rtm
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/wrp         $<TARGET_FILE_DIR:PoseidonTests>/fixtures/wrp
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/xml         $<TARGET_FILE_DIR:PoseidonTests>/fixtures
-    COMMENT "Copying test fixtures to output directory"
+    COMMAND ${CMAKE_COMMAND} -DFIXTURES_ROOT=${FIXTURES_ROOT}
+        -DDEST_DIR=$<TARGET_FILE_DIR:PoseidonTests>/fixtures
+        -P ${CMAKE_SOURCE_DIR}/scripts/proteus/copy-fixtures.cmake
+    COMMENT "Copying test fixtures to output directory (missing dirs skipped)"
 )
 
 # Copy TcPbo WCX plugin DLL next to test executable

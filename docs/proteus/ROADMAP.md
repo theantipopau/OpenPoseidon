@@ -24,6 +24,7 @@
 | T18a | Machine-readable GPU/CPU timing line (PERF-CAP) | done-unverified | no | `proteus/T18-perf-capture` |
 | T18b | Perf capture script + scene/region definitions | done-unverified | no | `proteus/T18b-capture-script` |
 | T19 | Golden-image harness (shots + SSIM compare + capture) | done-unverified | no | `proteus/T19-golden-harness` |
+| TOOLCHAIN-1 | VS-bundled LLVM candidates in FindLLVMSanitizer.cmake | done-unverified | no | `proteus/main (direct)` |
 
 ## Phase A — Renderer issues
 
@@ -37,9 +38,18 @@
 | --- | --- | --- | --- | --- |
 | BACKEND-VERIFY-1 | Build + test verification of merged upstream backend; Oct-14 crash triage | done-unverified | no | `proteus/main (direct, follows UPSTREAM-SYNC-1)` |
 
+## Phase F — Research (proposals only)
+
+| ID | Title | Status | GPU | Branch |
+| --- | --- | --- | --- | --- |
+| FIXTURE-FONT-1 | Authored font fixtures + tolerant post-build copy | done-unverified | no | `proteus/main (direct)` |
+| FIXTURE-VOICE-1 | Restored omitted voice fixture files; 2 failing UI tests fixed | done-unverified | no | `proteus/main (direct)` |
+
 ## Unsorted
 
 - W0a: Upscaler interface + Native TAA backend
 - W0-ORDER: Retained-admission race intermittently renders empty worlds
 - UPSTREAM-SYNC-1: Merge upstream/main (CLI11 C++20 overlay + DB/loadout scripting)
 - MENU-FFUR-1: Proteus shell neutralizes inherited menu artwork (FFUR shutdown leak)
+- UI-THEME-A: Proteus art backdrop on Mods/Multiplayer/Configure (Phase A slice)
+- SHUTDOWN-T-1: SHUTDOWN-TIME phase probes in UnloadGameData + live proof

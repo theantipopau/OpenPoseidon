@@ -297,3 +297,21 @@ tickets:
     follow_ups:
       - font decision (author TTF or explicit skip) + pac/jpg/pbo/rtm tickets
       - generator script if names must be reproducible from scratch
+  - id: FIXTURE-FONT-1
+    title: Authored font fixtures + tolerant post-build copy
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - tests/fixtures/font/make_dummy_ttf_fixture.py
+      - tests/fixtures/font/dummy.ttf
+      - tests/fixtures/font/legacy.fxy
+      - tests/fixtures/font/legacy-01.paa
+      - scripts/proteus/copy-fixtures.cmake
+      - tests/unit/engine/Poseidon/CMakeLists.txt
+      - docs/proteus/FIXTURE-FONT-1.md
+    toggle: n/a (test data + build staging; no engine behaviour change)
+    evidence: "FontTools-authored TTF (107 box glyphs) + 2688-byte legacy FXY pair; copy script warns-not-fails on omitted dirs. PoseidonTests target builds fully green incl. post-build (ninja 0); [font] 4640/56 pass; broad [UI] no-exclusion 230 cases 224/0/6 exit 0. Full binary now aborts at paa/synthetic_ai88_lzss.pac. check-all OK."
+    gpu_verified: false
+    follow_ups:
+      - pac/jpg/pbo/rtm + synthetic paa/p3d/mlod gaps (per-test archaeology)
+      - generator-script pattern for each future restoration
