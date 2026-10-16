@@ -10,21 +10,21 @@ shots:
   - name: open
     mission: dev-missions/terrain-brush.Intro/mission.sqm
     trigger: 30s
-    min_admitted: 0
+    min_admitted: 0 # bare-terrain mission: statics N/A (census 13 not-static), denylist guards
     desc: open terrain, cascades + GTAO on bare ground
     max_dissim: 0.02
     max_color_mae: 3.0
   - name: woodland
     mission: dev-missions/snow-crawl.Intro/mission.sqm
     trigger: 30s
-    min_admitted: 0
+    min_admitted: 0 # bare-terrain mission (see open); denylist guards
     desc: alpha-cutout vegetation, contact shadows
     max_dissim: 0.40
     max_color_mae: 30
   - name: ride
     mission: dev-missions/jeep-ride.Intro/mission.sqm
     trigger: 20s
-    min_admitted: 0
+    min_admitted: 0 # bare-terrain mission (see open); denylist guards
     desc: vehicle in frame, temporal stability spot-check
     max_dissim: 0.35
     max_color_mae: 10
@@ -45,7 +45,7 @@ shots:
   - name: manual
     mission: dev-missions/jeep-manual.Intro/mission.sqm
     trigger: 30s
-    min_admitted: 0
+    min_admitted: 0 # bare-terrain mission (see open); denylist guards
     desc: second Intro viewpoint, A/B sanity framing
     max_dissim: 0.35
     max_color_mae: 10
