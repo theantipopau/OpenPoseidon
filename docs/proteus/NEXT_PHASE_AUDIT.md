@@ -89,3 +89,20 @@ lookups; the proposal below marks exactly where those inputs land.
 - kozl repro log attached to its ticket (fixed or findings-recorded).
 - Upscaler choice recorded with research citations; no unsigned vendor
   binaries in the repo.
+
+## 6. Addendum 2026-10-16: tickets landed since this proposal
+
+- **UI-THEME-A** (proposal Phase A slice): Proteus art behind Mods /
+  Multiplayer / Configure retail screens, behaviour-neutral. Remaining legacy
+  screens + visual GPU check still open.
+- **SHUTDOWN-T-1** (proposal item 1b): phase probes live; benchmark self-exit
+  total is 289 ms, so the 30–70 s menu-quit path still needs a real
+  launch → menu → quit capture. Same run should confirm MENU-FFUR-1 + the new
+  backdrops visually.
+- **TOOLCHAIN-1** (BACKEND-VERIFY-1 follow-up): VS-bundled LLVM candidates added.
+- **FIXTURE-VOICE-1** (proposal item 3, partial): 2 sticking UI failures fixed
+  by restoring omitted fixture names; broad `[UI]` is 214/0/6. Remainder:
+  `font` decision + `pac/jpg/pbo/rtm` tickets.
+- **New evidence against proposal item 1d**: the live benchmark was judged
+  VALID with `admitted=0` — T18b re-baseline must wait for the admitted-count
+  gate, or its numbers are menu-cutscene fps.

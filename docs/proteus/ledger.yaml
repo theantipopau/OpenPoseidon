@@ -238,3 +238,62 @@ tickets:
       - owner visually confirms no FFUR art on quit with @ffsx2007 loaded
       - kozl/WW4 replacement still open (mechanism mapped, needs live @PRMOD repro)
       - pending upscaler/browser research feeds NEXT_PHASE_AUDIT proposal
+  - id: UI-THEME-A
+    title: Proteus art backdrop on Mods/Multiplayer/Configure (Phase A slice)
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - engine/Poseidon/UI/OptionsUIApp.cpp
+      - engine/Poseidon/UI/DisplayUIMultiplayer.cpp
+      - engine/Poseidon/UI/DisplayUI.cpp
+      - docs/proteus/UI-THEME-A.md
+    toggle: n/a (Proteus art behind unchanged retail controls)
+    evidence: "EnableProteusTheme + AddArtBackdrop(9790) before retail Load (+19, no handler/label/ID changes). Poseidon lib links; [menu][splash][inGameUI] 19/6 pass; broad [UI] 212/2/6 at the time (failures pre-existing, later fixed by FIXTURE-VOICE-1); check-all OK."
+    gpu_verified: false
+    follow_ups:
+      - remaining legacy screens (Server/Login/NewUser/Revert) same pattern
+      - owner visual check Mods/Multiplayer/Controls on next GPU run
+      - Phase B (focus/readability) + Phase C (settings) build on this
+  - id: SHUTDOWN-T-1
+    title: SHUTDOWN-TIME phase probes in UnloadGameData + live proof
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - engine/Poseidon/Foundation/Platform/Shutdown.cpp
+      - docs/proteus/SHUTDOWN-T-1.md
+      - docs/proteus/perf/20261016-125858-435ba3b-1080p-open.csv
+      - docs/proteus/perf/20261016-125858-435ba3b-1080p-open.json
+    toggle: n/a (RAII log lines only; teardown order unchanged)
+    evidence: "Fresh PoseidonGame --benchmark 1080p/open boots, runs 300f, self-exits exit 0; all 8 SHUTDOWN-TIME INFO lines present, total 289 ms on self-exit path (menu-quit 30-70 s path still to capture). Format hunk cleaned (VS clang-format), rebuilt + retested. check-all OK."
+    gpu_verified: true
+    follow_ups:
+      - real launch-menu-quit log with probes (+@ffsx2007: FFUR visual + backdrops)
+      - admitted=0 VALID run: T18b needs admitted-count gate for populated baselines
+  - id: TOOLCHAIN-1
+    title: VS-bundled LLVM candidates in FindLLVMSanitizer.cmake
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - cmake/FindLLVMSanitizer.cmake
+      - docs/proteus/TOOLCHAIN-1.md
+    toggle: n/a (fallback candidates only; LLVM_ROOT override still wins)
+    evidence: win-x64-clang-rwdi configure re-ran green with the file changed (during Poseidon build). From-scratch no-LLVM_ROOT verification on a VS-only box still owed.
+    gpu_verified: false
+    follow_ups: []
+  - id: FIXTURE-VOICE-1
+    title: Restored omitted voice fixture files; 2 failing UI tests fixed
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - tests/unit/engine/Poseidon/UI/Locale/fixtures/mission_language_detector/CoverageSample.Noe/radio.ogg
+      - tests/unit/engine/Poseidon/UI/Locale/fixtures/mission_language_detector/CoverageSample.Noe/radio.Czech.ogg
+      - tests/unit/engine/Poseidon/UI/Locale/fixtures/mission_language_detector/CoverageSample.Noe/radio.Polish.ogg
+      - tests/unit/engine/Poseidon/UI/Locale/fixtures/mission_language_detector/DemoSoundSubdir.Noe/sound/line.ogg
+      - tests/unit/engine/Poseidon/UI/Locale/fixtures/mission_language_detector/DemoSoundSubdir.Noe/sound/line.Czech.ogg
+      - docs/proteus/FIXTURE-VOICE-1.md
+    toggle: n/a (test data only; detector code untouched)
+    evidence: "Root cause: description.ext references sound files the source release omitted (all voice flags false; detector correct). Restored the 5 referenced names, existence-only. [missions] 107/24 pass; broad [UI] ~[font] 220 cases 214/0/6 exit 0 (first fully-green broad UI run). check-all OK."
+    gpu_verified: false
+    follow_ups:
+      - font decision (author TTF or explicit skip) + pac/jpg/pbo/rtm tickets
+      - generator script if names must be reproducible from scratch
