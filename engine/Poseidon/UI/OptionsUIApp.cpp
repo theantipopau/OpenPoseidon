@@ -1528,6 +1528,12 @@ DisplayMods::DisplayMods(ControlsContainer* parent) : Display(parent)
 {
     _enableSimulation = false;
     _exitWhenClose = -1;
+    // Phase A theme propagation: Proteus art behind the retail mod list. Added before
+    // Load() so retail controls paint on top; retail background frames hide automatically.
+    EnableProteusTheme();
+    static ParamFile proteusModsBackdrop;
+    proteusModsBackdrop.Clear();
+    ProteusTheme::AddArtBackdrop(this, proteusModsBackdrop, 9790);
     Load("RscDisplayMods");
 
     if (C3DStatic* text = dynamic_cast<C3DStatic*>(GetCtrl(IDC_MODS_MASTER_SERVER)))

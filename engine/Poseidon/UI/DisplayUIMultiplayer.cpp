@@ -38,6 +38,7 @@ using namespace Poseidon;
 #include <Poseidon/Core/ModId.hpp>
 #include <Poseidon/Core/ServerModResolve.hpp>
 #include <Poseidon/Core/ModCollection.hpp>
+#include <Poseidon/UI/ProteusTheme.hpp>
 #include <Poseidon/Core/ModSystem.hpp>
 #include <Poseidon/Core/PendingConnect.hpp>
 #include <Poseidon/Core/Application.hpp>
@@ -857,6 +858,12 @@ DisplayMultiplayer::DisplayMultiplayer(ControlsContainer* parent) : Display(pare
 
     _source = BSLAN;
 
+    // Phase A theme propagation: Proteus art behind the retail server browser. Added
+    // before Load() so the session list paints on top; background frames hide automatically.
+    EnableProteusTheme();
+    static ParamFile proteusMultiBackdrop;
+    proteusMultiBackdrop.Clear();
+    ProteusTheme::AddArtBackdrop(this, proteusMultiBackdrop, 9790);
     Load("RscDisplayMultiplayer");
     LoadParams();
 

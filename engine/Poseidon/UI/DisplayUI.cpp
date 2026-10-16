@@ -863,6 +863,12 @@ DisplayConfigure::DisplayConfigure(ControlsContainer* parent, bool enableSimulat
 {
     _enableSimulation = enableSimulation;
     _keys = nullptr;
+    // Phase A theme propagation: Proteus art behind the retail controls page. Added before
+    // Load() so key bindings paint on top; background frames hide automatically.
+    EnableProteusTheme();
+    static ParamFile proteusConfigureBackdrop;
+    proteusConfigureBackdrop.Clear();
+    ProteusTheme::AddArtBackdrop(this, proteusConfigureBackdrop, 9790);
     Load("RscDisplayConfigure");
     PoseidonAssert(_keys);
 
