@@ -315,3 +315,49 @@ tickets:
     follow_ups:
       - pac/jpg/pbo/rtm + synthetic paa/p3d/mlod gaps (per-test archaeology)
       - generator-script pattern for each future restoration
+  - id: T18c
+    title: "Populated benchmarks: admitted-count gate + re-baseline"
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - scripts/proteus/scenes.yaml
+      - scripts/proteus/shots.yaml
+      - docs/proteus/T18c-populated-baselines.md
+      - docs/proteus/perf/20261016-141805-5ec44b3-1080p-open.csv
+      - docs/proteus/perf/20261016-141805-5ec44b3-1080p-open.json
+      - docs/proteus/perf/20261016-142222-5ec44b3-1080p-interior.csv
+      - docs/proteus/perf/20261016-142222-5ec44b3-1080p-interior.json
+    toggle: n/a (yaml comments only; gate values restored, no behaviour change)
+    evidence: "Settled 30 s open run: 13 offered all not-static, 0 admitted, PNG not menu-backdrop (denylist holds) — bare terrain by design (mission.sqm 674 bytes, 1 soldier). Blanket-500 gate tried + reverted (invalidates real terrain). interior benchmark VALID admitted=173540/178263 ≥ 150k gate. Fresh 1080p baselines: open 89.3 fps (terrain-only), interior 71.1 fps (populated), binary 5ec44b3."
+    gpu_verified: true
+    follow_ups:
+      - woodland/ride/coast/manual re-baseline + Iters 5+ percentiles
+      - T19 goldens re-verify on current binary
+  - id: UPSCALER-1
+    title: Upscaler decision (in-house TAAU default; vendor paths optional-only)
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - docs/proteus/UPSCALER-1.md
+    toggle: n/a (docs only; no engine behaviour change)
+    evidence: "Delegated web research (2026-10-16): in-house TAAU stays default/fallback/WebGPU path; DLSS 4.x quality leader but NVIDIA-only Streamline native-optional; FSR 3.1.x MIT source is the cross-vendor candidate; FSR 4 signed-DLL + RX 7000+ envelope conditional; no browser path for vendor SDKs. No DLLs vendored."
+    gpu_verified: false
+    follow_ups:
+      - FSR 3.1.x source integration spike behind renderer capability interface
+      - DLSS/Streamline optional path, then FSR 4 prototype with HW checks
+      - FSR4 path retest after driver/SDK update (26.6.4 lead)
+  - id: UI-THEME-B
+    title: Proteus art backdrop on Server/Login/NewUser/Revert (Phase A continued)
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - engine/Poseidon/UI/DisplayUI.hpp
+      - engine/Poseidon/UI/DisplayUIMenus.cpp
+      - engine/Poseidon/UI/OptionsUIImpl.cpp
+      - docs/proteus/UI-THEME-B.md
+    toggle: n/a (Proteus art behind unchanged retail controls)
+    evidence: "EnableProteusTheme + AddArtBackdrop(9790) before retail Load (+26/-1, no handler/label/ID changes). Poseidon lib links; [menu][splash][inGameUI] 19/6 pass; broad [UI] 230 cases 224/0/6 exit 0; check-all OK."
+    gpu_verified: false
+    follow_ups:
+      - owner visual check Host/Login/New-user/Revert on next GPU run
+      - Phase B (focus/readability) + Phase C (settings) build on full Phase A coverage"

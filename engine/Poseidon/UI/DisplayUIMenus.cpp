@@ -13,6 +13,7 @@
 #include <Poseidon/Audio/DynSound.hpp>
 #include <Poseidon/UI/DisplayUI.hpp>
 #include <Poseidon/UI/DisplayUICommon.hpp>
+#include <Poseidon/UI/ProteusTheme.hpp>
 #include <Poseidon/UI/Inventory/DisplayInventory.hpp>
 #include <Poseidon/UI/Inventory/InventoryModel.hpp>
 #include <Poseidon/UI/Inventory/InventoryResources.hpp>
@@ -350,6 +351,11 @@ DisplayNewUser::DisplayNewUser(ControlsContainer* parent, RString name, bool edi
 
     _doPreview = false;
 
+    // Phase A theme propagation (UI-THEME-B): Proteus art behind the new-user screen.
+    EnableProteusTheme();
+    static ParamFile proteusNewUserBackdrop;
+    proteusNewUserBackdrop.Clear();
+    ProteusTheme::AddArtBackdrop(this, proteusNewUserBackdrop, 9790);
     Load("RscDisplayNewUser");
     _head->SetFace(_face);
     _head->SetGlasses(_glasses);

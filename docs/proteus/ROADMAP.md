@@ -23,6 +23,7 @@
 | --- | --- | --- | --- | --- |
 | T18a | Machine-readable GPU/CPU timing line (PERF-CAP) | done-unverified | no | `proteus/T18-perf-capture` |
 | T18b | Perf capture script + scene/region definitions | done-unverified | no | `proteus/T18b-capture-script` |
+| T18c | Populated benchmarks: admitted-count gate + re-baseline | done-unverified | yes | `proteus/main (direct)` |
 | T19 | Golden-image harness (shots + SSIM compare + capture) | done-unverified | no | `proteus/T19-golden-harness` |
 | TOOLCHAIN-1 | VS-bundled LLVM candidates in FindLLVMSanitizer.cmake | done-unverified | no | `proteus/main (direct)` |
 
@@ -53,3 +54,5 @@
 - MENU-FFUR-1: Proteus shell neutralizes inherited menu artwork (FFUR shutdown leak)
 - UI-THEME-A: Proteus art backdrop on Mods/Multiplayer/Configure (Phase A slice)
 - SHUTDOWN-T-1: SHUTDOWN-TIME phase probes in UnloadGameData + live proof
+- UPSCALER-1: Upscaler decision (in-house TAAU default; vendor paths optional-only)
+- UI-THEME-B: Proteus art backdrop on Server/Login/NewUser/Revert (Phase A continued)

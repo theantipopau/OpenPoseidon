@@ -13,6 +13,7 @@
 #include <Poseidon/UI/Map/UIMap.hpp>
 #include <Poseidon/Core/resincl.hpp>
 #include <Poseidon/Network/NetTransport.hpp>
+#include <Poseidon/UI/ProteusTheme.hpp>
 
 // MasterServerBrowser is the global (non-namespaced) C API backing the
 // internet server browser; forward-declare it here so DisplayMultiplayer can
@@ -676,6 +677,11 @@ class DisplayServer : public Display
     DisplayServer(ControlsContainer* parent) : Display(parent)
     {
         _enableSimulation = false;
+        // Phase A theme propagation (UI-THEME-B): Proteus art behind the host screen.
+        EnableProteusTheme();
+        static ParamFile proteusServerBackdrop;
+        proteusServerBackdrop.Clear();
+        ProteusTheme::AddArtBackdrop(this, proteusServerBackdrop, 9790);
         Load("RscDisplayServer");
         UpdateMissions();
 
@@ -943,7 +949,15 @@ class DisplayLogin : public Display
     int _exitWhenClose;
 
   public:
-    DisplayLogin(ControlsContainer* parent) : Display(parent) { Load("RscDisplayLogin"); }
+    DisplayLogin(ControlsContainer* parent) : Display(parent)
+    {
+        // Phase A theme propagation (UI-THEME-B): Proteus art behind the login dialog.
+        EnableProteusTheme();
+        static ParamFile proteusLoginBackdrop;
+        proteusLoginBackdrop.Clear();
+        ProteusTheme::AddArtBackdrop(this, proteusLoginBackdrop, 9790);
+        Load("RscDisplayLogin");
+    }
 
     Control* OnCreateCtrl(int type, int idc, const ParamEntry& cls) override;
     void OnButtonClicked(int idc) override;

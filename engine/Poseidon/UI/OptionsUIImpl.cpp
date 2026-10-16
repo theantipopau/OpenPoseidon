@@ -2156,6 +2156,11 @@ void DisplayCampaignLoad::OnCampaignCheat()
 
 DisplayRevert::DisplayRevert(ControlsContainer* parent) : Display(parent)
 {
+    // Phase A theme propagation (UI-THEME-B): Proteus art behind the revert dialog.
+    EnableProteusTheme();
+    static ParamFile proteusRevertBackdrop;
+    proteusRevertBackdrop.Clear();
+    ProteusTheme::AddArtBackdrop(this, proteusRevertBackdrop, 9790);
     Load("RscDisplayRevert");
     _exitWhenClose = -1;
 
