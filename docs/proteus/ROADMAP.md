@@ -31,7 +31,15 @@
 | --- | --- | --- | --- | --- |
 | A1 | Half-resolution GTAO with bilateral upsample (LIT-010 lever) | done-unverified | no | `proteus/ao-half-res` |
 
+## Phase B — Image quality
+
+| ID | Title | Status | GPU | Branch |
+| --- | --- | --- | --- | --- |
+| BACKEND-VERIFY-1 | Build + test verification of merged upstream backend; Oct-14 crash triage | done-unverified | no | `proteus/main (direct, follows UPSTREAM-SYNC-1)` |
+
 ## Unsorted
 
 - W0a: Upscaler interface + Native TAA backend
 - W0-ORDER: Retained-admission race intermittently renders empty worlds
+- UPSTREAM-SYNC-1: Merge upstream/main (CLI11 C++20 overlay + DB/loadout scripting)
+- MENU-FFUR-1: Proteus shell neutralizes inherited menu artwork (FFUR shutdown leak)

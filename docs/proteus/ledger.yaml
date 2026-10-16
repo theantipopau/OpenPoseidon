@@ -223,3 +223,18 @@ tickets:
       - toolchain FindLLVMSanitizer knows only C:/D:/Program Files/LLVM, not VS-bundled LLVM — consider adding the VS path as a candidate
       - Oct-14 cluster implicates AMD DX12 shader compiler + FSR4 loader (see CHANGELOG open risks); retest FSR4 path after driver/SDK update
       - T18b fps re-baseline still owed (menu-era numbers)
+  - id: MENU-FFUR-1
+    title: Proteus shell neutralizes inherited menu artwork (FFUR shutdown leak)
+    branch: proteus/main (direct, follows BACKEND-VERIFY-1)
+    status: done-unverified
+    files:
+      - engine/Poseidon/UI/OptionsUIApp.cpp
+      - docs/proteus/MENU-FFUR-1.md
+      - docs/proteus/NEXT_PHASE_AUDIT.md
+    toggle: n/a (Proteus menu takeover already unconditional; fix removes mod art unconditionally with it)
+    evidence: "Root cause: @ffsx2007 (ignored local mod) RscDisplayMain.CM1 fullscreen FFURGUImodern.paa; proteusMenu hid it but a teardown/visibility hole repainted it over the quit flow (user-confirmed splash-during-exit). Fix unbinds picture text of inherited menu CStatics before adding Proteus art (empty-text path null-safe per FindPicture/GlobLoadTexture/OnDraw). Poseidon lib + PoseidonTests link green; check-format OK; [menu][splash][inGameUI] 19 assertions/6 cases pass; broad [UI] 212/220 pass with 2 failures proven pre-existing by stash pre/post identical runs. Full binary blocked by omitted binary fixtures (documented). No headless GPU/menu-shot verification possible."
+    gpu_verified: false
+    follow_ups:
+      - owner visually confirms no FFUR art on quit with @ffsx2007 loaded
+      - kozl/WW4 replacement still open (mechanism mapped, needs live @PRMOD repro)
+      - pending upscaler/browser research feeds NEXT_PHASE_AUDIT proposal

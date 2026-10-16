@@ -241,6 +241,41 @@ DisplayMain::DisplayMain(ControlsContainer* parent) : Display(parent)
             _controlsBackground[i]->ShowCtrl(false);
         for (int i = 0; i < _controlsForeground.Size(); ++i)
             _controlsForeground[i]->ShowCtrl(false);
+        // The Proteus shell owns the menu backdrop: unbind picture content from the
+        // inherited (possibly mod-overridden) menu controls as well as hiding them.
+        // Hiding alone leaves a mod's fullscreen backdrop one visibility/teardown hole
+        // away from painting (seen as FFUR's RscDisplayMain.CM1 lingering over the quit
+        // flow); with no texture bound there is nothing to paint. SetText("") is safe
+        // for pictures: FindPicture/GlobLoadTexture both early-out on empty, OnDraw
+        // skips a null texture, and it detaches _textCls so no refresh resurrects it.
+        // Proteus art is added below, after this, so it is unaffected.
+        auto dropInheritedArt = [](auto ctrlRef)
+        {
+            CStatic* picture = dynamic_cast<CStatic*>(ctrlRef.GetRef());
+            if (!picture)
+                return;
+            const int type = picture->GetStyle() & ST_TYPE;
+            if (type == ST_PICTURE || type == ST_TILE_PICTURE)
+            {
+                picture->SetText("");
+                return;
+            }
+            // Style didn't propagate (e.g. through a custom picture base): fall back to
+            // matching texture names so no mod art survives regardless.
+            const char* text = picture->GetText();
+            if (!text)
+                return;
+            const size_t len = strlen(text);
+            if (len > 4 && text[len - 4] == '.' && tolower(text[len - 3]) == 'p' && tolower(text[len - 2]) == 'a' &&
+                tolower(text[len - 1]) == 'a')
+            {
+                picture->SetText("");
+            }
+        };
+        for (int i = 0; i < _controlsBackground.Size(); ++i)
+            dropInheritedArt(_controlsBackground[i]);
+        for (int i = 0; i < _controlsForeground.Size(); ++i)
+            dropInheritedArt(_controlsForeground[i]);
         // The retail default button (Quit) is still registered; Enter would fire it from a hidden control.
         _indexDefault = ControlId::Null();
 
