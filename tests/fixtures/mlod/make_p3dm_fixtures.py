@@ -169,8 +169,39 @@ def main() -> None:
     geometry_mass = b"MLOD" + struct.pack("<II", 257, 2) + visual + geometry_box
     (HERE / "p3dm_geometry_mass.p3d").write_bytes(geometry_mass)
 
+    # FIXTURE-SYNTH-1: fuzz_p3d reproducer. The #Property# tagg carries a key of
+    # 64 non-NUL bytes, which pre-fix ran strlen off the stack in both
+    # readTAGGProperty (MLODLoader) and the runtime LODShape #Property# path.
+    # One file serves both reproducers (test_mlod_tagg.cpp, test_shape_loader.cpp).
+    tagg_lod = p3dm_lod(
+        points[:4],
+        [((0, 1, 2), "", "")],
+        uv_sets=0,
+        resolution=1.0,
+        properties=[("A" * 64, "B" * 64)],
+    )
+    (HERE / "fuzz_tagg_oob.p3d").write_bytes(b"MLOD" + struct.pack("<II", 257, 1) + tagg_lod)
+
+    # FIXTURE-SYNTH-1: fuzz_shape reproducers for the optimized-binary
+    # (Shape::SerializeBin / LODShape::SerializeBin) path. Both carry the ODOL
+    # magic + version 7 two ints (0x4C4F444F, StrToInt("ODOL") byte order) so
+    # LoadOptimized takes the binary path instead of bailing EBadFileType.
+    odol_head = struct.pack("<II", 0x4C4F444F, 7)
+    # Texture count 0x40000000: the face/texture-count guard rejects a count the
+    # remaining stream cannot back before the huge Realloc. Prefix is one Shape
+    # with four empty arrays, two int hints, two Vector3 minmax, a Vector3
+    # centre and a float radius (64 bytes), then the bad count.
+    (HERE / "fuzz_shape_serializebin_oob.p3d").write_bytes(
+        odol_head + struct.pack("<i", 1) + bytes(64) + struct.pack("<i", 0x40000000)
+    )
+    # LOD count 100 > MAX_LOD_LEVELS (32): the _nLods guard rejects it before
+    # the fixed _lods array is written out of bounds.
+    (HERE / "fuzz_shape_lod_oob.p3d").write_bytes(odol_head + struct.pack("<i", 100))
+
     for name in ("p3dm_two_lod.p3d", "p3dm_mixed_signatures.p3d", "p3dm_uv_collapse.p3d",
-                 "p3dm_uv_bad_size.p3d", "unknown_lod_signature.p3d", "p3dm_geometry_mass.p3d"):
+                 "p3dm_uv_bad_size.p3d", "unknown_lod_signature.p3d", "p3dm_geometry_mass.p3d",
+                 "fuzz_tagg_oob.p3d", "fuzz_shape_serializebin_oob.p3d",
+                 "fuzz_shape_lod_oob.p3d"):
         print(f"wrote {name}: {(HERE / name).stat().st_size} bytes")
 
 

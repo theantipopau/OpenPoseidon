@@ -44,6 +44,7 @@
 | ID | Title | Status | GPU | Branch |
 | --- | --- | --- | --- | --- |
 | FIXTURE-FONT-1 | Authored font fixtures + tolerant post-build copy | done-unverified | no | `proteus/main (direct)` |
+| FIXTURE-SYNTH-1 | Synthetic texture family + shape fuzz reproducers; wire test_mlod_tagg | done-unverified | no | `proteus/main (direct)` |
 | FIXTURE-VOICE-1 | Restored omitted voice fixture files; 2 failing UI tests fixed | done-unverified | no | `proteus/main (direct)` |
 
 ## Unsorted

@@ -360,4 +360,35 @@ tickets:
     gpu_verified: false
     follow_ups:
       - owner visual check Host/Login/New-user/Revert on next GPU run
-      - Phase B (focus/readability) + Phase C (settings) build on full Phase A coverage"
+      - Phase B (focus/readability) + Phase C (settings) build on full Phase A coverage
+  - id: FIXTURE-SYNTH-1
+    title: Synthetic texture family + shape fuzz reproducers; wire test_mlod_tagg
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - tests/fixtures/paa/make_pac_ai88_fixture.py
+      - tests/fixtures/paa/synthetic_ai88_lzss.pac
+      - tests/fixtures/paa/make_synthetic_textures.py
+      - tests/fixtures/paa/synthetic_dxt1.paa
+      - tests/fixtures/paa/synthetic_dxt3.paa
+      - tests/fixtures/paa/synthetic_dxt5.paa
+      - tests/fixtures/paa/synthetic_ai88.paa
+      - tests/fixtures/paa/synthetic_argb4444.paa
+      - tests/fixtures/paa/fuzz_dxt_oob.paa
+      - tests/fixtures/paa/fuzz_lzw_overflow.paa
+      - tests/fixtures/paa/fuzz_argb8888_oob.paa
+      - tests/fixtures/pac/synthetic_default.pac
+      - tests/fixtures/pac/synthetic_dark.pac
+      - tests/fixtures/mlod/make_p3dm_fixtures.py
+      - tests/fixtures/mlod/fuzz_tagg_oob.p3d
+      - tests/fixtures/mlod/fuzz_shape_serializebin_oob.p3d
+      - tests/fixtures/mlod/fuzz_shape_lod_oob.p3d
+      - tests/unit/engine/Poseidon/CMakeLists.txt
+      - docs/proteus/FIXTURE-SYNTH-1.md
+    toggle: n/a (test data + one-line test-list fix; no engine behaviour change)
+    evidence: "[fuzz] 11 cases pass (incl. newly wired MLOD TAGG); texture/format 30 cases 9873 assertions pass; both marker tests pass in their binaries. Full binary advances past all texture/shape-fuzz gaps. check-all OK."
+    gpu_verified: false
+    follow_ups:
+      - p3d render/loader corpus needs model-generator ticket (ODOL research)
+      - complex_vehicle content-asserting tests need owner decision (retarget vs data)
+      - wrp/jpg/pbo/rtm gaps; Core post-build pbo copy failure""

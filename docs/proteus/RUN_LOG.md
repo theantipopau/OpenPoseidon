@@ -70,3 +70,6 @@
 - 2026-10-16 14:40 RECORD UPSCALER-1: delegated web-research decision — in-house TAAU default/fallback/WebGPU path, vendor DLLs never shipped (DLSS/FSR4 load-time-optional only); FSR 3.1.x source spike next, then DLSS/Streamline, then FSR4 prototype. Docs-only, gpu_verified false.
 - 2026-10-16 14:45 START UI-THEME-B (UI-THEME-A follow-up): same two-line pattern on Server/Login/NewUser/Revert.
 - 2026-10-16 14:50 VERIFY UI-THEME-B: Poseidon lib links (lib newer than edited sources); [menu][splash][inGameUI] 19/6 pass; broad [UI] 230 cases 224/0/6 exit 0; check-all OK after ROADMAP regen (20 tickets).
+- 2026-10-16 15:00 START FIXTURE-SYNTH-1 (FIXTURE-FONT-1 follow-up): per-test archaeology from the synthetic_ai88_lzss.pac abort.
+- 2026-10-16 15:00 FINDING: "PAC" fixtures are PAA-layout files (0x8080/0xFF05 descriptor selects PAA levels regardless of suffix; PAC-vs-PAA reported from suffix). DXT payloads raw per PAAEncoder; Bin16 always LZSS; StrToInt("ODOL")==MSVC 'LODO'==0x4C4F444F. test_mlod_tagg.cpp existed but was never in any target.
+- 2026-10-16 15:30 VERIFY: [fuzz] 11/11 pass; texture/format 30 cases 9873 assertions pass; marker tests pass in both binaries. Full binary advances past all texture/shape-fuzz gaps; next gaps are the p3d render corpus + complex_vehicle content tests + wrp (ticketed, not fabricated). check-all OK after roadmap regen.

@@ -347,6 +347,7 @@ list(APPEND POSEIDON_TEST_SOURCES
     Asset/Formats/P3D/test_mlod_loader.cpp
     Asset/Formats/P3D/test_mlod_writer.cpp
     Asset/Formats/P3D/MLOD/test_mlod_lod_dispatch.cpp
+    Asset/Formats/P3D/MLOD/test_mlod_tagg.cpp
     Asset/Formats/P3D/MLOD/test_odol_revision.cpp
     Asset/Formats/P3D/test_odol_named_selections.cpp
     Asset/Formats/P3D/test_odol40_arma1.cpp
