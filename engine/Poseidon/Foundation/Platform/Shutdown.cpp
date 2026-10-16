@@ -58,6 +58,8 @@ using namespace Poseidon::Dev;
 #include <Poseidon/Network/Network.hpp>
 #include <Poseidon/Network/NetworkConfig.hpp>
 
+#include <chrono>
+
 namespace Poseidon
 {
 struct ::ArcadeTemplate& GetGClipboard();
@@ -108,6 +110,28 @@ ArcadeTemplate& GetGClipboard();
 
 void ManCleanUp();
 
+namespace
+{
+// Elapsed-time probe for the 30-70 s shutdown windows seen in quit logs: each phase of
+// UnloadGameData logs a SHUTDOWN-TIME line at INFO so the next quit run shows exactly
+// where the time goes. Behaviour-neutral (RAII log on scope exit only).
+class ShutdownPhaseTimer
+{
+  public:
+    explicit ShutdownPhaseTimer(const char* phase) : _phase(phase), _start(std::chrono::steady_clock::now()) {}
+    ~ShutdownPhaseTimer()
+    {
+        const long long ms =
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - _start).count();
+        LOG_INFO(Core, "SHUTDOWN-TIME phase '{}' took {} ms", _phase, ms);
+    }
+
+  private:
+    const char* _phase;
+    std::chrono::steady_clock::time_point _start;
+};
+} // namespace
+
 // Tears down the whole game-data layer (world, scene, sound, banks, configs,
 // caches) in the order the engine has always used. When keepEngine is true the
 // graphics engine — the SDL window + RHI device — is left alive; that single
@@ -115,72 +139,94 @@ void ManCleanUp();
 // reloads onto the same window) and a quit-to-desktop.
 void UnloadGameData(bool keepEngine)
 {
+    ShutdownPhaseTimer total("unload-game-data-total");
     GDebugger.PauseCheckingAlive();
     if (GEngine)
     {
         GEngine->ReinitCounters();
     }
 
-    GApp->m_canRender = false;
-    markersMap.Clear();
-    CurrentTemplate.Clear();
-    Poseidon::GetGClipboard().Clear();
-    if (GEngine)
     {
-        GEngine->StopAll();
+        ShutdownPhaseTimer phase("render-stop");
+        GApp->m_canRender = false;
+        markersMap.Clear();
+        CurrentTemplate.Clear();
+        Poseidon::GetGClipboard().Clear();
+        if (GEngine)
+        {
+            GEngine->StopAll();
+        }
     }
     // Probe pools otherwise release GPU meshes from static destructors after
     // the renderer/uploader has already gone away.
     Dev::ShutdownPhysicsProbes();
-    if (GWorld)
     {
-        delete GWorld, GWorld = nullptr;
+        ShutdownPhaseTimer phase("delete-world");
+        if (GWorld)
+        {
+            delete GWorld, GWorld = nullptr;
+        }
     }
     // GScene aliases GWorld->_scene (a value member of World, assigned via GScene = GetScene()).
     // Deleting GWorld already destroyed that Scene; GScene is not separately heap-allocated, so
     // it must only be cleared here — a delete is a double-free + use-after-free of the World
     // (Scene::~Scene re-runs the landscape teardown and SaveConfig() reads the freed World).
-    ModelCache::SetExternalLoader(nullptr);
-    Poseidon::Asset::Formats::Enfusion::EnfusionMount::Instance().Close();
-    GScene = nullptr;
-    // The next Scene needs its own preload slots after an in-process remount.
-    ScenePreloader::Instance().Shutdown();
-    if (GEngine)
     {
-        GEngine->ClearFontCache();
+        ShutdownPhaseTimer phase("mounts-caches");
+        ModelCache::SetExternalLoader(nullptr);
+        Poseidon::Asset::Formats::Enfusion::EnfusionMount::Instance().Close();
+        GScene = nullptr;
+        // The next Scene needs its own preload slots after an in-process remount.
+        ScenePreloader::Instance().Shutdown();
+        if (GEngine)
+        {
+            GEngine->ClearFontCache();
+        }
+        FontSystem::Instance().Shutdown();
+        GPreloadedTextures.Clear();
     }
-    FontSystem::Instance().Shutdown();
-    GPreloadedTextures.Clear();
     // Release the sound scene's waves (env sounds, global sounds, music track) while the
     // sound system that owns their OpenAL buffers/sources is still alive. GSoundScene is a
     // global that outlives a re-mount (only CleanupSoundSystem deletes it, and that runs in
     // DestroyEngine, which keepEngine skips). Without this, the waves linger past the
     // delete GSoundsys below; the next World ctor's GSoundScene->Reset() then destroys them
     // and ~WaveOAL calls SoundSystemOAL::UnregisterWave on the freed system (AV in std::find).
-    if (GSoundScene)
     {
-        GSoundScene->Reset();
+        ShutdownPhaseTimer phase("sound");
+        if (GSoundScene)
+        {
+            GSoundScene->Reset();
+        }
+        if (GSoundsys)
+        {
+            delete GSoundsys, GSoundsys = nullptr;
+        }
     }
-    if (GSoundsys)
     {
-        delete GSoundsys, GSoundsys = nullptr;
+        ShutdownPhaseTimer phase("configs-banks");
+        ClearStringtable();
+        ManCleanUp();
+        Glob.Clear();
     }
-    ClearStringtable();
-    ManCleanUp();
-    Glob.Clear();
-    if (!keepEngine)
     {
-        Poseidon::DestroyEngine();
+        ShutdownPhaseTimer phase("destroy-engine");
+        if (!keepEngine)
+        {
+            Poseidon::DestroyEngine();
+        }
     }
-    Pars.Clear();
-    Pars.DeleteVariables();
-    ExtParsCampaign.Clear();
-    ExtParsCampaign.DeleteVariables();
-    ExtParsMission.Clear();
-    ExtParsMission.DeleteVariables();
-    Res.Clear();
-    Res.DeleteVariables();
-    GetNetworkManager().Done();
+    {
+        ShutdownPhaseTimer phase("pars-res-network");
+        Pars.Clear();
+        Pars.DeleteVariables();
+        ExtParsCampaign.Clear();
+        ExtParsCampaign.DeleteVariables();
+        ExtParsMission.Clear();
+        ExtParsMission.DeleteVariables();
+        Res.Clear();
+        Res.DeleteVariables();
+        GetNetworkManager().Done();
+    }
 }
 
 void DDTerm()
