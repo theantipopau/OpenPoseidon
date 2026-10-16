@@ -13,7 +13,13 @@ function(find_llvm_root OUTPUT_VAR ARCH)
     elseif(ARCH STREQUAL "x86")
         set(LLVM_CANDIDATES "C:/Program Files (x86)/LLVM")
     elseif(ARCH STREQUAL "x64")
-        set(LLVM_CANDIDATES "C:/Program Files/LLVM" "D:/Program Files/LLVM")
+        # VS-bundled LLVM (BACKEND-VERIFY-1: fresh configures on boxes without a standalone
+        # LLVM install fail without these; LLVM_ROOT env override still wins above).
+        set(LLVM_CANDIDATES "C:/Program Files/LLVM" "D:/Program Files/LLVM"
+            "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/x64"
+            "C:/Program Files/Microsoft Visual Studio/2022/Professional/VC/Tools/Llvm/x64"
+            "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/Llvm/x64"
+            "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/Llvm/x64")
     else()
         message(FATAL_ERROR "Unsupported architecture: ${ARCH}")
     endif()
