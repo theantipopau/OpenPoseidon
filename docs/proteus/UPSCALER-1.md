@@ -43,3 +43,20 @@ Docs-only. No engine change; `gpu_verified` stays false. Sources are
 listed in the research handoff (NVIDIA DLSS/Streamline pages, AMD
 FidelityFX SDK releases, DF/Notebookcheck/TechPowerUp quality reports,
 WebGPU explainer, pmndrs/upscaler).
+
+## Addendum 2026-10-16: FSR4 driver-lead check (FSR4-RETEST)
+
+- The 26.6.4 lead is confirmed, and it is now citable: AMD's own 26.6.4
+  notes (Jun 29) list as a known issue "Intermittent application crash may
+  be observed in some games with AMD FSR Upscaling 4.1 enabled on Radeon
+  RX 7000 series graphics products"; r/Amd reports FSR 4.1 crashes on
+  RX 7900 XTX under 26.6.4. 26.7.1 (Jul 28) narrows the note to Win10
+  RX 7000 systems — improving, not closed. No 26.8.1 note mentions the
+  FSR 4.1 crash, but 9000-series-specific 26.8.1 issue reports exist.
+- Local box (the Oct-14 cluster machine): RX 9070 XT (RDNA4), driver
+  32.0.31044.16, `amdxc64.dll` 8.18.10.0504. Our 9 identical `amdxc64`
+  AVs + 1 FSR-loader AV happened on RDNA4, which AMD's RX-7000-specific
+  note does not directly explain — local evidence for caution, still not
+  a general claim.
+- Retest condition stands: newer driver/SDK + FSR4 path, expecting TAAU
+  fallback to hold. No code change in this addendum.
