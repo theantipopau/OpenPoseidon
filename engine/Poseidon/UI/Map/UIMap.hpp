@@ -889,6 +889,10 @@ public:
 		{
 			_unit.player = APNonplayable;
 		}
+        // UI-THEME-C: Proteus theme on the editor popup (no art backdrop -- the live 3D
+        // editor stays visible behind it). Buttons become MenuButton, retail background
+        // frames hide via the _proteusTheme path. No handler/label/ID/layout changes.
+        EnableProteusTheme();
 		if (advanced)
 			Load("RscDisplayArcadeUnit");
 		else
@@ -961,6 +965,8 @@ public:
 
 		_oldType = marker.markerType;
 
+        // UI-THEME-C: Proteus theme on the editor popup (no art backdrop -- see Unit).
+        EnableProteusTheme();
 		if (advanced)
 			Load("RscDisplayArcadeMarker");
 		else
@@ -1008,6 +1014,8 @@ public:
 		_t = t;
 		_advanced = advanced;
 
+        // UI-THEME-C: Proteus theme on the editor popup (no art backdrop -- see Unit).
+        EnableProteusTheme();
 		if (advanced)
 			Load("RscDisplayArcadeSensor");
 		else
@@ -1054,6 +1062,8 @@ public:
 	{
 		_enableSimulation = false;
 		_enableDisplay = false;
+        // UI-THEME-C: Proteus theme on the editor popup (no art backdrop -- see Unit).
+        EnableProteusTheme();
 		Load("RscDisplayTemplateSave");
 	}
 
@@ -1073,6 +1083,8 @@ public:
 		_enableSimulation = false;
 		_enableDisplay = false;
 		_merge = merge;
+        // UI-THEME-C: Proteus theme on the editor popup (no art backdrop -- see Unit).
+        EnableProteusTheme();
 		Load("RscDisplayTemplateLoad");
 		OnIslandChanged();
 	}
@@ -1098,6 +1110,8 @@ public:
 		_enableDisplay = false;
 
 		_intel = intel;
+        // UI-THEME-C: Proteus theme on the editor popup (no art backdrop -- see Unit).
+        EnableProteusTheme();
 		if (advanced)
 			Load("RscDisplayIntel");
 		else

@@ -391,4 +391,21 @@ tickets:
     follow_ups:
       - p3d render/loader corpus needs model-generator ticket (ODOL research)
       - complex_vehicle content-asserting tests need owner decision (retarget vs data)
-      - wrp/jpg/pbo/rtm gaps; Core post-build pbo copy failure""
+      - wrp/jpg/pbo/rtm gaps; Core post-build pbo copy failure
+  - id: UI-THEME-C
+    title: Proteus theme on the mission-editor dialogs (no art backdrop)
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - engine/Poseidon/UI/Map/UIMap.hpp
+      - engine/Poseidon/UI/Map/UIArcade.cpp
+      - engine/Poseidon/UI/Map/UIArcadeMarker.cpp
+      - engine/Poseidon/UI/Map/UIArcadeWaypoint.cpp
+      - engine/Poseidon/UI/Map/UIMapDialogs.cpp
+      - docs/proteus/UI-THEME-C.md
+    toggle: n/a (Proteus theme on unchanged retail dialog controls)
+    evidence: "EnableProteusTheme() before retail Load in 10 editor popup ctors (+14, no handler/label/ID changes); no art backdrop (popups over live 3D). Lib+tests build green; [menu][splash][inGameUI] 19/6 pass; broad [UI] 230 cases 224/0/6 exit 0; check-all OK."
+    gpu_verified: false
+    follow_ups:
+      - owner visual check of themed editor dialogs on GPU
+      - fullscreen editor canvas theming needs a design decision first

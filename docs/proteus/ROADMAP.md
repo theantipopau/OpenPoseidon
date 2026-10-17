@@ -57,3 +57,4 @@
 - SHUTDOWN-T-1: SHUTDOWN-TIME phase probes in UnloadGameData + live proof
 - UPSCALER-1: Upscaler decision (in-house TAAU default; vendor paths optional-only)
 - UI-THEME-B: Proteus art backdrop on Server/Login/NewUser/Revert (Phase A continued)
+- UI-THEME-C: Proteus theme on the mission-editor dialogs (no art backdrop)

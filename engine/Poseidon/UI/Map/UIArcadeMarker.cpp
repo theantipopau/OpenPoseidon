@@ -353,6 +353,8 @@ DisplayArcadeEffects::DisplayArcadeEffects(ControlsContainer* parent, ArcadeEffe
     _enableSimulation = false;
     _enableDisplay = false;
     _effects = effects;
+    // UI-THEME-C: Proteus theme on the editor popup (no art backdrop — see UIArcade.cpp).
+    EnableProteusTheme();
     if (advanced)
     {
         Load("RscDisplayArcadeEffects");

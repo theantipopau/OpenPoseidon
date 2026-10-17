@@ -41,6 +41,8 @@ DisplayArcadeWaypoint::DisplayArcadeWaypoint(ControlsContainer* parent, ArcadeTe
 
     _advanced = advanced;
 
+    // UI-THEME-C: Proteus theme on the editor popup (no art backdrop — see UIArcade.cpp).
+    EnableProteusTheme();
     if (advanced)
     {
         Load("RscDisplayArcadeWaypoint");

@@ -123,6 +123,8 @@ DisplayInsertMarker::DisplayInsertMarker(ControlsContainer* parent, float x, flo
 
     InputSubsystem::Instance().ChangeGameFocus(+1);
 
+    // UI-THEME-C: Proteus theme on the editor popup (no art backdrop — see UIArcade.cpp).
+    EnableProteusTheme();
     Load("RscDisplayInsertMarker");
     _x = x;
     _y = y;
