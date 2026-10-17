@@ -248,8 +248,8 @@ tickets:
       - engine/Poseidon/UI/DisplayUI.cpp
       - docs/proteus/UI-THEME-A.md
     toggle: n/a (Proteus art behind unchanged retail controls)
-    evidence: "EnableProteusTheme + AddArtBackdrop(9790) before retail Load (+19, no handler/label/ID changes). Poseidon lib links; [menu][splash][inGameUI] 19/6 pass; broad [UI] 212/2/6 at the time (failures pre-existing, later fixed by FIXTURE-VOICE-1); check-all OK."
-    gpu_verified: false
+    evidence: "EnableProteusTheme + AddArtBackdrop(9790) before retail Load (+19, no handler/label/ID changes). Poseidon lib links; [menu][splash][inGameUI] 19/6 pass; broad [UI] 212/2/6 at the time (failures pre-existing, later fixed by FIXTURE-VOICE-1); check-all OK. Owner visual confirm 2026-10-17 on fresh tip build (Mods/Multiplayer/Configure looking good)."
+    gpu_verified: true
     follow_ups:
       - remaining legacy screens (Server/Login/NewUser/Revert) same pattern
       - owner visual check Mods/Multiplayer/Controls on next GPU run
@@ -356,8 +356,8 @@ tickets:
       - engine/Poseidon/UI/OptionsUIImpl.cpp
       - docs/proteus/UI-THEME-B.md
     toggle: n/a (Proteus art behind unchanged retail controls)
-    evidence: "EnableProteusTheme + AddArtBackdrop(9790) before retail Load (+26/-1, no handler/label/ID changes). Poseidon lib links; [menu][splash][inGameUI] 19/6 pass; broad [UI] 230 cases 224/0/6 exit 0; check-all OK."
-    gpu_verified: false
+    evidence: "EnableProteusTheme + AddArtBackdrop(9790) before retail Load (+26/-1, no handler/label/ID changes). Poseidon lib links; [menu][splash][inGameUI] 19/6 pass; broad [UI] 230 cases 224/0/6 exit 0; check-all OK. Owner visual confirm 2026-10-17 on fresh tip build (full mod set incl. @ffsx2007) — UI looking good."
+    gpu_verified: true
     follow_ups:
       - owner visual check Host/Login/New-user/Revert on next GPU run
       - Phase B (focus/readability) + Phase C (settings) build on full Phase A coverage
