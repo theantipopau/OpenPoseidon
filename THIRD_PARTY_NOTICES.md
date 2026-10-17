@@ -631,14 +631,17 @@ license inventory. Renderer Cargo dependencies are pinned by the workspace
 ### AMD FidelityFX Super Resolution 4 (FFX API)
 
 `engine/WgpuRenderer/rust/src/fsr4.rs` mirrors the FFX API structures from the
-FidelityFX SDK 2.3 headers (`api/include/ffx_api.h`, `api/include/ffx_api_types.h`,
-`upscalers/include/ffx_upscale.h`, `api/include/dx12/ffx_api_dx12.h`):
+FidelityFX SDK 2.3.0 headers (`api/include/ffx_api.h`, `api/include/ffx_api_types.h`,
+`upscalers/include/ffx_upscale.h`, `api/include/dx12/ffx_api_dx12.h`,
+FSR Upscaling 4.1.1):
 https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK
 
 The FSR 4 runtime is not in this repository and not distributed with it. The
 signed binaries (`amd_fidelityfx_loader_dx12.dll`, `amd_fidelityfx_upscaler_dx12.dll`)
 come from the SDK's `signedbin` folder, under the SDK's own licence (`docs/license.md`
-in the SDK). Copy them beside the exe or set `WGR_FSR4_DIR`.
+in the SDK). SDK 2.x requires going through the loader DLL. Copy them beside
+the exe or set `WGR_FSR4_DIR`. FSR 3.1 remains the documented Vulkan route;
+no Vulkan FSR 4 provider is wired up (DX12 backend only).
 
 ```
 Copyright (C) 2026 Advanced Micro Devices, Inc.
@@ -656,6 +659,37 @@ all copies or substantial portions of the Software.
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+```
+
+### AMD FidelityFX Super Resolution 3.1
+
+`engine/WgpuRenderer/rust/src/fsr31.rs` is a wgpu-native temporal upscaler in the
+spirit of FSR 3.1: jitter-compensated EASU plus RCAS through the same MIT kernels
+as FSR 1 below (no FFX SDK sources are vendored; only the viewport-mapping jitter
+compensation is ours). It runs on the Vulkan path every build ships, on Radeon
+RX 5000+, GeForce RTX 20+ (Intel best-effort), under the same AMD MIT licence:
+https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK
+
+```
+Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 ```
 
 ### AMD FidelityFX Super Resolution 1

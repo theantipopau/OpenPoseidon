@@ -1984,6 +1984,14 @@ class Engine : public IGraphicsEngine
         // FSR 4 (AMD's signed ML upscaler, DX12 backend only). Takes priority over DLSS
         // and FSR 1 when set; off the DX12 backend the renderer reports why and falls back.
         bool fsr4On = false;
+        // FSR 3.1 (cross-vendor temporal upscaler, wgpu-native: Vulkan and DX12,
+        // RX 5000+ / RTX 20+). Below FSR 4, above Native TAA and FSR 1 in the chain;
+        // on by default so Auto without DLSS resolves to it instead of FSR 1.
+        bool fsr31On = true;
+        // Native TAA reference (100% scale only, sits between FSR 3.1 and FSR 1).
+        // Session-only: the dev panel owns it live (WGR_NATIVE_TAA=1 seeds it at
+        // boot); graphics.cfg has no lane for it, so it is never persisted.
+        bool nativeTaaOn = false;
         float fsrSharpness = 0.25f; // RCAS stops: 0 = sharpest, 2 = mildest
         // RCAS sharpen pass over the DLSS output (strength = fsrSharpness).
         // Default ON — the owner's pick: DLSS + 0.25-stop RCAS beats plain DLSS.
@@ -2007,7 +2015,8 @@ class Engine : public IGraphicsEngine
         // Active MSAA sample count of the scene targets (1 = off). Fixed at launch;
         // SetMsaaSamples changes the NEXT launch.
         int msaaSamples = 1;
-        // 0 none/native, 1 DLSS, 2 FSR1, 3 bilinear, 4 FSR 4, 5 native TAA (W0a).
+        // 0 none/native, 1 DLSS, 2 FSR1, 3 bilinear, 4 FSR 4, 5 native TAA (W0a),
+        // 6 FSR 3.1.
         int activeUpscaler = 0;
     };
 

@@ -15,7 +15,8 @@ crate-type = ["cdylib", "rlib"]
 # must stay that way: the NGX SDK is proprietary and GPL-incompatible, so a build meant
 # for distribution must never enable this (docs/temporal-upscaling-plan.md §0.1). The
 # build script links the static NGX lib out of the untracked .tmp-dlss-sdk checkout
-# (or WGR_DLSS_SDK).
+# (or WGR_DLSS_SDK). Tested against DLSS SDK 310.x (DLSS 4.5 generation,
+# Streamline 2.x as the alternative route — neither vendored nor linked here).
 dlss = ["dep:ash"]
 
 [dependencies]

@@ -3022,7 +3022,7 @@ typedef struct WgrTemporalTuning
     float mip_bias;            /* > 0 = auto (half log2(scale)); else clamped [-4, 0] */
     float reactive_sky;
     float reactive_water;
-    uint32_t flags; /* bit0 auto-exposure, bit1 jitter-Y flip, bit2 MV render-space, bit3 MV flip, bit4 FSR1 on, bit5 RCAS over DLSS, bit6 FSR 4 on */
+    uint32_t flags; /* bit0 auto-exposure, bit1 jitter-Y flip, bit2 MV render-space, bit3 MV flip, bit4 FSR1 on, bit5 RCAS over DLSS, bit6 FSR 4 on, bit7 FSR 3.1 on, bit8 Native TAA on */
     /* RCAS sharpness in stops (0 = sharpest, 2 = mildest). */
     float fsr_sharpness;
 } WgrTemporalTuning;
@@ -3038,7 +3038,7 @@ typedef struct WgrTemporalInfo
     /// Active MSAA sample count of the scene targets (1 = off). Startup-fixed; the
     /// menu/panel setting applies on the next launch (WGR_MSAA is the channel).
     uint32_t msaa_samples;
-    /* 0 none/native, 1 DLSS, 2 FSR1, 3 bilinear, 4 FSR 4. */
+    /* 0 none/native, 1 DLSS, 2 FSR1, 3 bilinear, 4 FSR 4, 5 native TAA, 6 FSR 3.1. */
     uint32_t active_upscaler;
 } WgrTemporalInfo;
 

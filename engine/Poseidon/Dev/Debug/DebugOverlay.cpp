@@ -5548,11 +5548,12 @@ void DrawTemporalTab()
     Dev::PanelHelp("temporal %s | DLSS route %s | DLSS %s (quality %d)",
                    info.temporalActive ? "on" : "off", info.dlssRoute ? "up" : "down",
                    info.dlssActive ? "active" : "inactive", info.dlssQuality);
-    // W0a: index 5 = Native TAA (ID_NATIVE_TAA). Keep in sync with upscaler.rs ids.
-    static const char* kUpscalerNames[] = {"native (no upscaler)", "DLSS", "FSR 1", "bilinear", "FSR 4", "native TAA"};
+    // W0a: index 5 = Native TAA (ID_NATIVE_TAA), index 6 = FSR 3.1 (ID_FSR31).
+    // Keep in sync with upscaler.rs ids.
+    static const char* kUpscalerNames[] = {"native (no upscaler)", "DLSS", "FSR 1", "bilinear", "FSR 4", "native TAA", "FSR 3.1"};
     const std::string dlssVer = DlssRuntimeVersionString();
     Dev::PanelHelp("active upscaler: %s%s%s%s",
-                   kUpscalerNames[info.activeUpscaler >= 0 && info.activeUpscaler <= 5 ? info.activeUpscaler : 0],
+                   kUpscalerNames[info.activeUpscaler >= 0 && info.activeUpscaler <= 6 ? info.activeUpscaler : 0],
                    dlssVer.empty() ? "" : "  (DLSS runtime ",
                    dlssVer.c_str(),
                    dlssVer.empty() ? "" : ", FSR 1.0)");
@@ -5574,32 +5575,43 @@ void DrawTemporalTab()
     bool changed = false;
     changed |= Dev::Checkbox("Temporal (jitter + motion vectors)", &t.temporalOn);
     changed |= Dev::Checkbox("DLSS Super Resolution", &t.dlssOn);
-    Dev::PanelTooltip("Needs the NGX route (NVIDIA, detected at launch). Off/unavailable -> FSR 1 takes over.");
+    Dev::PanelTooltip("Needs the NGX route (NVIDIA, detected at launch). Off/unavailable -> FSR 3.1 takes over.");
+    changed |= Dev::Checkbox("FSR 4 (DX12 ML upscaler)", &t.fsr4On);
+    Dev::PanelTooltip("AMD's signed ML upscaler: best quality where it runs, but needs the DX12 backend\n(Start.ps1 -Dx12) and an RX 7000+ card. Off that backend the renderer reports why and falls back.");
+    changed |= Dev::Checkbox("FSR 3.1 (cross-vendor temporal)", &t.fsr31On);
+    Dev::PanelTooltip("Jitter-compensated EASU+RCAS (MIT-licensed, Vulkan + DX12, RX 5000+ / RTX 20+).\nBeats FSR 1 wherever the temporal path is on; falls back to FSR 1 with temporal off.");
     changed |= Dev::Checkbox("FSR 1 (vendor-neutral upscaler)", &t.fsrOn);
-    Dev::PanelTooltip("AMD FidelityFX EASU+RCAS (MIT-licensed, runs on any GPU). Active when DLSS is off.\nBoth off = soft bilinear.");
+    Dev::PanelTooltip("AMD FidelityFX EASU+RCAS (MIT-licensed, runs on any GPU). The no-temporal fallback.\nAll off = soft bilinear.");
+    changed |= Dev::Checkbox("Native TAA reference (100% only)", &t.nativeTaaOn);
+    Dev::PanelTooltip("The temporal accumulator as the output: no upscaling, the aliasing/ghosting reference.\nSession-only (WGR_NATIVE_TAA=1 seeds it at boot); the Options page cannot persist it.");
     changed |= Dev::Checkbox("Sharpen DLSS output (RCAS)", &t.dlssSharpen);
     Dev::PanelTooltip("Runs the RCAS sharpener over the DLSS result (NVIDIA removed DLSS's own\n"
                       "sharpening; an external pass is the standard answer). Strength = the slider below.");
     // The knob feeds FSR's RCAS and the optional post-DLSS RCAS; grey it when neither
     // consumer is live so nobody wiggles a dead slider (owner did exactly that).
-    const bool sharpnessLive = info.activeUpscaler == 2 || (info.activeUpscaler == 1 && t.dlssSharpen);
+    // FSR 1 (2) and FSR 3.1 (6) both sharpen with their own RCAS pass; DLSS (1) only
+    // when the external sharpen pass is enabled.
+    const bool sharpnessLive = info.activeUpscaler == 2 || info.activeUpscaler == 6 || (info.activeUpscaler == 1 && t.dlssSharpen);
     if (!sharpnessLive)
         ImGui::BeginDisabled();
     changed |= Dev::SliderFloat("Sharpness (0 = max)", &t.fsrSharpness, 0.0f, 2.0f, "%.2f");
     if (!sharpnessLive)
     {
         ImGui::EndDisabled();
-        Dev::PanelHelp("  (inactive - needs FSR 1, or DLSS with \"Sharpen DLSS output\")");
+        Dev::PanelHelp("  (inactive - needs FSR 1 / FSR 3.1, or DLSS with \"Sharpen DLSS output\")");
     }
     Dev::PanelTooltip("RCAS sharpening in stops: 0 = sharpest, 2 = mildest.\n"
-                      "Applies to FSR 1 and, when enabled above, to the DLSS output.");
+                      "Applies to FSR 1 / FSR 3.1 and, when enabled above, to the DLSS output.");
     changed |= Dev::SliderInt("Render scale %", &t.renderScalePct, 50, 200);
     Dev::PanelTooltip("<100%% = upscaling (67%% ~ DLSS Quality). 100%% + DLSS = DLAA. >100%% = SSAA (supersampling, expensive).");
     if (Dev::Button("Native (everything off)"))
     {
         t.temporalOn = false;
         t.dlssOn = false;
+        t.fsr4On = false;
+        t.fsr31On = false;
         t.fsrOn = false;
+        t.nativeTaaOn = false;
         t.renderScalePct = 100;
         changed = true;
     }
@@ -5609,12 +5621,13 @@ void DrawTemporalTab()
     Dev::PanelSameLine();
     if (Dev::Button("Auto defaults"))
     {
-        // Fresh shipped defaults: DLSS-if-supported (else FSR), Quality scale, all
-        // the owner-validated tuning values.
+        // Fresh shipped defaults: DLSS-if-supported (else FSR 3.1), Quality scale,
+        // all the owner-validated tuning values. Session-only Native TAA is not
+        // part of the shipped look and resets with everything else.
         t = Engine::TemporalSettings{};
         changed = true;
     }
-    Dev::PanelTooltip("Back to the shipped automatic setup: DLSS on (when the route is up, else FSR 1),\n"
+    Dev::PanelTooltip("Back to the shipped automatic setup: DLSS on (when the route is up, else FSR 3.1),\n"
                       "render scale 67%%, default sharpness/bias. Applies instantly.");
 
     {
@@ -5647,7 +5660,7 @@ void DrawTemporalTab()
             // surfaces stay coupled: upscaler choice from the DLSS/FSR switches,
             // sub-100% scale into upscalerQuality vs SSAA into renderScale, plus
             // sharpness and the DLSS sharpen pass.
-            cfg.dlssMode = t.fsr4On ? 3 : t.dlssOn && t.fsrOn ? -1 : t.dlssOn ? 1 : t.fsrOn ? 2 : 0;
+            cfg.dlssMode = t.fsr4On ? 3 : t.dlssOn && t.fsrOn ? -1 : t.dlssOn ? 1 : t.fsr31On && !t.fsrOn && !t.dlssOn ? 4 : t.fsrOn ? 2 : 0;
             const int samplesForChoice[] = {0, 2, 4, 8};
             cfg.msaaSamples = samplesForChoice[msaaChoice];
             if (t.renderScalePct < 100)

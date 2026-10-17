@@ -1452,6 +1452,12 @@ public:
 
 EngineWgpu::EngineWgpu(const GraphicsEngineParams& params) : _windowed(params.useWindow)
 {
+    // W0a Native TAA is session-owned by the dev panel, but the env seed must be
+    // visible in the first place: seed the tuning struct from the same variable the
+    // renderer reads, so the panel round-trips the true boot state instead of
+    // clobbering an env-enabled reference on first touch.
+    if (const char* nativeTaa = std::getenv("WGR_NATIVE_TAA"))
+        _temporalTuning.nativeTaaOn = std::strcmp(nativeTaa, "0") != 0;
     // Startup overrides seed the shared look once, so Weather controls remain
     // authoritative when the owner switches fog mode or edits a layer later.
     if (const char* fogMode = std::getenv("WGR_LAYERED_FOG"))
@@ -16463,7 +16469,8 @@ void EngineWgpu::SetTemporalTuning(const TemporalSettings& t)
     w.reactive_water = std::clamp(t.reactiveWater, 0.0f, 1.0f);
     w.flags = (t.dlssAutoExposure ? 1u : 0u) | (t.jitterYFlip ? 2u : 0u) |
               (t.mvRenderSpace ? 4u : 0u) | (t.mvFlip ? 8u : 0u) | (t.fsrOn ? 16u : 0u) |
-              (t.dlssSharpen ? 32u : 0u) | (t.fsr4On ? 64u : 0u);
+              (t.dlssSharpen ? 32u : 0u) | (t.fsr4On ? 64u : 0u) | (t.fsr31On ? 128u : 0u) |
+              (t.nativeTaaOn ? 256u : 0u);
     w.fsr_sharpness = std::clamp(t.fsrSharpness, 0.0f, 2.0f);
     _pendingSet.temporal = w;
     _pendingSet.temporalDirty = true;
@@ -16540,7 +16547,7 @@ void EngineWgpu::SetMsaaSamples(int samples)
 }
 
 // graphics.cfg renderScale: 1.0 = AUTO — leave the renderer's own default alone
-// (which is DLSS Quality at 67% when the route is up, else native). Anything else is
+// (which is DLSS Quality at 67% when the route is up, else FSR 3.1). Anything else is
 // an explicit pin, routed through the live temporal tuning like the dev panel does.
 void EngineWgpu::SetRenderScale(float scale)
 {

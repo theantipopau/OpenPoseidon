@@ -10,7 +10,7 @@
 // supported. The engine runs wgpu on Vulkan by default, so FSR 4 needs WGPU_BACKEND=dx12
 // (Start.ps1 -Dx12). Off that backend the chain reports why and falls back.
 //
-// The FFI below mirrors the FidelityFX SDK 2.3 headers (api/include/ffx_api.h,
+// The FFI below mirrors the FidelityFX SDK 2.3.0 headers (api/include/ffx_api.h,
 // api/include/ffx_api_types.h, upscalers/include/ffx_upscale.h, and
 // api/include/dx12/ffx_api_dx12.h), MIT, Copyright (C) AMD. Layouts are C layouts; keep
 // the field order in step with the headers.

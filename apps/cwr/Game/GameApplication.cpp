@@ -153,8 +153,9 @@ bool WriteCaptureMetrics(const std::string& path)
             cJSON_AddNumberToObject(build, "output_width", ti.outputWidth);
             cJSON_AddNumberToObject(build, "output_height", ti.outputHeight);
             cJSON_AddNumberToObject(build, "msaa_samples", ti.msaaSamples);
-            static const char* kUpscalers[] = {"native", "dlss", "fsr1", "bilinear"};
-            const int u = (ti.activeUpscaler >= 0 && ti.activeUpscaler <= 3) ? ti.activeUpscaler : 0;
+            // Keep in sync with upscaler.rs ids (ID_NATIVE..ID_FSR31 = 0..6).
+            static const char* kUpscalers[] = {"native", "dlss", "fsr1", "bilinear", "fsr4", "native-taa", "fsr31"};
+            const int u = (ti.activeUpscaler >= 0 && ti.activeUpscaler <= 6) ? ti.activeUpscaler : 0;
             cJSON_AddStringToObject(build, "upscaler", kUpscalers[u]);
             // dlss_route is "the NGX device came up at launch"; dlss_active is "it ran
             // last frame". They come apart when nvngx_dlss.dll is missing beside the exe,

@@ -39,9 +39,11 @@ else()
 endif()
 
 # REN-TEMP-001M: -DPOSEIDON_DLSS=ON compiles the renderer with the proprietary NGX/DLSS
-# path (runtime-gated by WGR_DLSS=1; needs the untracked .tmp-dlss-sdk checkout). OFF is
-# the default and the only configuration that may ever be distributed — the SDK is
-# GPL-incompatible (docs/temporal-upscaling-plan.md §0.1).
+# path (runtime-gated by WGR_DLSS=1; needs the untracked .tmp-dlss-sdk checkout).
+# Tested against DLSS SDK 310.x (DLSS 4.5 generation); Streamline 2.x is the
+# alternative abstraction (sl.interposer.dll + feature plugins) but is not wired up.
+# OFF is the default and the only configuration that may ever be distributed —
+# the SDK is GPL-incompatible (docs/temporal-upscaling-plan.md §0.1).
 option(POSEIDON_DLSS "Build wgpu_renderer with the DLSS (NGX) feature" OFF)
 if(POSEIDON_DLSS)
     set(_wgr_cargo_features FEATURES dlss)

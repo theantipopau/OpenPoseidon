@@ -157,7 +157,7 @@ void ApplyGraphicsConfigToEngine(const GraphicsConfig& cfg)
         GEngine->SetRenderScale(cfg.renderScale);
         GEngine->SetMsaaSamples(cfg.msaaSamples);
         // Upscaler rows (REN-TEMP-001): live through the temporal tuning. Auto =
-        // DLSS when its route is up, else FSR 1 at Quality; Off = pure native.
+        // DLSS when its route is up, else FSR 3.1 at Quality; Off = pure native.
         // The legacy SSAA row (renderScale > 1) owns the scale when pinned.
         if (GEngine->SupportsTemporalTuning())
         {
@@ -167,6 +167,9 @@ void ApplyGraphicsConfigToEngine(const GraphicsConfig& cfg)
             t.fsrOn = (cfg.dlssMode == -1 || cfg.dlssMode == 2);
             // FSR 4 is chosen only explicitly (never by Auto): it needs the DX12 backend.
             t.fsr4On = cfg.dlssMode == 3;
+            // FSR 3.1 is the Auto answer without DLSS, and mode 4 chooses it
+            // explicitly (FSR 1 stays on as the no-temporal fallback either way).
+            t.fsr31On = (cfg.dlssMode == -1 || cfg.dlssMode == 4);
             t.fsrSharpness = std::clamp(cfg.fsrSharpness, 0.0f, 2.0f);
             t.dlssSharpen = cfg.dlssSharpen != 0;
             t.jitterPhases = std::clamp(cfg.jitterPhases, 0, 64);
@@ -182,13 +185,15 @@ void ApplyGraphicsConfigToEngine(const GraphicsConfig& cfg)
                 {
                     t.renderScalePct = cfg.upscalerQuality;
                 }
-                else if (cfg.dlssMode == 2 || cfg.dlssMode == 3 || (cfg.dlssMode == -1 && !info.dlssRoute))
+                else if (cfg.dlssMode == 2 || cfg.dlssMode == 3 || cfg.dlssMode == 4 || (cfg.dlssMode == -1 && !info.dlssRoute))
                 {
                     // FSR chosen (or Auto without DLSS): Quality point.
                     t.renderScalePct = 67;
                 }
-                // FSR 4 is temporal (jitter and motion vectors), so it turns the path on too.
-                if (cfg.dlssMode == 1 || cfg.dlssMode == 3 || (cfg.dlssMode == -1 && info.dlssRoute))
+                // Every upscaler but FSR 1 is temporal (jitter and motion vectors),
+                // so they turn the path on too; Auto always does, because without a
+                // DLSS route it now resolves to FSR 3.1 instead of FSR 1.
+                if (cfg.dlssMode == 1 || cfg.dlssMode == 3 || cfg.dlssMode == 4 || cfg.dlssMode == -1)
                     t.temporalOn = true;
             }
             GEngine->SetTemporalTuning(t);

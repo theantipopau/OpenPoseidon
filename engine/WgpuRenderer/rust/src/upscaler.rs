@@ -2,8 +2,11 @@
 //
 // The renderer owns an ordered chain of backends and asks each in turn to fill the
 // output-extent target from the render-extent inputs; the first `Done` wins. Today the
-// chain is [DLSS (dlss builds, when the NGX route is up), FSR 1, Bilinear]; XeSS/FSR 3
-// slot in as further implementations of the same trait, and "Native" is the absence of
+// chain is [DLSS (dlss builds, NGX Vulkan, WGR_DLSS=1), FSR 4 (DX12 backend only,
+// WGPU_BACKEND=dx12 + signed FFX loader/upscaler DLLs), FSR 3.1 (wgpu-native,
+// jitter-compensated EASU+RCAS, every backend), Native TAA (100% scale only),
+// FSR 1, Bilinear]; XeSS slots in as a further implementation of the same trait,
+// and "Native" is the absence of
 // the chain entirely (at 100%-scale-without-DLAA no upscale target exists and the post
 // chain reads the resolve directly — see ensure_hdr).
 //
@@ -29,6 +32,9 @@ pub const ID_FSR4: u32 = 4;
 // W0a: Native TAA — the 100%-scale temporal reference. A NEW id, not ID_NATIVE:
 // ID_NATIVE means "the chain did not run at all" (see the never-native test).
 pub const ID_NATIVE_TAA: u32 = 5;
+// FSR 3.1 (fsr31.rs) — the cross-vendor temporal upscaler. Owns id 6; the engine
+// indexes its name table with these ids, so pin the value (see the ABI test).
+pub const ID_FSR31: u32 = 6;
 
 // REN-UPS-001 — the explicit capability description the roadmap asks for
 // (POST-DLSS-MODERNISATION-ROADMAP §1.1: "Add an explicit capability description so a
@@ -63,6 +69,9 @@ pub struct UpscaleSettings {
     pub fsr_sharpness: f32,
     // FSR 4 (fsr4.rs): the user picked it on the Video page. Inert off the DX12 backend.
     pub fsr4_on: bool,
+    // FSR 3.1 (fsr31.rs): the cross-vendor temporal upscaler. On by default
+    // (WGR_FSR31=0 to disable); inert without the temporal path.
+    pub fsr31_on: bool,
     pub dlss_runtime_on: bool,
     // W0a: the Native TAA reference (WGR_NATIVE_TAA=1). Opt-in; default off preserves
     // the legacy direct-resolve look until W0c promotes the temporal default.
@@ -171,6 +180,15 @@ pub trait TemporalUpscaler {
 // FSR 4 (fsr4.rs): temporal, like DLSS, and it sharpens with its own FFX pass.
 pub const FSR4_CAPS: UpscalerCaps = UpscalerCaps {
     info_id: ID_FSR4,
+    needs_temporal_inputs: true,
+    wants_external_sharpen: false,
+};
+
+// FSR 3.1 (fsr31.rs): temporal (the v1 jitter compensation corrects the frame's
+// jitter, so without the temporal path it is just FSR 1), and RCAS is its own
+// second dispatch like FSR 1 — external sharpening would sharpen twice.
+pub const FSR31_CAPS: UpscalerCaps = UpscalerCaps {
+    info_id: ID_FSR31,
     needs_temporal_inputs: true,
     wants_external_sharpen: false,
 };
@@ -403,7 +421,8 @@ impl FsrUpscaler {
 }
 
 // FsrEasuCon (ffx_fsr1.h), viewport == full input texture in our use.
-fn easu_constants(render: (u32, u32), output: (u32, u32)) -> [f32; 16] {
+// pub(crate): FSR 3.1 (fsr31.rs) builds its jitter-compensated mapping on this.
+pub(crate) fn easu_constants(render: (u32, u32), output: (u32, u32)) -> [f32; 16] {
     let (iw, ih) = (render.0 as f32, render.1 as f32);
     let (ow, oh) = (output.0 as f32, output.1 as f32);
     [
@@ -1050,22 +1069,42 @@ mod tests {
     }
 
     // The ids cross the C ABI as `TemporalInfo::activeUpscaler`; the engine indexes a
-    // 4-entry name table with them (DebugOverlay.cpp `kUpscalerNames`). Renumbering
-    // here silently relabels the dev panel, so pin the values.
+    // name table with them (DebugOverlay.cpp `kUpscalerNames`, GameApplication.cpp
+    // `kUpscalers`). Renumbering here silently relabels the dev panel, so pin the values.
     #[test]
     fn info_ids_match_the_engine_abi() {
         assert_eq!(ID_NATIVE, 0);
         assert_eq!(ID_DLSS, 1);
         assert_eq!(ID_FSR1, 2);
         assert_eq!(ID_BILINEAR, 3);
+        assert_eq!(ID_FSR4, 4);
+        assert_eq!(ID_NATIVE_TAA, 5);
+        assert_eq!(ID_FSR31, 6);
     }
 
     // Two backends reporting the same id would make the panel lie about which one ran,
     // and `ID_NATIVE` means "the chain did not run at all" — no backend may claim it.
+    // Covers the full chain: DLSS (const, needs live NGX handles to construct), FSR 4
+    // (const, needs live D3D12 handles), FSR 3.1 (const + constructible, wgpu-native),
+    // Native TAA (constructible) and the spatial pair.
     #[test]
     fn backend_ids_are_unique_and_never_native() {
-        let mut seen = vec![ID_DLSS];
-        for u in spatial_chain() {
+        // DLSS and FSR 4 need live GPU handles to construct, so their ids enter via
+        // their pinned consts; FSR 3.1 and Native TAA are constructible and join below.
+        let mut seen = vec![ID_DLSS, FSR4_CAPS.info_id, FSR31_CAPS.info_id];
+        assert_ne!(FSR4_CAPS.info_id, ID_NATIVE, "FSR4 caps claim the native id");
+        assert_ne!(FSR31_CAPS.info_id, ID_NATIVE, "FSR 3.1 caps claim the native id");
+        assert_ne!(NATIVE_TAA_CAPS.info_id, ID_NATIVE, "Native TAA caps claim the native id");
+        assert_eq!(
+            crate::fsr31::Fsr31Upscaler::new().caps(),
+            FSR31_CAPS,
+            "FSR 3.1 impl drifted from its caps"
+        );
+        assert!(!seen.contains(&NATIVE_TAA_CAPS.info_id), "Native TAA duplicates a const id");
+        assert_eq!(NativeTaaUpscaler::new().caps(), NATIVE_TAA_CAPS, "Native TAA impl drifted from its caps");
+        let mut chain = spatial_chain();
+        chain.push(Box::new(NativeTaaUpscaler::new()));
+        for u in chain {
             let id = u.caps().info_id;
             assert_ne!(id, ID_NATIVE, "{} claims the native id", u.label());
             assert!(!seen.contains(&id), "{} duplicates id {}", u.label(), id);

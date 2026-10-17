@@ -1508,6 +1508,11 @@ void RegisterScreenshot(HarnessServer& hs)
                 cJSON_AddNumberToObject(result, "outputHeight", ti.outputHeight);
                 cJSON_AddNumberToObject(result, "msaaSamples", ti.msaaSamples);
                 cJSON_AddNumberToObject(result, "activeUpscaler", ti.activeUpscaler);
+                // Numeric id plus its name: captures are read without the source beside
+                // them. Keep in sync with upscaler.rs ids (ID_NATIVE..ID_FSR31 = 0..6).
+                static const char* kUpscalers[] = {"native", "dlss", "fsr1", "bilinear", "fsr4", "native-taa", "fsr31"};
+                const int u = (ti.activeUpscaler >= 0 && ti.activeUpscaler <= 6) ? ti.activeUpscaler : 0;
+                cJSON_AddStringToObject(result, "upscaler", kUpscalers[u]);
             }
             constexpr int cap = Engine::kGpuRegionEnd;
             float gpu[cap], cpu[cap];

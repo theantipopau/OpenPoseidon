@@ -60,12 +60,12 @@ const GraphicsRowText kRows[] = {
      "original compatibility switch."},
     {"STR_DISP_MAIN_OPT_GRAPHICS_UPSCALER", "STR_DISP_MAIN_OPT_GRAPHICS_UPSCALER_DESC", "Upscaler",
      "Renders the 3D scene below window resolution and reconstructs it for large FPS gains. Auto picks DLSS on "
-     "supported NVIDIA cards, otherwise FSR 1. Off renders every pixel natively."},
+     "supported NVIDIA cards, otherwise FSR 3.1. Off renders every pixel natively."},
     {"STR_DISP_MAIN_OPT_GRAPHICS_UPSCALER_QUALITY", "STR_DISP_MAIN_OPT_GRAPHICS_UPSCALER_QUALITY_DESC", "Upscaler Quality",
      "Internal render resolution when an upscaler is active. Quality (67%) is the recommended sweet spot; "
      "Performance trades sharpness for the highest frame rate."},
     {"STR_DISP_MAIN_OPT_GRAPHICS_SHARPNESS", "STR_DISP_MAIN_OPT_GRAPHICS_SHARPNESS_DESC", "Sharpness",
-     "Image sharpening strength (RCAS), applied by FSR 1 and on top of DLSS. Left = sharpest, right = mildest."},
+     "Image sharpening strength (RCAS), applied by FSR 1 / FSR 3.1 and on top of DLSS. Left = sharpest, right = mildest."},
 };
 constexpr int kFpsCapValues[] = {0, 30, 60, 90, 120, 144, 240};
 constexpr int kMsaaValues[] = {0, 2, 4, 8};
@@ -210,8 +210,8 @@ const char* GraphicsPage::GraphicsProvider::RowDescription(int row) const
         static std::string s_upscalerDesc;
         const std::string ver = DlssRuntimeVersionString();
         s_upscalerDesc = std::string(LocalizeStringWithFallback(kRows[row].desc, kRows[row].descEn));
-        s_upscalerDesc += ver.empty() ? " Installed: FSR 1.0 (no DLSS runtime found)."
-                                      : " Installed: DLSS " + ver + " and FSR 1.0.";
+        s_upscalerDesc += ver.empty() ? " Installed: FSR 3.1 + FSR 1.0 (no DLSS runtime found)."
+                                      : " Installed: DLSS " + ver + ", FSR 3.1 and FSR 1.0.";
         s_upscalerDesc += " FSR 4 needs the DX12 backend (Start.ps1 -Dx12) and the AMD FSR 4 runtime.";
         return s_upscalerDesc.c_str();
     }
@@ -254,7 +254,7 @@ OptionsScrollList::RowDef GraphicsPage::GraphicsProvider::RowFor(int row) const
         case kRowMultitexturing:
             return {622, m_page->m_offOnCStrs.data(), 2};
         case kRowUpscaler:
-            return {642, m_page->m_upscalerCStrs.data(), 5};
+            return {642, m_page->m_upscalerCStrs.data(), 6};
         case kRowUpscalerQuality:
             return {652, m_page->m_upscalerQualityCStrs.data(), 4};
         case kRowSharpness:
@@ -315,8 +315,8 @@ int GraphicsPage::GraphicsProvider::RowValue(int row) const
         case kRowMultitexturing:
             return c.multitexturing ? 1 : 0;
         case kRowUpscaler:
-            // Auto(-1)->0, Off(0)->1, DLSS(1)->2, FSR 1(2)->3, FSR 4(3)->4.
-            return c.dlssMode >= 0 && c.dlssMode <= 3 ? c.dlssMode + 1 : 0;
+            // Auto(-1)->0, Off(0)->1, DLSS(1)->2, FSR 1(2)->3, FSR 4(3)->4, FSR 3.1(4)->5.
+            return c.dlssMode >= 0 && c.dlssMode <= 4 ? c.dlssMode + 1 : 0;
         case kRowUpscalerQuality:
             return c.upscalerQuality == 67 ? 1 : c.upscalerQuality == 58 ? 2 : c.upscalerQuality == 50 ? 3 : 0;
         case kRowSharpness:
@@ -425,8 +425,8 @@ void GraphicsPage::GraphicsProvider::SetRowValue(int row, int v)
             c.multitexturing = v != 0;
             break;
         case kRowUpscaler:
-            // 0 Auto, 1 Off, 2 DLSS, 3 FSR 1, 4 FSR 4.
-            if (v >= 0 && v <= 4)
+            // 0 Auto, 1 Off, 2 DLSS, 3 FSR 1, 4 FSR 4, 5 FSR 3.1.
+            if (v >= 0 && v <= 5)
                 c.dlssMode = v - 1;
             break;
         case kRowUpscalerQuality:
@@ -560,6 +560,7 @@ void GraphicsPage::RefreshLocalizedChoices()
     m_upscalerLabels[2] = dlssVer.empty() ? std::string("DLSS (not found)") : "DLSS " + dlssVer;
     m_upscalerLabels[3] = "FSR 1.0";
     m_upscalerLabels[4] = "FSR 4 (DX12)";
+    m_upscalerLabels[5] = "FSR 3.1";
     for (size_t i = 0; i < m_upscalerLabels.size(); ++i)
         m_upscalerCStrs[i] = m_upscalerLabels[i].c_str();
 

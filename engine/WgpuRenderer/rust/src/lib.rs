@@ -6,6 +6,7 @@ mod dlss_device;
 mod dlss_status;
 #[cfg(windows)]
 mod fsr4;
+mod fsr31;
 mod dof;
 mod exposure;
 mod far;
@@ -889,6 +890,8 @@ pub struct Renderer {
     fsr_sharpness: f32,
     // FSR 4 switch (live, from the tuning flags bit 6). Inert off the DX12 backend.
     fsr4_runtime_on: bool,
+    // FSR 3.1 switch (live, from the tuning flags bit 7). Inert without temporal.
+    fsr31_runtime_on: bool,
     // W0a Native TAA reference switch. Env-seeded (WGR_NATIVE_TAA=1), default off:
     // at 100% the legacy path reads the resolve directly, and TAA changes the pixels.
     // Panel wiring comes with the W0c mode selection; env is enough for A/B.
@@ -2001,6 +2004,10 @@ impl Renderer {
                 }
                 #[cfg(windows)]
                 v.push(Box::new(fsr4::Fsr4Upscaler::new(dx12_backend)));
+                // FSR 3.1: the cross-vendor temporal upscaler (wgpu-native, runs on
+                // every backend). Below FSR 4 — the ML path wins where it runs —
+                // above Native TAA and the spatial backends.
+                v.push(Box::new(fsr31::Fsr31Upscaler::new()));
                 // W0a: Native runs at 100% only (Skips otherwise), ahead of the
                 // spatial backends — an explicit opt-in beats EASU+RCAS. DLSS-DLAA
                 // keeps priority above it when the NGX route is up.
@@ -2036,6 +2043,9 @@ impl Renderer {
                 .unwrap_or(true),
             main_cam_off: 0,
             fsr4_runtime_on: false,
+            fsr31_runtime_on: std::env::var("WGR_FSR31")
+                .map(|v| v != "0")
+                .unwrap_or(true),
             native_taa_on: std::env::var("WGR_NATIVE_TAA")
                 .map(|v| v != "0")
                 .unwrap_or(false),
@@ -2775,6 +2785,7 @@ impl Renderer {
                     fsr_on: self.fsr_runtime_on,
                     fsr_sharpness: self.fsr_sharpness,
                     fsr4_on: self.fsr4_runtime_on,
+                    fsr31_on: self.fsr31_runtime_on,
                     dlss_runtime_on: self.dlss_runtime_on,
                     native_taa_on: self.native_taa_on,
                     dlss_auto_exposure: self.dlss_auto_exposure,
@@ -3076,6 +3087,11 @@ impl Renderer {
         self.fsr_runtime_on = t.flags & 16 != 0;
         self.dlss_sharpen = t.flags & 32 != 0;
         self.fsr4_runtime_on = t.flags & 64 != 0;
+        self.fsr31_runtime_on = t.flags & 128 != 0;
+        // Live-owned by the dev panel (Engine::TemporalSettings::nativeTaaOn,
+        // seeded from WGR_NATIVE_TAA on both sides so the first push round-trips
+        // the boot state instead of clobbering it).
+        self.native_taa_on = t.flags & 256 != 0;
         self.fsr_sharpness = t.fsr_sharpness.clamp(0.0, 2.0);
     }
 
