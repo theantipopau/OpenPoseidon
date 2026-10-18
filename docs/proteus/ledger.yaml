@@ -409,3 +409,22 @@ tickets:
     follow_ups:
       - owner visual check of themed editor dialogs on GPU
       - fullscreen editor canvas theming needs a design decision first
+  - id: DX12-1
+    title: DX12 black terrain fix, FSR 4 falls back to FSR 3.1, upscaler transition log
+    branch: proteus/DX12-1-dx12-upscaler-fixes
+    status: done-unverified
+    files:
+      - engine/WgpuRenderer/rust/src/terrain/mod.rs
+      - engine/WgpuRenderer/rust/src/fsr4.rs
+      - engine/WgpuRenderer/rust/src/lib.rs
+      - engine/WgpuRenderer/rust/src/dlss_status.rs
+      - engine/Poseidon/UI/Settings/GraphicsApply.cpp
+      - scripts/Shot-Mission.ps1
+      - docs/KNOWN_ISSUES.md
+      - docs/proteus/DX12-1.md
+    toggle: n/a (bug fixes and a diagnostic log line; no default change)
+    evidence: "jeep-ride DX12 vs Vulkan terrain matches; Shot-Mission upscaler check build 104: Vulkan now FSR 3.1 (was bilinear), DX12 FSR 4; cargo test serial 719 pass / 4 pre-existing failures; dlss_status 14/14."
+    gpu_verified: false
+    follow_ups:
+      - parallel cargo test once hit STATUS_ACCESS_VIOLATION in GPU tests; not reproduced serially
+      - owner GPU check: Nogova on DX12 and Vulkan, arcade editor mode button

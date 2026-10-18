@@ -164,12 +164,14 @@ void ApplyGraphicsConfigToEngine(const GraphicsConfig& cfg)
             Engine::TemporalSettings t = GEngine->GetTemporalTuning();
             const Engine::TemporalInfo info = GEngine->GetTemporalInfo();
             t.dlssOn = (cfg.dlssMode == -1 || cfg.dlssMode == 1);
-            t.fsrOn = (cfg.dlssMode == -1 || cfg.dlssMode == 2);
             // FSR 4 is chosen only explicitly (never by Auto): it needs the DX12 backend.
+            // Off DX12 the chain falls through, so modes 3 and 4 keep FSR 3.1 and FSR 1
+            // on as fallbacks; without them FSR 4 on Vulkan silently ran bilinear.
+            t.fsrOn = (cfg.dlssMode == -1 || cfg.dlssMode == 2 || cfg.dlssMode == 3);
             t.fsr4On = cfg.dlssMode == 3;
             // FSR 3.1 is the Auto answer without DLSS, and mode 4 chooses it
             // explicitly (FSR 1 stays on as the no-temporal fallback either way).
-            t.fsr31On = (cfg.dlssMode == -1 || cfg.dlssMode == 4);
+            t.fsr31On = (cfg.dlssMode == -1 || cfg.dlssMode == 3 || cfg.dlssMode == 4);
             t.fsrSharpness = std::clamp(cfg.fsrSharpness, 0.0f, 2.0f);
             t.dlssSharpen = cfg.dlssSharpen != 0;
             t.jitterPhases = std::clamp(cfg.jitterPhases, 0, 64);

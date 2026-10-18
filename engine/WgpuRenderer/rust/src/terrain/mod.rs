@@ -403,6 +403,14 @@ impl Terrain {
         white_view: wgpu::TextureView,
         composer: &mut naga_oil::compose::Composer,
     ) -> Self {
+        // wgpu-hal's DX12 backend copies only the descriptors a partially bound array was
+        // given, but lays the following bindings out after the array's full declared count.
+        // Group 2 binds the ground array FIRST, so on DX12 the index map, detail texture
+        // and jitter map landed in unwritten slots and read as null (black terrain, RX 9070
+        // XT). Padding the array to its full size keeps every binding where the layout
+        // says. Vulkan is unaffected and keeps the partially bound path.
+        let partially_bound =
+            partially_bound && unsafe { device.as_hal::<wgpu::hal::api::Dx12>() }.is_none();
         // group 1 (vertex): terrain params UBO + heightmap (R32Float, textureLoad).
         let group1_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("wgr_terrain_group1_layout"),

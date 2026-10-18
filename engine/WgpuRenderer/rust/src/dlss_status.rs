@@ -159,7 +159,7 @@ pub fn snippet_missing_reason(dirs: &[PathBuf]) -> String {
 
 // Reasons decided before any hardware is touched.
 pub const REASON_BUILD_WITHOUT_DLSS: &str =
-    "this build was compiled without DLSS support (POSEIDON_DLSS=OFF); FSR 1 is the upscaler";
+    "this build was compiled without DLSS support (POSEIDON_DLSS=OFF)";
 pub const REASON_OPTED_OUT: &str =
     "DLSS turned off (WGR_DLSS=0 — Options > Upscaler is Off or FSR, or the env var)";
 

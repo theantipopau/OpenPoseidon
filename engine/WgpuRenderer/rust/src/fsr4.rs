@@ -438,6 +438,19 @@ fn ffx_texture(
     })
 }
 
+// What a texture is, for the "not a DX12 resource" log line: the difference between a
+// destroyed texture, a multisampled one and a non-DX12 one is the whole diagnosis.
+fn describe(tex: &wgpu::Texture) -> String {
+    format!(
+        "{:?} {}x{} samples={} usage={:?}",
+        tex.format(),
+        tex.width(),
+        tex.height(),
+        tex.sample_count(),
+        tex.usage()
+    )
+}
+
 impl TemporalUpscaler for Fsr4Upscaler {
     fn label(&self) -> &'static str {
         "FSR 4"
@@ -576,19 +589,19 @@ impl TemporalUpscaler for Fsr4Upscaler {
         }
 
         let Some(color_r) = ffx_texture(&color_tex, render, FORMAT_R16G16B16A16_FLOAT, USAGE_READ_ONLY, STATE_PIXEL_COMPUTE_READ) else {
-            return self.disable("color texture is not a DX12 resource".into());
+            return self.disable(format!("color texture is not a DX12 resource ({})", describe(&color_tex)));
         };
         let Some(depth_r) = ffx_texture(&depth.0, render, FORMAT_R32_FLOAT, USAGE_READ_ONLY, STATE_PIXEL_COMPUTE_READ) else {
-            return self.disable("depth texture is not a DX12 resource".into());
+            return self.disable(format!("depth texture is not a DX12 resource ({})", describe(&depth.0)));
         };
         let Some(motion_r) = ffx_texture(&velocity.0, render, FORMAT_R16G16_FLOAT, USAGE_READ_ONLY, STATE_PIXEL_COMPUTE_READ) else {
-            return self.disable("motion texture is not a DX12 resource".into());
+            return self.disable(format!("motion texture is not a DX12 resource ({})", describe(&velocity.0)));
         };
         let Some(exposure_r) = ffx_texture(&exposure.0, (1, 1), FORMAT_R32_FLOAT, USAGE_READ_ONLY, STATE_PIXEL_COMPUTE_READ) else {
-            return self.disable("exposure texture is not a DX12 resource".into());
+            return self.disable(format!("exposure texture is not a DX12 resource ({})", describe(&exposure.0)));
         };
         let Some(output_r) = ffx_texture(&ctx.output_tex, output, FORMAT_R16G16B16A16_FLOAT, USAGE_UAV, STATE_UNORDERED_ACCESS) else {
-            return self.disable("output texture is not a DX12 resource".into());
+            return self.disable(format!("output texture is not a DX12 resource ({})", describe(&ctx.output_tex)));
         };
         // Engine history control (0..1, higher = trust history less) is the reactive mask
         // in FFX terms: the same intent, so it feeds the same input.

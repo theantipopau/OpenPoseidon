@@ -911,6 +911,9 @@ pub struct Renderer {
     rcas_sharpener: upscaler::RcasSharpener,
     // Which backend produced the last upscaled frame (ffi::WgrTemporalInfo values).
     last_upscaler: u32,
+    // The backend last written to the log. last_upscaler is reset to native every frame
+    // (the panel readout), so transitions are tracked separately.
+    logged_upscaler: u32,
     // Exact startup opt-in only; OFF has no tuple allocation/copy.
     main_camera_tuple: Option<Box<main_camera_tuple::Tracker>>,
     // Default OFF: bounded CPU tuple copies only for an explicitly enabled fixture.
@@ -2057,6 +2060,7 @@ impl Renderer {
                 .unwrap_or(0.25)
                 .clamp(0.0, 2.0),
             last_upscaler: 0,
+            logged_upscaler: 0,
             main_camera_tuple: (std::env::var("WGR_GEOMETRY_PAGE_CAMERA_TUPLE").ok().as_deref()==Some("1") &&
                 std::env::var("WGR_GEOMETRY_PAGE_FIXTURE").ok().as_deref()==Some("1") &&
                 (std::env::var("WGR_GEOMETRY_PAGE_SURFACE_CERTIFICATE").ok().as_deref()==Some("1") ||
@@ -2886,9 +2890,26 @@ impl Renderer {
                     );
                 }
             }
-            self.last_upscaler = winner
+            let next_upscaler = winner
                 .map(|(caps, _)| caps.info_id)
                 .unwrap_or(upscaler::ID_NATIVE);
+            if next_upscaler != self.logged_upscaler {
+                // Logged on change only: which backend actually ran is otherwise
+                // invisible in the log (the DLSS line only speaks about DLSS).
+                self.logged_upscaler = next_upscaler;
+                let name = match next_upscaler {
+                    upscaler::ID_DLSS => "DLSS",
+                    upscaler::ID_FSR4 => "FSR 4",
+                    upscaler::ID_FSR31 => "FSR 3.1",
+                    upscaler::ID_NATIVE_TAA => "Native TAA",
+                    upscaler::ID_FSR1 => "FSR 1",
+                    upscaler::ID_BILINEAR => "bilinear",
+                    _ => "native",
+                };
+                self.log
+                    .log(log_level::INFO, &format!("upscaler: active is now {name}"));
+            }
+            self.last_upscaler = next_upscaler;
             up_view
         } else {
             post_source
