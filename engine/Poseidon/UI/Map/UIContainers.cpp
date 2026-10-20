@@ -312,7 +312,7 @@ void ControlsContainer::LoadControlBackground(const ParamEntry& ctrlCls)
     if (ctrl != nullptr)
     {
         // Proteus screens draw their own backdrop; the retail background frames stay hidden.
-        if (_proteusTheme)
+        if (_proteusTheme && !_proteusKeepRetailBackdrop)
             ctrl->ShowCtrl(false);
         int index = _controlsBackground.Add(ctrl);
         if (ctrl->CanBeDefault() && ctrlCls.FindEntry("default") && (ctrlCls >> "default").GetInt())

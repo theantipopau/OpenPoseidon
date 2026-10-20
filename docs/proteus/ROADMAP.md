@@ -39,6 +39,12 @@
 | --- | --- | --- | --- | --- |
 | BACKEND-VERIFY-1 | Build + test verification of merged upstream backend; Oct-14 crash triage | done-unverified | no | `proteus/main (direct, follows UPSTREAM-SYNC-1)` |
 
+## Phase D — Performance and stability
+
+| ID | Title | Status | GPU | Branch |
+| --- | --- | --- | --- | --- |
+| DX12-1 | DX12 black terrain fix, FSR 4 falls back to FSR 3.1, upscaler transition log | done-unverified | no | `proteus/DX12-1-dx12-upscaler-fixes` |
+
 ## Phase F — Research (proposals only)
 
 | ID | Title | Status | GPU | Branch |
@@ -58,3 +64,4 @@
 - UPSCALER-1: Upscaler decision (in-house TAAU default; vendor paths optional-only)
 - UI-THEME-B: Proteus art backdrop on Server/Login/NewUser/Revert (Phase A continued)
 - UI-THEME-C: Proteus theme on the mission-editor dialogs (no art backdrop)
+- UI-THEME-C1: Editor popups keep retail backdrop under themed buttons

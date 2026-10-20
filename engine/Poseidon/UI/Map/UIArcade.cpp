@@ -1332,7 +1332,7 @@ DisplayArcadeGroup::DisplayArcadeGroup(ControlsContainer* parent, Vector3Par pos
 
     // UI-THEME-C: Proteus theme on the editor popup (no art backdrop — the live 3D editor
     // stays visible behind it). No handler/label/ID/layout changes.
-    EnableProteusTheme();
+    EnableProteusPopupTheme();
     Load("RscDisplayArcadeGroup");
 
     UpdateTypes();

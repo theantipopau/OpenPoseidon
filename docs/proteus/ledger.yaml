@@ -428,3 +428,22 @@ tickets:
     follow_ups:
       - parallel cargo test once hit STATUS_ACCESS_VIOLATION in GPU tests; not reproduced serially
       - owner GPU check: Nogova on DX12 and Vulkan, arcade editor mode button
+  - id: UI-THEME-C1
+    title: Editor popups keep retail backdrop under themed buttons
+    branch: proteus/DX12-1-dx12-upscaler-fixes
+    status: done-unverified
+    files:
+      - engine/Poseidon/UI/Controls/UIControls.hpp
+      - engine/Poseidon/UI/Map/UIArcade.cpp
+      - engine/Poseidon/UI/Map/UIArcadeMarker.cpp
+      - engine/Poseidon/UI/Map/UIArcadeWaypoint.cpp
+      - engine/Poseidon/UI/Map/UIContainers.cpp
+      - engine/Poseidon/UI/Map/UIMap.hpp
+      - engine/Poseidon/UI/Map/UIMapDialogs.cpp
+      - docs/proteus/UI-THEME-C1.md
+    toggle: n/a (Proteus buttons on kept retail dialog frame)
+    evidence: "EnableProteusPopupTheme() in 10 popup ctors + backdrop exemption in LoadControlBackground; gate leftovers fixed (ROADMAP regen, lib.rs rustfmt reflow). Lib links; [menu][splash][inGameUI] 19/6 pass; broad [UI] 230 cases 224/0/6 exit 0; check-all OK."
+    gpu_verified: false
+    follow_ups:
+      - owner visual check of the themed editor dialogs on GPU
+      - fullscreen editor canvas theming needs a design decision first

@@ -55,6 +55,7 @@ protected:
 	PackedColor _cursorColor;
 
 	bool _proteusTheme = false;
+    bool _proteusKeepRetailBackdrop = false;
 	RefArray<Control> _controlsBackground;
 	RefArray<ControlObject> _objects;
 	RefArray<Control> _controlsForeground;
@@ -93,6 +94,13 @@ public:
 	// Proteus design system (see ProteusTheme.hpp). Call before Load(): buttons are created as
 	// ProteusTheme::MenuButton and retail background frames are created hidden.
 	void EnableProteusTheme() {_proteusTheme = true;}
+    // Popups over the live 3D have no art backdrop of their own, so they keep the retail
+    // background frame (dark, alpha 0.94) visible under the themed buttons. Legacy: EnableProteusTheme().
+    void EnableProteusPopupTheme()
+    {
+        _proteusTheme = true;
+        _proteusKeepRetailBackdrop = true;
+    }
 	bool ProteusThemeEnabled() const {return _proteusTheme;}
 	void Init();
 

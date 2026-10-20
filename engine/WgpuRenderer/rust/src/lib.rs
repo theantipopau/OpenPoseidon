@@ -2061,15 +2061,27 @@ impl Renderer {
                 .clamp(0.0, 2.0),
             last_upscaler: 0,
             logged_upscaler: 0,
-            main_camera_tuple: (std::env::var("WGR_GEOMETRY_PAGE_CAMERA_TUPLE").ok().as_deref()==Some("1") &&
-                std::env::var("WGR_GEOMETRY_PAGE_FIXTURE").ok().as_deref()==Some("1") &&
-                (std::env::var("WGR_GEOMETRY_PAGE_SURFACE_CERTIFICATE").ok().as_deref()==Some("1") ||
-                 std::env::var("WGR_GEOMETRY_PAGE_RETAIL_WORLD_VISIBLE").ok().as_deref()==Some("1")))
-                .then(|| Box::new(main_camera_tuple::Tracker::new())),
+            main_camera_tuple: (std::env::var("WGR_GEOMETRY_PAGE_CAMERA_TUPLE")
+                .ok()
+                .as_deref()
+                == Some("1")
+                && std::env::var("WGR_GEOMETRY_PAGE_FIXTURE").ok().as_deref() == Some("1")
+                && (std::env::var("WGR_GEOMETRY_PAGE_SURFACE_CERTIFICATE")
+                    .ok()
+                    .as_deref()
+                    == Some("1")
+                    || std::env::var("WGR_GEOMETRY_PAGE_RETAIL_WORLD_VISIBLE")
+                        .ok()
+                        .as_deref()
+                        == Some("1")))
+            .then(|| Box::new(main_camera_tuple::Tracker::new())),
             demand_view_snapshot: demand_view_snapshot::startup_enabled(
-                std::env::var("WGR_GEOMETRY_PAGE_DEMAND_VIEWS").ok().as_deref(),
-                std::env::var("WGR_GEOMETRY_PAGE_FIXTURE").ok().as_deref())
-                .then(|| Box::new(demand_view_snapshot::Tracker::new())),
+                std::env::var("WGR_GEOMETRY_PAGE_DEMAND_VIEWS")
+                    .ok()
+                    .as_deref(),
+                std::env::var("WGR_GEOMETRY_PAGE_FIXTURE").ok().as_deref(),
+            )
+            .then(|| Box::new(demand_view_snapshot::Tracker::new())),
             sample_count,
             tonemap,
             underwater_target: None,
