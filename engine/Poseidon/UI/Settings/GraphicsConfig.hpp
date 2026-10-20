@@ -110,6 +110,13 @@ public:
 	// samples), 1 = frozen offset always. Upscaled setups that still shimmer
 	// pin 1. Persisted per user; tolerated as absent.
 	int       jitterPhases     = 0;
+    // Native TAA reference (100% scale only): 0 = off, anything else = on.
+    // Persisted per user; tolerated as absent (stays 0). Only meaningful at
+    // 100% render scale -- the backend skips otherwise, so saving it on with an
+    // upscaler quality is inert, not an error. Applied with OR-semantics (see
+    // GraphicsApply.cpp): the file can enable it, never forcibly disable live
+    // panel/env state.
+    int nativeTaa = 0;
 	// RFG-047: hand Enfusion's BC7/BC5/BC4 textures to the GPU compressed instead of
 	// decoding them to 32-bit (1 = on, the default; 0 = the old decode path). Read at
 	// renderer creation -- the choice has to be made before any texture is loaded -- so

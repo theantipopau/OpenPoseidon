@@ -461,3 +461,20 @@ tickets:
     follow_ups:
       - owner GPU check: accumulator vs single-frame lines on Vulkan jeep-ride
       - output-res history only if v2 underwhelms
+  - id: TAA-CFG-1
+    title: Native TAA graphics.cfg lane (persistable via Save as default)
+    branch: proteus/DX12-1-dx12-upscaler-fixes
+    status: done-unverified
+    files:
+      - engine/Poseidon/UI/Settings/GraphicsConfig.hpp
+      - engine/Poseidon/UI/Settings/GraphicsConfig.cpp
+      - engine/Poseidon/UI/Settings/GraphicsApply.cpp
+      - engine/Poseidon/Dev/Debug/DebugOverlay.cpp
+      - engine/Poseidon/Graphics/Core/Engine.hpp
+      - tests/unit/engine/Poseidon/UI/Settings/test_graphicsConfig.cpp
+      - docs/proteus/TAA-CFG-1.md
+    toggle: nativeTaa 0/1 in graphics.cfg; OR-apply (file enables, never disables)
+    evidence: "[Settings][GraphicsConfig] 161/29 exit 0 (new round-trip test); [menu][splash][inGameUI] 19/6; broad [UI] 224/0/6; lib+tests link green; check-all OK. No GPU run."
+    gpu_verified: false
+    follow_ups:
+      - owner GPU check: save/restore on and off across restarts

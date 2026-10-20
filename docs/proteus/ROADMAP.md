@@ -25,6 +25,7 @@
 | T18b | Perf capture script + scene/region definitions | done-unverified | no | `proteus/T18b-capture-script` |
 | T18c | Populated benchmarks: admitted-count gate + re-baseline | done-unverified | yes | `proteus/main (direct)` |
 | T19 | Golden-image harness (shots + SSIM compare + capture) | done-unverified | no | `proteus/T19-golden-harness` |
+| TAA-CFG-1 | Native TAA graphics.cfg lane (persistable via Save as default) | done-unverified | no | `proteus/DX12-1-dx12-upscaler-fixes` |
 | TOOLCHAIN-1 | VS-bundled LLVM candidates in FindLLVMSanitizer.cmake | done-unverified | no | `proteus/main (direct)` |
 
 ## Phase A — Renderer issues

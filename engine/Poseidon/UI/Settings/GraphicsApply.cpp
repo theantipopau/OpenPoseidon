@@ -175,6 +175,13 @@ void ApplyGraphicsConfigToEngine(const GraphicsConfig& cfg)
             t.fsrSharpness = std::clamp(cfg.fsrSharpness, 0.0f, 2.0f);
             t.dlssSharpen = cfg.dlssSharpen != 0;
             t.jitterPhases = std::clamp(cfg.jitterPhases, 0, 64);
+            // Native TAA is session-owned by the dev panel (and WGR_NATIVE_TAA at
+            // boot): the file may only enable it, never clobber live state — a
+            // plain assignment here would switch off a panel-enabled reference
+            // every time any Options row applies. Saved-ON is sticky until saved
+            // off again; the backend itself skips away from 100% scale.
+            if (cfg.nativeTaa != 0)
+                t.nativeTaaOn = true;
             const bool ssaaPinned = cfg.renderScale > 1.01f;
             if (!ssaaPinned)
             {

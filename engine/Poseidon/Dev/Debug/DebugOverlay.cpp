@@ -5583,7 +5583,11 @@ void DrawTemporalTab()
     changed |= Dev::Checkbox("FSR 1 (vendor-neutral upscaler)", &t.fsrOn);
     Dev::PanelTooltip("AMD FidelityFX EASU+RCAS (MIT-licensed, runs on any GPU). The no-temporal fallback.\nAll off = soft bilinear.");
     changed |= Dev::Checkbox("Native TAA reference (100% only)", &t.nativeTaaOn);
-    Dev::PanelTooltip("The temporal accumulator as the output: no upscaling, the aliasing/ghosting reference.\nSession-only (WGR_NATIVE_TAA=1 seeds it at boot); the Options page cannot persist it.");
+    Dev::PanelTooltip("The temporal accumulator as the output: no upscaling, "
+                      "the aliasing/ghosting reference.\nWGR_NATIVE_TAA=1 seeds it "
+                      "at boot; \"Save as default\" below persists it in "
+                      "graphics.cfg.\nA saved-ON is sticky until saved off again "
+                      "(Options applies never switch it off).");
     changed |= Dev::Checkbox("Sharpen DLSS output (RCAS)", &t.dlssSharpen);
     Dev::PanelTooltip("Runs the RCAS sharpener over the DLSS result (NVIDIA removed DLSS's own\n"
                       "sharpening; an external pass is the standard answer). Strength = the slider below.");
@@ -5676,17 +5680,20 @@ void DrawTemporalTab()
             cfg.fsrSharpness = t.fsrSharpness;
             cfg.dlssSharpen = t.dlssSharpen ? 1 : 0;
             cfg.jitterPhases = t.jitterPhases;
+            cfg.nativeTaa = t.nativeTaaOn ? 1 : 0;
             if (cfg.Save(cfgPath))
                 LOG_INFO(Graphics,
                          "Dev panel: graphics.cfg saved (dlssMode={}, quality={}, msaa={}, renderScale={:.2f}, "
-                         "sharpness={:.2f}, dlssSharpen={}, jitterPhases={})",
+                         "sharpness={:.2f}, dlssSharpen={}, jitterPhases={}, nativeTaa={})",
                          cfg.dlssMode, cfg.upscalerQuality, cfg.msaaSamples, cfg.renderScale, cfg.fsrSharpness,
-                         cfg.dlssSharpen, cfg.jitterPhases);
+                         cfg.dlssSharpen, cfg.jitterPhases, cfg.nativeTaa);
             else
                 LOG_ERROR(Graphics, "Dev panel: saving '{}' failed", cfgPath);
         }
-        Dev::PanelTooltip("Writes the whole tab (upscaler, quality, MSAA, scale, sharpness, DLSS sharpen, jitter phases) to "
-                          "graphics.cfg - the same file the Options menu edits - applied on every launch.");
+        Dev::PanelTooltip("Writes the whole tab (upscaler, quality, MSAA, "
+                          "scale, sharpness, DLSS sharpen, jitter phases,\n"
+                          "Native TAA) to graphics.cfg - the same file the "
+                          "Options menu edits - applied on every launch.");
     }
 
     Dev::PanelSeparator();

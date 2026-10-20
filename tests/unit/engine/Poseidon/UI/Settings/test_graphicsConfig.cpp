@@ -170,6 +170,26 @@ TEST_CASE("GraphicsConfig: a grass tier round-trips through the file", "[Setting
     std::filesystem::remove(path);
 }
 
+TEST_CASE("GraphicsConfig: nativeTaa defaults off and round-trips through the file", "[Settings][GraphicsConfig]")
+{
+    GraphicsConfig fresh;
+    fresh.LoadDefaults();
+    CHECK(fresh.nativeTaa == 0);
+
+    const std::string path = (std::filesystem::temp_directory_path() / "poseidon_nativetaa_cfg.cfg").string();
+    std::filesystem::remove(path);
+
+    GraphicsConfig saved;
+    saved.nativeTaa = 1;
+    REQUIRE(saved.Save(path));
+
+    GraphicsConfig loaded;
+    REQUIRE(loaded.Load(path));
+    CHECK(loaded.nativeTaa == 1);
+
+    std::filesystem::remove(path);
+}
+
 TEST_CASE("GraphicsConfig: the FPS cap rounds up to an allowed rate", "[Settings][GraphicsConfig]")
 {
     CHECK(GraphicsConfig::FpsCapForRefreshRate(30) == 30);

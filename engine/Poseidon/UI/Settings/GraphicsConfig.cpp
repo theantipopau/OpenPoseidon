@@ -311,6 +311,8 @@ bool GraphicsConfig::Load(const std::string& path)
         dlssSharpen = (int)*e;
     if (auto* e = cfg.FindEntry("jitterPhases"))
         jitterPhases = (int)*e;
+    if (auto* e = cfg.FindEntry("nativeTaa"))
+        nativeTaa = (int)*e;
     if (auto* e = cfg.FindEntry("enfusionCompressedTextures"))
         enfusionCompressedTextures = (int)*e;
     if (auto* e = cfg.FindEntry("enfusionLayerTint"))
@@ -348,6 +350,7 @@ bool GraphicsConfig::Save(const std::string& path) const
     cfg.Add("fsrSharpness", fsrSharpness);
     cfg.Add("dlssSharpen", dlssSharpen);
     cfg.Add("jitterPhases", jitterPhases);
+    cfg.Add("nativeTaa", nativeTaa);
     cfg.Add("enfusionCompressedTextures", enfusionCompressedTextures);
     cfg.Add("enfusionLayerTint", enfusionLayerTint);
     cfg.Add("enfusionTintMultiply", enfusionTintMultiply);

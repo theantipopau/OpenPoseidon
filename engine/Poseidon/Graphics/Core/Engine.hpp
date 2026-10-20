@@ -1989,8 +1989,9 @@ class Engine : public IGraphicsEngine
         // on by default so Auto without DLSS resolves to it instead of FSR 1.
         bool fsr31On = true;
         // Native TAA reference (100% scale only, sits between FSR 3.1 and FSR 1).
-        // Session-only: the dev panel owns it live (WGR_NATIVE_TAA=1 seeds it at
-        // boot); graphics.cfg has no lane for it, so it is never persisted.
+        // Live-owned by the dev panel (WGR_NATIVE_TAA=1 seeds it at boot);
+        // graphics.cfg `nativeTaa` may enable it across restarts (OR-semantics —
+        // the file never switches it off; see GraphicsApply.cpp).
         bool nativeTaaOn = false;
         float fsrSharpness = 0.25f; // RCAS stops: 0 = sharpest, 2 = mildest
         // RCAS sharpen pass over the DLSS output (strength = fsrSharpness).
