@@ -8,15 +8,23 @@
 // it is the default AMD/NVIDIA answer. Chain order is DLSS > FSR 4 > FSR 3.1 >
 // Native TAA (100% only) > FSR 1 > Bilinear.
 //
-// v1 scope (honest): jitter-compensated EASU + RCAS through the same MIT
-// `fsr1.wgsl` kernels FSR 1 uses. That is a real step past FSR 1, not a relabel:
-// FSR 1 ignores jitter entirely, so under render scale with the temporal path on
-// it upscales a jittered frame without un-jittering it and the output shimmers.
-// This backend subtracts the frame's jitter (render-pixel units, the same
-// convention `temporal.rs` feeds DLSS) from the EASU viewport mapping, so the
-// upscaled image is stable. The staged follow-up is the full FFX 3.1
-// temporal-accumulation core (history reuse, disocclusion rejection, Native AA
-// mode); it slots into this same struct, caps and chain position.
+// Accumulation core (FSR31-ACCUM): the preferred path consumes the agreed
+// render-res accumulator (`Temporal::render_debug_resolve`, exposed as
+// `ctx.native_history`) — reprojected along velocity, neighbourhood-clamped,
+// blended 90/10 — then EASU-upscales that stable image with PLAIN viewport
+// constants (the accumulator carries no jitter) plus RCAS. At render == output
+// that is Native AA mode. Disocclusion rejection lives in the resolve's depth
+// compare; this backend adds no second history of its own.
+//
+// Fallback (honest v1 scope): when no accumulator ran this frame (no velocity
+// target, first frame before the resolve), jitter-compensated EASU + RCAS
+// straight from the current frame through the same MIT `fsr1.wgsl` kernels
+// FSR 1 uses. A real step past FSR 1, not a relabel: FSR 1 ignores jitter
+// entirely, so under render scale with the temporal path on it upscales a
+// jittered frame without un-jittering it and the output shimmers. This backend
+// subtracts the frame's jitter (render-pixel units, the same convention
+// `temporal.rs` feeds DLSS) from the EASU viewport mapping, so the upscaled
+// image is stable.
 //
 // License note: the EASU/RCAS kernels are AMD FidelityFX MIT, Copyright (c) 2021
 // Advanced Micro Devices, Inc. — see THIRD_PARTY_NOTICES.md ("FSR 3.1") and
@@ -162,9 +170,10 @@ impl TemporalUpscaler for Fsr31Upscaler {
         if !ctx.settings.fsr31_on {
             return UpscaleOutcome::Skip;
         }
-        // Temporal contract: the jitter compensation below corrects the frame's
-        // jitter, so without jitter there is nothing this backend does that FSR 1
-        // does not — skip and let the spatial path own the frame.
+        // Temporal contract: the accumulation core and the jitter compensation
+        // both need the temporal path (jitter + velocity); without it there is
+        // nothing this backend does that FSR 1 does not — skip and let the
+        // spatial path own the frame.
         if !ctx.settings.temporal_enabled {
             return UpscaleOutcome::Skip;
         }
@@ -199,12 +208,20 @@ impl TemporalUpscaler for Fsr31Upscaler {
             let v = t.create_view(&wgpu::TextureViewDescriptor::default());
             self.intermediate = Some((t, v));
         }
+        // FSR31-ACCUM: the accumulator is the stable, unjittered image — upscale
+        // it with plain viewport constants. Without one, fall back to the
+        // jitter-compensated single-frame path.
+        let from_accum = ctx.native_history.is_some();
+        let input_view: &wgpu::TextureView = match ctx.native_history.as_ref() {
+            Some((_, hv)) => hv,
+            None => &ctx.color_view,
+        };
         let mut data = [0f32; 20];
-        data[..16].copy_from_slice(&easu_constants_jittered(
-            ctx.render,
-            ctx.output,
-            ctx.jitter_px,
-        ));
+        data[..16].copy_from_slice(&if from_accum {
+            upscaler::easu_constants(ctx.render, ctx.output)
+        } else {
+            easu_constants_jittered(ctx.render, ctx.output, ctx.jitter_px)
+        });
         data[16] = (-ctx.settings.fsr_sharpness.clamp(0.0, 2.0)).exp2();
         self.ensure_kit(device);
         let kit = self.kit.as_ref().expect("ensured above");
@@ -217,7 +234,7 @@ impl TemporalUpscaler for Fsr31Upscaler {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&ctx.color_view),
+                    resource: wgpu::BindingResource::TextureView(input_view),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
@@ -282,12 +299,23 @@ impl TemporalUpscaler for Fsr31Upscaler {
         }
         ctx.encoder.pop_debug_group();
         {
-            static ONCE: std::sync::Once = std::sync::Once::new();
+            static ONCE_ACCUM: std::sync::Once = std::sync::Once::new();
+            static ONCE_SINGLE: std::sync::Once = std::sync::Once::new();
             let (rw, rh) = ctx.render;
             let (ow, oh) = ctx.output;
-            ONCE.call_once(|| {
-                eprintln!("[wgr] FSR 3.1 active: {rw}x{rh} -> {ow}x{oh} (jitter-compensated EASU+RCAS)");
-            });
+            if from_accum {
+                ONCE_ACCUM.call_once(|| {
+                    eprintln!(
+                        "[wgr] FSR 3.1 active: {rw}x{rh} -> {ow}x{oh} (accumulator + EASU + RCAS)"
+                    );
+                });
+            } else {
+                ONCE_SINGLE.call_once(|| {
+                    eprintln!(
+                        "[wgr] FSR 3.1 active: {rw}x{rh} -> {ow}x{oh} (single-frame jitter-compensated EASU+RCAS, no accumulator)"
+                    );
+                });
+            }
         }
         UpscaleOutcome::Done { quality: -1 }
     }

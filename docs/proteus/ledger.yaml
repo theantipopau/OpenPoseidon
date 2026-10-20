@@ -447,3 +447,17 @@ tickets:
     follow_ups:
       - owner visual check of the themed editor dialogs on GPU
       - fullscreen editor canvas theming needs a design decision first
+  - id: FSR31-ACCUM
+    title: FSR 3.1 consumes the agreed temporal accumulator (v2 core)
+    branch: proteus/DX12-1-dx12-upscaler-fixes
+    status: done-unverified
+    files:
+      - engine/WgpuRenderer/rust/src/lib.rs
+      - engine/WgpuRenderer/rust/src/fsr31.rs
+      - docs/proteus/FSR31-ACCUM.md
+    toggle: n/a (accumulation when the resolve ran; single-frame fallback otherwise)
+    evidence: "cargo test fsr31 3/3 + upscaler 9/9 exit 0; check-all OK. No GPU run."
+    gpu_verified: false
+    follow_ups:
+      - owner GPU check: accumulator vs single-frame lines on Vulkan jeep-ride
+      - output-res history only if v2 underwhelms

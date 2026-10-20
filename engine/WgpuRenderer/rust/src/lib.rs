@@ -2678,12 +2678,17 @@ impl Renderer {
         }
         // REN-TEMP-001K: temporal debug resolve (WGR_TEMPORAL_DEBUG=2) — accumulate the
         // resolved HDR frame along velocity. W0a: also the Native TAA production
-        // accumulator when native_history_wanted is set (100% scale only — running
-        // the pass under render scale would burn a fullscreen resolve nobody reads).
+        // accumulator when native_history_wanted is set. FSR31-ACCUM: also the
+        // FSR 3.1 accumulation core at any render <= output (render-res history,
+        // EASU+RCAS upscale after). Over-runs when DLSS/FSR 4 wins the chain —
+        // the same accepted tradeoff as the native path (prediction would fork
+        // the chain logic into the orchestration).
         if self.temporal.enabled {
             let render_size = self.render_size();
             let out = (self.config.width, self.config.height);
-            self.temporal.native_history_wanted = self.native_taa_active() && render_size == out;
+            let upscale_ok = render_size.0 <= out.0 && render_size.1 <= out.1;
+            self.temporal.native_history_wanted = (self.native_taa_active() && render_size == out)
+                || (self.fsr31_runtime_on && upscale_ok);
             self.temporal.render_debug_resolve(
                 &self.device,
                 &self.queue,

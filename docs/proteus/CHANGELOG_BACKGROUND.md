@@ -16,3 +16,4 @@
 - 2026-10-14 A1 (`proteus/ao-half-res`): half-res GTAO already implemented default-on — pinned with `gtao_half_res_march_stays_pinned_to_the_bilateral_upsample_contract` (8/8 GTAO CPU tests pass); 1080p/1440p/4K timings deferred to ticket 18's capture script. See `docs/proteus/A1-gtao-half-res.md`.
 - 2026-10-18 DX12-1: DX12 terrain no longer renders black/white (wgpu-hal partially bound array workaround); FSR 4 mode now falls back to FSR 3.1 on Vulkan instead of bilinear. See `docs/proteus/DX12-1.md`.
 - 2026-10-20 UI-THEME-C1: editor popups keep the retail backdrop frame under themed Proteus buttons (EnableProteusPopupTheme); check-all OK, broad [UI] 224/0/6 exit 0. See `docs/proteus/UI-THEME-C1.md`.
+- 2026-10-20 FSR31-ACCUM: FSR 3.1 upscales the agreed render-res accumulator (plain EASU+RCAS; Native AA at 100%), single-frame fallback without velocity — fsr31 3/3 + upscaler 9/9 exit 0, check-all OK. See `docs/proteus/FSR31-ACCUM.md`.
