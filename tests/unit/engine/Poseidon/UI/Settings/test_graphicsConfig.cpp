@@ -187,6 +187,25 @@ TEST_CASE("GraphicsConfig: nativeTaa defaults off and round-trips through the fi
     REQUIRE(loaded.Load(path));
     CHECK(loaded.nativeTaa == 1);
 
+    // Tolerated as absent: an old file without the key loads as off on a fresh instance.
+    {
+        std::string text;
+        {
+            std::ifstream in(path);
+            text.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+        }
+        const std::string::size_type at = text.find("nativeTaa=");
+        REQUIRE(at != std::string::npos);
+        text.erase(at, text.find('\n', at) - at + 1);
+        {
+            std::ofstream out(path, std::ios::trunc);
+            out << text;
+        }
+        GraphicsConfig oldFile;
+        REQUIRE(oldFile.Load(path));
+        CHECK(oldFile.nativeTaa == 0);
+    }
+
     std::filesystem::remove(path);
 }
 
@@ -279,12 +298,17 @@ TEST_CASE("GraphicsConfig: Save then Load round-trips every field", "[Settings][
     const std::string path = TmpPath("roundtrip.cfg");
     std::filesystem::remove(path);
 
+    // Every persistable field is set to a non-default value below: a field that Save
+    // writes but Load forgets (or vice versa) is invisible while it still holds its
+    // default, which is exactly how the upscaler/temporal lane grew keys with no
+    // round-trip coverage. One CHECK per field, so a miss names itself.
     GraphicsConfig src;
     src.qualityPreset = GraphicsConfig::PresetMedium;
     src.terrainDetail = GraphicsConfig::TierMedium;
     src.objectLod = GraphicsConfig::TierMedium;
     src.shadowQuality = GraphicsConfig::TierLow;
     src.particlesQuality = GraphicsConfig::TierLow;
+    src.grassQuality = GraphicsConfig::TierLow;
     src.vsync = GraphicsConfig::VsyncAdaptive;
     src.fpsCap = 144;
     src.msaaSamples = 4;
@@ -293,6 +317,16 @@ TEST_CASE("GraphicsConfig: Save then Load round-trips every field", "[Settings][
     src.multitexturing = false;
     src.brightness = 1.2f;
     src.gamma = 0.9f;
+    src.dlssMode = 4;
+    src.upscalerQuality = 58;
+    src.fsrSharpness = 0.5f;
+    src.dlssSharpen = 0;
+    src.jitterPhases = 1;
+    src.nativeTaa = 1;
+    src.enfusionCompressedTextures = 0;
+    src.enfusionLayerTint = 0;
+    src.enfusionTintMultiply = 0;
+    src.enfusionMultiLayers = 0;
     REQUIRE(src.Save(path));
 
     GraphicsConfig dst;
@@ -302,6 +336,7 @@ TEST_CASE("GraphicsConfig: Save then Load round-trips every field", "[Settings][
     CHECK(dst.objectLod == src.objectLod);
     CHECK(dst.shadowQuality == src.shadowQuality);
     CHECK(dst.particlesQuality == src.particlesQuality);
+    CHECK(dst.grassQuality == src.grassQuality);
     CHECK(dst.vsync == src.vsync);
     CHECK(dst.fpsCap == src.fpsCap);
     CHECK(dst.msaaSamples == src.msaaSamples);
@@ -310,6 +345,17 @@ TEST_CASE("GraphicsConfig: Save then Load round-trips every field", "[Settings][
     CHECK(dst.multitexturing == src.multitexturing);
     CHECK(dst.brightness == src.brightness);
     CHECK(dst.gamma == src.gamma);
+    CHECK(dst.dlssMode == src.dlssMode);
+    CHECK(dst.upscalerQuality == src.upscalerQuality);
+    CHECK(dst.fsrSharpness == src.fsrSharpness);
+    CHECK(dst.dlssSharpen == src.dlssSharpen);
+    CHECK(dst.jitterPhases == src.jitterPhases);
+    CHECK(dst.nativeTaa == src.nativeTaa);
+    CHECK(dst.enfusionCompressedTextures == src.enfusionCompressedTextures);
+    CHECK(dst.enfusionLayerTint == src.enfusionLayerTint);
+    CHECK(dst.enfusionTintMultiply == src.enfusionTintMultiply);
+    CHECK(dst.enfusionMultiLayers == src.enfusionMultiLayers);
+    CHECK(dst.version == src.version);
 }
 
 TEST_CASE("GraphicsConfig: Load on missing file returns false, leaves instance untouched", "[Settings][GraphicsConfig]")

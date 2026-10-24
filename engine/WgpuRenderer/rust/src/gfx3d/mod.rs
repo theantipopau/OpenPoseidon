@@ -13215,7 +13215,7 @@ fn every_world_geometry_family_takes_the_same_aerial_perspective() {
     // air the way the terrain behind it does.
     let frame = include_str!("../shaders/frame.wgsl");
     assert!(
-        frame.contains("fn apply_fog_receiver(rgb: vec3<f32>, world_pos_rel: vec3<f32>, vegetation: bool) -> vec3<f32> {"),
+        frame.contains("fn apply_fog_receiver(rgb: vec3<f32>, world_pos_rel: vec3<f32>, receiver: bool) -> vec3<f32> {"),
         "frame.wgsl must own the single role-aware aerial-perspective implementation"
     );
     assert!(
@@ -13240,10 +13240,17 @@ fn every_world_geometry_family_takes_the_same_aerial_perspective() {
     // the same atmosphere. Nothing between the leaf lighting and the fog may return early.
     let shading = include_str!("../shaders/shading.wgsl");
     let at = shading
-        .find("rgb = apply_fog_receiver(rgb, world_pos, is_vegetation && !is_cockpit && cave.y >= 0.999);")
+        .find("rgb = apply_fog_receiver(rgb, world_pos, !is_cockpit && cave.y >= 0.999);")
         .expect("shading.wgsl must fog all object sections through the shared role-aware implementation");
-    assert!(frame.contains("return apply_fog_receiver(rgb, world_pos_rel, false);"),
-        "Generic geometry must delegate to the same implementation with no plant exception");
+    // `receiver` is no longer "is this vegetation": the fog admits foreground transport at any
+    // endpoint that is a real surface (fog_surface_open returns it), and endpoint weather-map
+    // coverage deliberately cannot erase transport along the certified camera ray. Only the
+    // explicitly excluded consumers -- cockpit/interior -- pass false, and they do it in the
+    // shading call asserted above. So both generic wrappers delegate with `true`.
+    assert!(
+        frame.contains("return apply_fog_receiver(rgb, world_pos_rel, true);"),
+        "Generic geometry must delegate to the same implementation with no plant exception"
+    );
     let tail = &shading[at..];
     assert!(
         tail.matches("return rgb;").count() >= 1,

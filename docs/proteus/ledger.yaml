@@ -474,7 +474,24 @@ tickets:
       - tests/unit/engine/Poseidon/UI/Settings/test_graphicsConfig.cpp
       - docs/proteus/TAA-CFG-1.md
     toggle: nativeTaa 0/1 in graphics.cfg; OR-apply (file enables, never disables)
-    evidence: "[Settings][GraphicsConfig] 161/29 exit 0 (new round-trip test); [menu][splash][inGameUI] 19/6; broad [UI] 224/0/6; lib+tests link green; check-all OK. No GPU run."
+    evidence: "[Settings][GraphicsConfig] 176/29 exit 0 (full-field round-trip + tolerated-absent); [menu][splash][inGameUI] 19/6; broad [UI] 224/0/6; lib+tests link green; check-all OK. No GPU run."
     gpu_verified: false
     follow_ups:
       - owner GPU check: save/restore on and off across restarts
+  - id: RUST-TESTS-1
+    title: The four standing cargo test --lib failures (ABI pin, GI test-device limits, NaN atlas UV)
+    branch: proteus/DX12-1-dx12-upscaler-fixes
+    status: done-unverified
+    files:
+      - engine/WgpuRenderer/rust/src/ffi.rs
+      - engine/WgpuRenderer/rust/src/gfx3d/cull.rs
+      - engine/WgpuRenderer/rust/src/gfx3d/gi.rs
+      - engine/WgpuRenderer/rust/src/gfx3d/mod.rs
+      - engine/WgpuRenderer/rust/src/shaders/tree_snow.wgsl
+      - docs/proteus/RUST-TESTS-1.md
+    toggle: n/a (tests + a shader NaN gate)
+    evidence: "cargo test --lib --test-threads=1 723 passed / 0 failed / 5 ignored exit 0 (was 719/4); abi_tests 13/13; check-format OK; check-all OK."
+    gpu_verified: false
+    follow_ups:
+      - owner debug: parallel cargo test --lib access violation still unexplained (serial green)
+      - owner visual: NaN-free forest snow on DX12 in a real forest shot

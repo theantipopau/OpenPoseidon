@@ -777,12 +777,21 @@ mod tests {
         if !adapter.features().contains(bindless) {
             return None;
         }
+        // The camera group carries 8 sampled textures and the gather adds its probe volume,
+        // so the object and compute layouts pass the default 16 per stage. Production raises
+        // this same limit (REN-GI-001 in lib.rs); a test device left at the default rejects
+        // pipelines the shipped renderer builds.
+        let sampled = adapter
+            .limits()
+            .max_sampled_textures_per_shader_stage
+            .clamp(16, 64);
         pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             required_features: bindless,
             required_limits: wgpu::Limits {
                 max_bind_groups: 5,
                 max_binding_array_elements_per_shader_stage: 128,
                 max_binding_array_sampler_elements_per_shader_stage: 8,
+                max_sampled_textures_per_shader_stage: sampled,
                 ..Default::default()
             },
             ..Default::default()

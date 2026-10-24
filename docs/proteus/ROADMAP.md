@@ -67,3 +67,4 @@
 - UI-THEME-B: Proteus art backdrop on Server/Login/NewUser/Revert (Phase A continued)
 - UI-THEME-C: Proteus theme on the mission-editor dialogs (no art backdrop)
 - UI-THEME-C1: Editor popups keep retail backdrop under themed buttons
+- RUST-TESTS-1: The four standing cargo test --lib failures (ABI pin, GI test-device limits, NaN atlas UV)

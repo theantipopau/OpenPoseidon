@@ -2213,16 +2213,40 @@ mod abi_tests {
 
     #[test]
     fn exported_abi_version_matches_the_public_contract() {
-        assert_eq!(super::wgr_abi_version(), 21); // Paired cave/hole/swimmer integration
+        // The ABI number is declared twice: here, and in the `#define` the C++ engine
+        // compiles against. Restating the value in this test let the pair drift -- the
+        // header moved to 22 and this assertion kept saying 21 -- so read the header and
+        // compare against it. The pin underneath is deliberate friction: a bump has to be
+        // a reviewed edit on both sides, not a silent one.
+        const HEADER: &str = include_str!("../../include/wgpu_renderer.hpp");
+        let declared = HEADER
+            .lines()
+            .find_map(|line| {
+                let rest = line.trim().strip_prefix("#define WGR_ABI_VERSION ")?;
+                let digits: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+                digits.parse::<u32>().ok()
+            })
+            .expect("WGR_ABI_VERSION is not declared in wgpu_renderer.hpp");
+        assert_eq!(declared, 22); // Terrain-following fog and coherent density modulation
+        assert_eq!(super::wgr_abi_version(), declared);
     }
 
     #[test]
     fn old_mesh_fact_summary_pair_is_refused_and_new_layout_is_exact() {
-        assert_eq!(std::mem::size_of::<super::WgrMeshHandleFactSummary>(),80);
-        assert_eq!(std::mem::offset_of!(super::WgrMeshHandleFactSummary,live_mesh_records),48);
-        assert_eq!(std::mem::offset_of!(super::WgrMeshHandleFactSummary,record_scope_valid),72);
-        let mut check=good_check(); check.abi_version=14;
-        assert_eq!(unsafe { super::wgr_abi_validate(&check) },0);
+        // rustfmt reflow only: this test sits inside the hunk-scoped format checker's
+        // +/-3 line fuzz around the ABI-version test above, so its drift blocked the gate.
+        assert_eq!(std::mem::size_of::<super::WgrMeshHandleFactSummary>(), 80);
+        assert_eq!(
+            std::mem::offset_of!(super::WgrMeshHandleFactSummary, live_mesh_records),
+            48
+        );
+        assert_eq!(
+            std::mem::offset_of!(super::WgrMeshHandleFactSummary, record_scope_valid),
+            72
+        );
+        let mut check = good_check();
+        check.abi_version = 14;
+        assert_eq!(unsafe { super::wgr_abi_validate(&check) }, 0);
     }
     #[test]
     fn pre_tidewater_version_is_refused_even_with_current_layout_hash() {

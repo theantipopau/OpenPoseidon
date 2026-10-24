@@ -32,12 +32,14 @@ from UPSCALER-2/HANDOVER, DX12-1 and FSR31-ACCUM.
   line; checkbox tooltip rewritten (was "cannot persist it"); save tooltip
   lists Native TAA.
 - `Graphics/Core/Engine.hpp` — stale "never persisted" comment corrected.
-- `tests/.../UI/Settings/test_graphicsConfig.cpp` — default-off + round-trip.
+- `tests/.../UI/Settings/test_graphicsConfig.cpp` — default-off + round-trip +
+  tolerated-absent (stripped key loads as 0 on a fresh instance).
 
 ## Verification
 
-- New test passes: `[Settings][GraphicsConfig]` 161 assertions / 29 cases
-  (was 28 cases), exit 0.
+- New test passes: `[Settings][GraphicsConfig]` 176 assertions / 29 cases
+  (was 28 cases; 161 at commit, +3 for the tolerated-absent block, +12 for
+  the full-field round-trip extension), exit 0.
 - `[menu],[splash],[inGameUI]` 19/6 pass; broad `[UI]` 230 cases 224/0/6
   exit 0. `Poseidon` + `PoseidonTests` link green (exit 0; only pre-existing
   warnings/notes).

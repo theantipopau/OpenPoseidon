@@ -5228,14 +5228,24 @@ pub(crate) mod tests {
         }))
         .ok()?;
         // Actual object shaders include conform resources in group 4, matching
-        // the production device's five-group requirement.
+        // the production device's five-group requirement. The camera group's sampled
+        // textures must clear the default 16 per stage for the same reason the engine
+        // raises it (REN-GI-001: 8 camera textures plus the water/object groups), and a
+        // test device that stops at the default fails pipeline creation for shaders that
+        // build fine in the game.
+        let sampled = adapter
+            .limits()
+            .max_sampled_textures_per_shader_stage
+            .clamp(16, 64);
         pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             required_limits: wgpu::Limits {
                 max_bind_groups: 5,
+                max_sampled_textures_per_shader_stage: sampled,
                 ..wgpu::Limits::default()
             },
             ..Default::default()
-        })).ok()
+        }))
+        .ok()
     }
 
     fn read_u32s(

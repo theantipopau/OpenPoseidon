@@ -68,11 +68,25 @@ fn tree_snow_coverage(world_pos: vec3<f32>, crown_height: f32, cached_exposure: 
     return tree_snow_cover_depth(crown_height, depth, exposed);
 }
 
+// NaN/Inf gate that survives fast-math. `abs(v) < 1e20` is the idiomatic finite test
+// and is correct under strict IEEE (a NaN compare is false), but the DX12 backend folded
+// it under optimization: a NaN atlas V then skipped every guard and painted a full snow
+// crown, which `forest_actual_gpu_audited_atlas_crowns_trunks_ground_shelter_and_ablation`
+// caught. Bit-testing the exponent cannot be folded away. All-ones exponent = NaN or Inf,
+// and neither is an authored texel coordinate.
+fn forest_snow_uv_finite(uv: vec2<f32>) -> bool {
+    let x = bitcast<u32>(uv.x);
+    let y = bitcast<u32>(uv.y);
+    return (x & 0x7f800000u) != 0x7f800000u && (y & 0x7f800000u) != 0x7f800000u;
+}
+
 // Match the actual material's eight-sampler ABI (bit0 clamp U, bit1 clamp V).
 // Far triangular strips and canopy tops repeat outside [0,1]; their photographed
 // foliage repeats with them. Clamped near atlases never wrap into a bark region.
 fn forest_snow_sample_uv(uv: vec2<f32>, sampler_index: u32) -> vec2<f32> {
-    if (!all(abs(uv) < vec2<f32>(1e20)) || sampler_index > 7u) { return vec2<f32>(1e30); }
+    if (!forest_snow_uv_finite(uv) || !all(abs(uv) < vec2<f32>(1e20)) || sampler_index > 7u) {
+        return vec2<f32>(1e30);
+    }
     return vec2<f32>(select(fract(uv.x), clamp(uv.x,0.0,1.0), (sampler_index & 1u) != 0u),
         select(fract(uv.y), clamp(uv.y,0.0,1.0), (sampler_index & 2u) != 0u));
 }
@@ -90,7 +104,9 @@ fn forest_snow_crown_rect(uv: vec2<f32>, lo: vec2<f32>, hi: vec2<f32>) -> f32 {
 // never an inferred per-tree component or whole-cluster height. Full foliage
 // category 5 is restricted to foliage-only photos, including canopy-top cards.
 fn forest_snow_atlas_crown(uv: vec2<f32>, category: u32) -> f32 {
-    if (!all(abs(uv) < vec2<f32>(1e20)) || uv.y < 0.0 || uv.y > 1.01) { return 0.0; }
+    if (!forest_snow_uv_finite(uv) || !all(abs(uv) < vec2<f32>(1e20)) || uv.y < 0.0 || uv.y > 1.01) {
+        return 0.0;
+    }
     if (category == 1u) {
         if (uv.x < -0.002 || uv.x > 1.002) { return 0.0; }
         return 1.0 - smoothstep(0.27, 0.42, uv.y);
