@@ -4,9 +4,10 @@
 # The release omits prebuilt binary fixtures with undocumented provenance
 # (tests/fixtures/font, pac, jpg, pbo, rtm and friends; see ASSET_SOURCES.md),
 # so a hard `cmake -E copy_directory` per dir fails the whole tests-target
-# build on the first missing dir. Copy what exists, warn on what does not;
-# tests that need unrestored data abort at runtime via GetTestFixturePath
-# (documented, not silent) instead of breaking the build for everyone.
+# build on the first missing dir. Copy what exists, warn on what does not.
+# Tests that then ask for unrestored data SKIP themselves through
+# GetTestFixturePath and report it (docs/proteus/FIXTURE-SKIP-1.md), so the rest
+# of the suite still runs instead of the process dying at the first absent file.
 #
 # Usage: cmake -DFIXTURES_ROOT=<tests/fixtures> -DDEST_DIR=<.../fixtures>
 #        -P scripts/proteus/copy-fixtures.cmake
