@@ -14,6 +14,7 @@
 | --- | --- | --- | --- | --- |
 | G1 | Agent guide (AGENTS.md + CLAUDE.md pointer) | done-unverified | no | `proteus/G1-agent-guide` |
 | G2 | Asset and licence registry | done-unverified | no | `proteus/G2-asset-registry` |
+| G2a-fixture-strays | Fixture binaries that committed tests require were untracked; third-party Aspect_Ratio.hpp sat at the root | done-unverified | no | `proteus/DX12-1-dx12-upscaler-fixes` |
 | G3 | CI workflow + local check-all parity | done-unverified | no | `proteus/G3-ci` |
 | G3a-fmt-base | fmt-changed compared against origin/main, not the Proteus line (red on 169 files) | done-unverified | no | `proteus/DX12-1-dx12-upscaler-fixes` |
 | G4 | Roadmap and renderer-systems ledger | done-unverified | no | `proteus/G4-roadmap-ledger` |

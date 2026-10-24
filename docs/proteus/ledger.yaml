@@ -545,3 +545,24 @@ tickets:
     gpu_verified: false
     follow_ups:
       - owner CI: watch the next fmt-changed run to confirm it reports hunk counts on the line instead of 169 files
+  - id: G2a-fixture-strays
+    title: Fixture binaries that committed tests require were untracked; third-party Aspect_Ratio.hpp sat at the root
+    branch: proteus/DX12-1-dx12-upscaler-fixes
+    status: done-unverified
+    files:
+      - .gitignore
+      - tests/fixtures/mlod/p3dm_geometry_mass.p3d
+      - tests/fixtures/mlod/p3dm_mixed_signatures.p3d
+      - tests/fixtures/mlod/p3dm_two_lod.p3d
+      - tests/fixtures/mlod/p3dm_uv_bad_size.p3d
+      - tests/fixtures/mlod/p3dm_uv_collapse.p3d
+      - tests/fixtures/mlod/unknown_lod_signature.p3d
+      - tests/fixtures/paa/taggs_compressed_mip.paa
+      - tests/fixtures/paa/taggs_full.paa
+      - tests/fixtures/paa/taggs_none.paa
+      - tests/fixtures/paa/taggs_unknown.paa
+    toggle: n/a (fixture provenance + ignore rule)
+    evidence: "Regenerating both fixtures scripts is byte-stable: sha256 of all 26 files unchanged, tracked fuzz_*/synthetic_* included. [graphics][paa][ast-013] 24 cases: 23 passed, 1 skipped, 149 assertions, exit 0 against the taggs fixtures. MLOD p3dm tests still cannot run to completion in this checkout: mlod/complex_vehicle_mlod.p3d is deliberately absent (FIXTURE-SYNTH-1) and aborts the binary with exit 127. check-assets unaffected (it scans assets/ only), check-all OK."
+    gpu_verified: false
+    follow_ups:
+      - owner decision: retarget the complex_vehicle_mlod content tests to synthetic fixtures so the MLOD tag can run without the omitted corpus
