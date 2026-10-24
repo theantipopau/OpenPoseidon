@@ -33,4 +33,8 @@ imgui.ini
 
 # Third-party full conversion (PR MOD) extracted for testing; not ours to commit
 /@PRMOD/
+# @PRMOD's bin/ sources #include "..\..\Aspect_Ratio.hpp", so the mod's own header lands at
+# the repo root whenever that extraction is built. It is theirs (Faguss, ofp-faguss.com),
+# not ours, and it is not referenced by any engine or test source.
+/Aspect_Ratio.hpp
 /@ffsx2007/
