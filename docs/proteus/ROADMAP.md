@@ -15,6 +15,7 @@
 | G1 | Agent guide (AGENTS.md + CLAUDE.md pointer) | done-unverified | no | `proteus/G1-agent-guide` |
 | G2 | Asset and licence registry | done-unverified | no | `proteus/G2-asset-registry` |
 | G3 | CI workflow + local check-all parity | done-unverified | no | `proteus/G3-ci` |
+| G3a-fmt-base | fmt-changed compared against origin/main, not the Proteus line (red on 169 files) | done-unverified | no | `proteus/DX12-1-dx12-upscaler-fixes` |
 | G4 | Roadmap and renderer-systems ledger | done-unverified | no | `proteus/G4-roadmap-ledger` |
 
 ## Phase T — GPU verification tooling
@@ -69,3 +70,4 @@
 - UI-THEME-C1: Editor popups keep retail backdrop under themed buttons
 - RUST-TESTS-1: The four standing cargo test --lib failures (ABI pin, GI test-device limits, NaN atlas UV)
 - RUST-TESTS-1a: Parallel cargo test access violation (Vulkan validation layer race) + check-format cp1252 crash
+- RUST-TESTS-1b: CI runs the serial validation-layer pass on main

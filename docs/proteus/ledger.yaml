@@ -519,4 +519,29 @@ tickets:
     evidence: "gdb fault in vkNegotiateLoaderLayerInterfaceVersion (VkLayer_khronos_validation.dll); WGPU_VALIDATION=0 control 8/8 green; default parallel cargo test --lib 8/8 then 5/5 green (~20-24 s); WGPU_VALIDATION=1 --test-threads=1 723/0/5 exit 0 (145 s); check-format OK; check-all OK."
     gpu_verified: false
     follow_ups:
-      - CI: run the serial WGPU_VALIDATION=1 pass before releases touching renderer setup
+      - CI: watch the first main run for Lavapipe slowness (RUST-TESTS-1b)
+  - id: RUST-TESTS-1b
+    title: CI runs the serial validation-layer pass on main
+    branch: proteus/DX12-1-dx12-upscaler-fixes
+    status: done-unverified
+    files:
+      - .github/workflows/proteus.yml
+      - docs/proteus/RUST-TESTS-1.md
+    toggle: WGPU_VALIDATION=1 (job sets it; main pushes + manual dispatch only)
+    evidence: "workflow YAML parses (pyyaml); the job installs mesa-vulkan-drivers + vulkan-validationlayers, asserts VkLayer_khronos_validation.json exists, then runs cargo test -p wgpu_renderer --lib -- --test-threads=1 with WGPU_VALIDATION=1; the same command form was exercised locally (filtered serial pass, 42/0/1 exit 0). Not yet exercised on Actions."
+    gpu_verified: false
+    follow_ups:
+      - owner CI: confirm the first main run finishes inside the 90 min timeout on Lavapipe
+  - id: G3a-fmt-base
+    title: fmt-changed compared against origin/main, not the Proteus line (red on 169 files)
+    branch: proteus/DX12-1-dx12-upscaler-fixes
+    status: done-unverified
+    files:
+      - .github/workflows/proteus.yml
+      - scripts/proteus/check-all.ps1
+      - docs/proteus/CHANGELOG_BACKGROUND.md
+    toggle: n/a (gate base)
+    evidence: "origin/main is the fork upstream tip (5efc6a9) and sits 169 files behind the line: check-format --base origin/main reports drift at exit 1, while --base proteus/main sees the ticket's 5 working-tree files. Both CI and check-all.ps1 now use the Proteus line, with a HEAD^ fallback when the merge-base equals HEAD (a push to main itself). Simulated CI block: base 18c3f85, check-format OK (21 changed files)."
+    gpu_verified: false
+    follow_ups:
+      - owner CI: watch the next fmt-changed run to confirm it reports hunk counts on the line instead of 169 files

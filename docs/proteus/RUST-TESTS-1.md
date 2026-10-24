@@ -97,6 +97,14 @@ isolation, so sharing stays out.
 wgpu's own validation is unconditional; only the external layer's checks are opt-in. The
 comment on `headless_instance()` carries the same explanation for the next reader.
 
+**CI (RUST-TESTS-1b).** `proteus.yml` now has a `rust-tests-validation-layer` job that runs
+exactly that pass on `proteus/main` pushes and manual dispatch, because the fast job no longer
+loads the layer and its checks would otherwise rot unseen. The job installs
+`mesa-vulkan-drivers` and `vulkan-validationlayers`, and — since wgpu only logs a *debug*-level
+"unable to find layer" and carries on — asserts `VkLayer_khronos_validation.json` exists before
+testing, so a green run cannot quietly mean "the layer was absent". It is main-only because
+serial on software Vulkan is slow; the default parallel job stays the per-PR gate.
+
 **Tooling bug found on the way:** `check-format.py` used `text=True`, which decodes with the
 locale encoding (cp1252 on Windows). A diff that touched a line containing UTF-8 punctuation
 inside the new `temporal.rs` hunks crashed the gate with
@@ -106,5 +114,6 @@ with the default environment.
 
 ## Follow-ups
 
-- None open from this ticket. The layer is opt-in, not gone: run the serial
-  `WGPU_VALIDATION=1` pass before a release that touches renderer setup.
+- None open from this ticket. The layer is opt-in, not gone: locally the serial
+  `WGPU_VALIDATION=1 cargo test --lib -- --test-threads=1` pass is still the way to see its
+  best-practice checks, and CI (RUST-TESTS-1b) runs it on every `proteus/main` push.

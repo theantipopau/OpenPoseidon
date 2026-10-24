@@ -47,7 +47,18 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq clang-format
       - name: check format of changed hunks
         run: |
-          BASE="$(git merge-base HEAD origin/main 2>/dev/null || git rev-parse HEAD~1)"
+          # Compare against the Proteus line, not origin/main: origin/main is the fork's
+          # upstream tip and sits ~169 files behind the line, so merge-base against it
+          # re-checks every hunk on the line and fails on drift no ticket touched -- the
+          # exact failure this hunk scoping exists to prevent. Local check-all.ps1 uses
+          # the same base.
+          BASE="$(git merge-base HEAD origin/proteus/main 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || true)"
+          # A push to proteus/main leaves origin/proteus/main == HEAD, which would make the
+          # gate find nothing to check; fall back to the previous commit in that case.
+          if [ -z "$BASE" ] || [ "$BASE" = "$(git rev-parse HEAD)" ]; then
+            BASE="$(git rev-parse HEAD^)"
+          fi
+          echo "format base: $BASE"
           python scripts/proteus/check-format.py --base "$BASE"
 
   rust-tests:
@@ -70,6 +81,44 @@ jobs:
       - run: cargo test -p wgpu_renderer --lib
         env:
           WGPU_BACKEND: vulkan
+
+  rust-tests-validation-layer:
+    # The Khronos validation layer only runs when asked for (see headless_instance() in
+    # rust/src/lib.rs): it is not safe to initialise from several test threads at once, so
+    # its pass must be serial, and serial on software Vulkan is slow. Hence main + manual
+    # dispatch, not every PR. This is the job that keeps the layer's best-practice checks
+    # from rotting now that the default suite no longer loads it.
+    name: rust unit tests (validation layer, serial)
+    if: github.ref == 'refs/heads/proteus/main' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/rustup@v1
+        with:
+          toolchain: stable
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          # Separate key: this job writes the same target dir with different env vars, so
+          # it must not hand the fast lane a cache built by the serial pass.
+          key: ${{ runner.os }}-cargo-layer-${{ hashFiles('**/Cargo.lock') }}
+      - name: software Vulkan + Khronos validation layer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq mesa-vulkan-drivers vulkan-validationlayers
+      - name: layer must be present, or the pass would silently prove nothing
+        run: |
+          ls /usr/share/vulkan/explicit_layer.d/VkLayer_khronos_validation.json \
+            || ls /usr/share/vulkan/implicit_layer.d/VkLayer_khronos_validation.json
+      - name: serial pass with the SDK layer enabled
+        run: cargo test -p wgpu_renderer --lib -- --test-threads=1
+        env:
+          WGPU_BACKEND: vulkan
+          WGPU_VALIDATION: '1'
 
   build-linux:
     name: build (linux-x64-clang-rwdi)

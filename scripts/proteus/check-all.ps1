@@ -26,7 +26,9 @@ if ($LASTEXITCODE -ne 0) { $failed = $true }
 Write-Host '== format (changed hunks vs proteus/main) =='
 Set-Location $root
 $base = (git merge-base HEAD proteus/main 2>$null)
-if (-not $base) { $base = 'HEAD~1' }
+# On proteus/main itself the merge-base is HEAD, which would check nothing at all; compare
+# against the previous commit instead (CI does the same).
+if (-not $base -or $base -eq (git rev-parse HEAD)) { $base = 'HEAD~1' }
 # Hunk-scoped (check-format.py): plain rustfmt recurses from a crate root into
 # every module and clang-format flags whole files, so both fail on drift the
 # ticket never touched. New files: `git add -N <file>` (intent-to-add) first so
