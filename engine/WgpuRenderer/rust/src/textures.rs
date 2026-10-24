@@ -1028,8 +1028,7 @@ mod tests {
     // skips) when there is no adapter or the adapter cannot do binding arrays -- the same
     // convention as gfx3d::cull::tests::headless.
     fn bindless_headless() -> Option<(wgpu::Device, wgpu::Queue)> {
-        let instance =
-            wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+        let instance = crate::headless_instance();
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::default(),
             compatible_surface: None,
@@ -1557,8 +1556,7 @@ mod slot_lease_tests {
     // The bindless layout needs TEXTURE_BINDING_ARRAY, which the default headless
     // device does not enable; request it explicitly (skip when unsupported).
     fn headless_bindless() -> Option<(wgpu::Device, wgpu::Queue)> {
-        let instance =
-            wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+        let instance = crate::headless_instance();
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::default(),
             compatible_surface: None,

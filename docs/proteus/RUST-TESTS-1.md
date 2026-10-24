@@ -54,7 +54,7 @@ away; the old magnitude test stays as a belt-and-braces bound on huge-but-finite
 ## Verification
 
 - `cargo test --lib -- --test-threads=1`: **723 passed / 0 failed / 5 ignored**, exit 0
-  (was 719/4, plus a parallel-run access violation that the serial pass does not reproduce).
+  (was 719/4, plus the parallel-run access violation fixed in the follow-up below).
 - `cargo test --lib abi_tests`: 13/13, exit 0.
 - The four named tests individually: 3/3 then 1/1, exit 0.
 - `check-format.py --base <merge-base>`: OK.
@@ -62,7 +62,49 @@ away; the old magnitude test stays as a belt-and-braces bound on huge-but-finite
 - No GPU capture was taken: these are device-init and shader-module assertions, not frames.
   The NaN fix is proved numerically by the acceptance test that caught it.
 
+## Follow-up: the parallel access violation, root-caused (RUST-TESTS-1a)
+
+The serial pass was green but plain `cargo test --lib` segfaulted on roughly two of every
+five runs (`0xc0000005`). It was not in the renderer.
+
+**Reproduction.** Five consecutive parallel runs: 3 green, 2 segfaults. Attaching gdb to a
+run that failed put the fault inside the Vulkan SDK's validation layer:
+
+```
+Thread 572 received signal SIGSEGV
+0x00007ffc571664ad in vkNegotiateLoaderLayerInterfaceVersion ()
+   from C:\VulkanSDK\1.4.357.0\Bin\VkLayer_khronos_validation.dll
+```
+
+then `wcsrchr` and layer init frames below it. A debug build makes wgpu request
+`InstanceFlags::VALIDATION`, and every test helper built its own `wgpu::Instance`; several
+test threads therefore initialised that layer at once. A control run with
+`WGPU_VALIDATION=0` was green **8/8**, which pins the fault on the optional SDK layer rather
+than on our API use.
+
+**What did not work.** One process-wide instance shared by every test (`OnceLock`) made it
+*worse* -- five segfaults in eight runs -- and, with the layer off, produced its own
+flakiness (one run with 9 failures, another with 1). The suite depends on per-test instance
+isolation, so sharing stays out.
+
+**Fix.** Every helper now builds its instance through one `headless_instance()` helper
+(`lib.rs`), which drops `VALIDATION` unless the operator asks for it:
+
+- default `cargo test --lib`: parallel, no SDK layer, **8/8 then 5/5 green**, ~20-24 s.
+- `WGPU_VALIDATION=1 cargo test --lib -- --test-threads=1`: the layer still runs, 723/0/5
+  exit 0 in 145 s, so its best-practice checks remain available as a serial pass.
+
+wgpu's own validation is unconditional; only the external layer's checks are opt-in. The
+comment on `headless_instance()` carries the same explanation for the next reader.
+
+**Tooling bug found on the way:** `check-format.py` used `text=True`, which decodes with the
+locale encoding (cp1252 on Windows). A diff that touched a line containing UTF-8 punctuation
+inside the new `temporal.rs` hunks crashed the gate with
+`AttributeError: 'NoneType' object has no attribute 'splitlines'` instead of reporting a
+verdict. `run()` now decodes UTF-8 explicitly with `errors="replace"`, and the gate passes
+with the default environment.
+
 ## Follow-ups
 
-- The parallel `cargo test --lib` access violation is still unexplained; serial runs are
-  green. Reproducing it needs a debugger on the real-device tests, which is an owner action.
+- None open from this ticket. The layer is opt-in, not gone: run the serial
+  `WGPU_VALIDATION=1` pass before a release that touches renderer setup.

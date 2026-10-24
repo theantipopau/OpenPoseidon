@@ -5038,8 +5038,7 @@ pub(crate) mod tests {
     // gets a bind group. Skips silently with no adapter.
     #[test]
     fn gpu_group1_layout_builds_on_a_real_device() {
-        let instance =
-            wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+        let instance = crate::headless_instance();
         let Ok(adapter) =
             pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::default(),
@@ -5219,8 +5218,7 @@ pub(crate) mod tests {
     // Best-effort headless device; returns None (test skips) when no adapter is available
     // (e.g. CI without a GPU).
     pub(crate) fn headless() -> Option<(wgpu::Device, wgpu::Queue)> {
-        let instance =
-            wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+        let instance = crate::headless_instance();
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::default(),
             compatible_surface: None,

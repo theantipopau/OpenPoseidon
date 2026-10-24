@@ -72,6 +72,30 @@ use crate::tonemap::Tonemap;
 use crate::water_backend::WaterBackend;
 use crate::water_visibility::WaterVisibility;
 
+/// The headless instance every test helper builds.
+///
+/// A debug build makes wgpu enable the Khronos validation layer, and that layer is not safe
+/// to initialise from the several test threads that create devices in parallel: the suite
+/// segfaults inside `vkNegotiateLoaderLayerInterfaceVersion` (`VkLayer_khronos_validation.dll`,
+/// Vulkan SDK 1.4.357) on two of five `cargo test --lib` runs, with every test that finished
+/// green. The crash is in the layer, not in the renderer -- a shared instance made it more
+/// frequent (five of eight runs), and `WGPU_VALIDATION=0` made it vanish, which is what pins
+/// it on the optional SDK layer rather than on our API use.
+///
+/// So each test keeps its own instance (the suite depends on that isolation) and the layer is
+/// dropped unless asked for. wgpu's own validation always runs; the layer's best-practice
+/// checks are still available as an explicit, serial pass:
+/// `WGPU_VALIDATION=1 cargo test --lib -- --test-threads=1`.
+#[cfg(test)]
+pub(crate) fn headless_instance() -> wgpu::Instance {
+    let mut desc = wgpu::InstanceDescriptor::new_without_display_handle_from_env();
+    let layer_requested = std::env::var("WGPU_VALIDATION").is_ok_and(|v| v != "0");
+    if !layer_requested {
+        desc.flags.remove(wgpu::InstanceFlags::VALIDATION);
+    }
+    wgpu::Instance::new(desc)
+}
+
 // Offscreen HDR scene target format (see docs/hdr-pipeline-plan.md §0.2). Alpha kept
 // for blending; full float precision to avoid banding in dark skies at night.
 const HDR_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba16Float;

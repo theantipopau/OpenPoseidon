@@ -493,5 +493,30 @@ tickets:
     evidence: "cargo test --lib --test-threads=1 723 passed / 0 failed / 5 ignored exit 0 (was 719/4); abi_tests 13/13; check-format OK; check-all OK."
     gpu_verified: false
     follow_ups:
-      - owner debug: parallel cargo test --lib access violation still unexplained (serial green)
       - owner visual: NaN-free forest snow on DX12 in a real forest shot
+  - id: RUST-TESTS-1a
+    title: Parallel cargo test access violation (Vulkan validation layer race) + check-format cp1252 crash
+    branch: proteus/DX12-1-dx12-upscaler-fixes
+    status: done-unverified
+    files:
+      - engine/WgpuRenderer/rust/src/lib.rs
+      - engine/WgpuRenderer/rust/src/far/mod.rs
+      - engine/WgpuRenderer/rust/src/gfx3d/cull.rs
+      - engine/WgpuRenderer/rust/src/gfx3d/gi.rs
+      - engine/WgpuRenderer/rust/src/gfx3d/mod.rs
+      - engine/WgpuRenderer/rust/src/godrays.rs
+      - engine/WgpuRenderer/rust/src/grass/mod.rs
+      - engine/WgpuRenderer/rust/src/rain_water.rs
+      - engine/WgpuRenderer/rust/src/sky/mod.rs
+      - engine/WgpuRenderer/rust/src/temporal.rs
+      - engine/WgpuRenderer/rust/src/textures.rs
+      - engine/WgpuRenderer/rust/src/water/foam_cadence_tests.rs
+      - engine/WgpuRenderer/rust/src/water/reference_tests.rs
+      - engine/WgpuRenderer/rust/src/water/scale_tests.rs
+      - scripts/proteus/check-format.py
+      - docs/proteus/RUST-TESTS-1.md
+    toggle: WGPU_VALIDATION=1 re-enables the SDK layer (serial pass required)
+    evidence: "gdb fault in vkNegotiateLoaderLayerInterfaceVersion (VkLayer_khronos_validation.dll); WGPU_VALIDATION=0 control 8/8 green; default parallel cargo test --lib 8/8 then 5/5 green (~20-24 s); WGPU_VALIDATION=1 --test-threads=1 723/0/5 exit 0 (145 s); check-format OK; check-all OK."
+    gpu_verified: false
+    follow_ups:
+      - CI: run the serial WGPU_VALIDATION=1 pass before releases touching renderer setup

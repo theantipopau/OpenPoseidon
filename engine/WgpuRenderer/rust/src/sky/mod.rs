@@ -201,8 +201,7 @@ mod sky_device_tests {
     // Best-effort headless device; the test skips when no adapter is available (CI without
     // a GPU). Same shape as godrays.rs::tests::headless.
     fn headless() -> Option<(wgpu::Device, wgpu::Queue)> {
-        let instance =
-            wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+        let instance = crate::headless_instance();
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::default(),
             compatible_surface: None,

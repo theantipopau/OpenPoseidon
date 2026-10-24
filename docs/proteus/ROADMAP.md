@@ -68,3 +68,4 @@
 - UI-THEME-C: Proteus theme on the mission-editor dialogs (no art backdrop)
 - UI-THEME-C1: Editor popups keep retail backdrop under themed buttons
 - RUST-TESTS-1: The four standing cargo test --lib failures (ABI pin, GI test-device limits, NaN atlas UV)
+- RUST-TESTS-1a: Parallel cargo test access violation (Vulkan validation layer race) + check-format cp1252 crash

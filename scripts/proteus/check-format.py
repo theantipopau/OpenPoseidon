@@ -39,7 +39,13 @@ FUZZ_CPP = 0
 
 
 def run(cmd, **kw):
-    return subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT, **kw)
+    # Decode as UTF-8 explicitly: `text=True` uses the locale encoding, and on Windows
+    # that is cp1252, which raises on the UTF-8 punctuation (curly quotes, arrows) that
+    # the docs and comments already contain. A diff touching one of those lines crashed
+    # this gate with an AttributeError on stdout=None instead of reporting a verdict.
+    return subprocess.run(
+        cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=ROOT, **kw
+    )
 
 
 def changed_files(base):

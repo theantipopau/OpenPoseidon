@@ -1622,30 +1622,52 @@ mod tests {
     // static one zero — so an all-zeros output cannot pass as success.
     #[test]
     fn cloud_history_mask_covers_terrain_and_clears_when_disabled() {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle());
+        let instance = crate::headless_instance();
         let adapter = pollster::block_on(instance.request_adapter(&Default::default()))
             .expect("GPU adapter required for history mask regression");
         let (device, queue) = pollster::block_on(adapter.request_device(&Default::default()))
             .expect("GPU device required for history mask regression");
-        let size = wgpu::Extent3d { width: 1, height: 1, depth_or_array_layers: 1 };
+        let size = wgpu::Extent3d {
+            width: 1,
+            height: 1,
+            depth_or_array_layers: 1,
+        };
         let depth = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("mask_test_depth"), size, mip_level_count: 1, sample_count: 1,
-            dimension: wgpu::TextureDimension::D2, format: wgpu::TextureFormat::Depth32Float,
+            label: Some("mask_test_depth"),
+            size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Depth32Float,
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::RENDER_ATTACHMENT,
             view_formats: &[],
         });
         let depth_view = depth.create_view(&Default::default());
         let cloud = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("mask_test_cloud"), size, mip_level_count: 1, sample_count: 1,
-            dimension: wgpu::TextureDimension::D2, format: wgpu::TextureFormat::Rgba8Unorm,
+            label: Some("mask_test_cloud"),
+            size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
-        queue.write_texture(cloud.as_image_copy(), &[0, 0, 0, 64],
-            wgpu::TexelCopyBufferLayout { offset: 0, bytes_per_row: Some(4), rows_per_image: Some(1) }, size);
+        queue.write_texture(
+            cloud.as_image_copy(),
+            &[0, 0, 0, 64],
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(4),
+                rows_per_image: Some(1),
+            },
+            size,
+        );
         let cloud_view = cloud.create_view(&Default::default());
         let readback = device.create_buffer(&wgpu::BufferDescriptor {
-            label: None, size: 256, mapped_at_creation: false,
+            label: None,
+            size: 256,
+            mapped_at_creation: false,
             usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
         });
         let mut t = Temporal::from_env();
@@ -1658,45 +1680,77 @@ mod tests {
         // Same depth generation across all runs: adding/removing the cloud view
         // must invalidate the bind independently, and zero tuning must clear it.
         for (cloud, strength, expected) in [
-            (None, 1.0, 0u8), (Some(&cloud_view), 1.0, 191),
-            (Some(&cloud_view), 0.5, 96), (Some(&cloud_view), 0.0, 0), (None, 1.0, 0),
+            (None, 1.0, 0u8),
+            (Some(&cloud_view), 1.0, 191),
+            (Some(&cloud_view), 0.5, 96),
+            (Some(&cloud_view), 0.0, 0),
+            (None, 1.0, 0),
         ] {
             t.reactive_sky = strength;
             let mut encoder = device.create_command_encoder(&Default::default());
             drop(encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: None, color_attachments: &[],
+                label: None,
+                color_attachments: &[],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                     view: &depth_view,
-                    depth_ops: Some(wgpu::Operations { load: wgpu::LoadOp::Clear(0.5), store: wgpu::StoreOp::Store }),
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(0.5),
+                        store: wgpu::StoreOp::Store,
+                    }),
                     stencil_ops: None,
-                }), timestamp_writes: None, occlusion_query_set: None, multiview_mask: None,
+                }),
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
             }));
-            t.render_history_control(&device, &queue, &mut encoder, &depth_view, 1, (1, 1), None, cloud);
-            encoder.copy_texture_to_buffer(t.history_control_texture().unwrap().as_image_copy(),
-                wgpu::TexelCopyBufferInfo { buffer: &readback,
-                    layout: wgpu::TexelCopyBufferLayout { offset: 0, bytes_per_row: Some(256), rows_per_image: Some(1) } }, size);
+            t.render_history_control(
+                &device,
+                &queue,
+                &mut encoder,
+                &depth_view,
+                1,
+                (1, 1),
+                None,
+                cloud,
+            );
+            encoder.copy_texture_to_buffer(
+                t.history_control_texture().unwrap().as_image_copy(),
+                wgpu::TexelCopyBufferInfo {
+                    buffer: &readback,
+                    layout: wgpu::TexelCopyBufferLayout {
+                        offset: 0,
+                        bytes_per_row: Some(256),
+                        rows_per_image: Some(1),
+                    },
+                },
+                size,
+            );
             queue.submit([encoder.finish()]);
             let (tx, rx) = std::sync::mpsc::channel();
-            readback.slice(..).map_async(wgpu::MapMode::Read, move |r| { tx.send(r).unwrap(); });
+            readback.slice(..).map_async(wgpu::MapMode::Read, move |r| {
+                tx.send(r).unwrap();
+            });
             device.poll(wgpu::PollType::wait_indefinitely()).unwrap();
             rx.recv().unwrap().unwrap();
             let actual = readback.slice(..).get_mapped_range()[0];
             readback.unmap();
-            assert!(actual.abs_diff(expected) <= 1, "mask {actual}, expected {expected}");
+            assert!(
+                actual.abs_diff(expected) <= 1,
+                "mask {actual}, expected {expected}"
+            );
         }
     }
 
     #[test]
     fn velocity_pass_runs_headlessly_and_reprojection_answers_both_ways() {
-        let instance =
-            wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
-        let Ok(adapter) = pollster::block_on(instance.request_adapter(
-            &wgpu::RequestAdapterOptions {
+        let instance = crate::headless_instance();
+        let Ok(adapter) =
+            pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::default(),
                 compatible_surface: None,
                 force_fallback_adapter: false,
-            },
-        )) else {
+            }))
+        else {
             return; // no GPU on this runner
         };
         let Ok((device, queue)) =

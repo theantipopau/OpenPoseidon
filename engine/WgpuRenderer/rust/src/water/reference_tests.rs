@@ -5,8 +5,7 @@ use wgpu::util::DeviceExt;
 
 #[test]
 fn gpu_reference_presets_have_distinct_meter_scales() {
-    let instance =
-        wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+    let instance = crate::headless_instance();
     let Ok(adapter) = pollster::block_on(instance.request_adapter(&Default::default())) else {
         eprintln!("SKIP FFT calibration: no GPU");
         return;

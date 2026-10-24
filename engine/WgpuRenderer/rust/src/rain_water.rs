@@ -1355,8 +1355,7 @@ mod full_draw_tests {
     // or bypass the front-facing, native-bed or physical-cover discards.
     #[test]
     fn actual_gpu_complete_pool_draw_visibility_and_admission() {
-        let instance =
-            wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+        let instance = crate::headless_instance();
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             force_fallback_adapter: false,
             ..Default::default()

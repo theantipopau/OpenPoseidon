@@ -22,8 +22,7 @@ fn block<'a>(source: &'a str, declaration: &str) -> &'a str {
 
 #[test]
 fn gpu_ocean_scale_normals_and_foam_follow_displacement() {
-    let instance =
-        wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+    let instance = crate::headless_instance();
     let Ok(adapter) = pollster::block_on(instance.request_adapter(&Default::default())) else {
         eprintln!("SKIP ocean GPU scale probe: no adapter (not runtime acceptance)");
         return;
@@ -253,8 +252,7 @@ fn probe(@builtin(global_invocation_id) id: vec3<u32>) {
 
 #[test]
 fn gpu_foam_coverage_equal_elapsed_time_and_pause() {
-    let instance =
-        wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+    let instance = crate::headless_instance();
     let Ok(adapter) = pollster::block_on(instance.request_adapter(&Default::default())) else {
         eprintln!("SKIP foam GPU probe: no adapter");
         return;
@@ -345,8 +343,7 @@ fn probe(@builtin(global_invocation_id) id: vec3<u32>) {
 
 #[test]
 fn gpu_surf_arrival_bounds_and_exposure() {
-    let instance =
-        wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+    let instance = crate::headless_instance();
     let Ok(adapter) = pollster::block_on(instance.request_adapter(&Default::default())) else {
         eprintln!("SKIP surf GPU probe");
         return;
@@ -524,14 +521,14 @@ fn probe(@builtin(global_invocation_id) id: vec3<u32>) {
 
 #[test]
 fn gpu_curling_sheet_overhang_collapse_and_world_anchor() {
-    let instance =
-        wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+    let instance = crate::headless_instance();
     let Ok(adapter) = pollster::block_on(instance.request_adapter(&Default::default())) else {
         eprintln!("SKIP foam GPU probe: no adapter");
         return;
     };
     let (device, queue) = pollster::block_on(adapter.request_device(&Default::default())).unwrap();
-    let mut source = include_str!("curling_breaker.wgsl").replace("#define_import_path water_curling_breaker", "");
+    let mut source = include_str!("curling_breaker.wgsl")
+        .replace("#define_import_path water_curling_breaker", "");
     source.push_str(r#"
 @group(0) @binding(0) var<storage,read_write> result: array<vec4<f32>>;
 @compute @workgroup_size(1)

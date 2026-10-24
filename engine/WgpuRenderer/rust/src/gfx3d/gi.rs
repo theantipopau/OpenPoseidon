@@ -763,8 +763,7 @@ mod tests {
     // headless device (default limits, 4 groups) refuses its shader outright. This one asks
     // for the 5 the renderer asks for.
     fn headless_five_groups() -> Option<(wgpu::Device, wgpu::Queue)> {
-        let instance =
-            wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+        let instance = crate::headless_instance();
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::default(),
             compatible_surface: None,

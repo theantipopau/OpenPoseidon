@@ -4,8 +4,7 @@ use bytemuck::Zeroable;
 use wgpu::util::DeviceExt;
 #[test]
 fn gpu_foam_pipeline_pause_cadence_and_teleport() {
-    let instance =
-        wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+    let instance = crate::headless_instance();
     let Ok(adapter) = pollster::block_on(instance.request_adapter(&Default::default())) else {
         eprintln!("SKIP history GPU pipeline");
         return;

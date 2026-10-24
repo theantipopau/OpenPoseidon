@@ -13640,8 +13640,7 @@ mod staging_tests {
 // the first frame someone enables WGR_TEMPORAL in-game. Skips silently with no adapter.
 #[test]
 fn velocity_obj_pipelines_build_on_a_real_device() {
-    let instance =
-        wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+    let instance = crate::headless_instance();
     let Ok(adapter) = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
         power_preference: wgpu::PowerPreference::default(),
         compatible_surface: None,
