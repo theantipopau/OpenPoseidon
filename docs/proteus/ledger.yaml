@@ -566,3 +566,30 @@ tickets:
     gpu_verified: false
     follow_ups:
       - owner decision: retarget the complex_vehicle_mlod content tests to synthetic fixtures so the MLOD tag can run without the omitted corpus
+  - id: FIXTURE-SKIP-1
+    title: An absent fixture SKIPs its own cases instead of aborting the whole test binary
+    branch: proteus/DX12-1-dx12-upscaler-fixes
+    status: done-unverified
+    files:
+      - tests/unit/engine/Poseidon/test_fixtures.hpp
+      - tests/unit/engine/Poseidon/Support/test_fixtures.hpp
+      - tests/unit/engine/Poseidon/CMakeLists.txt
+      - scripts/proteus/copy-fixtures.cmake
+      - tests/unit/engine/Poseidon/Graphics/test_jpg_import.cpp
+      - tests/unit/engine/Poseidon/Graphics/Textures/test_sinkhole_texture_formats.cpp
+      - tests/unit/engine/Poseidon/World/test_landscape_object_ids.cpp
+      - tests/unit/engine/Poseidon/TcPbo/test_tc_pbo_api.cpp
+      - tests/unit/engine/Poseidon/Graphics/Rendering/test_cloudlet_depth_contract.cpp
+      - tests/unit/engine/Poseidon/Graphics/Rendering/test_archive_source_binding.cpp
+      - tests/unit/engine/Poseidon/Asset/Probes/test_wave_to_lip.cpp
+      - tests/unit/engine/Poseidon/Audio/test_campaign_sound_voice_suffix.cpp
+      - tests/unit/engine/Poseidon/Graphics/test_shutdown_order_audit.cpp
+      - engine/Poseidon/World/SimStageEvidence.cpp
+      - docs/proteus/FIXTURE-SKIP-1.md
+    toggle: n/a (test infrastructure)
+    evidence: "GET_FIXTURE/REQUIRE_FIXTURE skip the calling case and an atexit reporter prints the 34 absent files; Support/test_fixtures.hpp forwards to the single definition; PoseidonCoreTests stages fixtures through copy-fixtures.cmake (it could not link before: raw copy_directory on the absent tests/fixtures/pbo). PoseidonTests 3,996 cases: 3,765 passed, 3 failed, 228 skipped; 888,085 assertions: 888,076 passed, 9 failed (was exit 127 with 0 cases and 0 assertions at p3d/simple_proxy.p3d). PoseidonCoreTests builds and runs: 895 cases, 867 passed, 1 failed, 27 skipped. I-05's fixed 2000-char window and two sim-stage census omissions were fixed on the way; 4 failures left visible on purpose (dev-panel ImGui:: wrapper bypasses, DrainInstanceOps model-lookup ordering, local DayZ corpus revisions, QIFStreamB mod path escape)."
+    gpu_verified: false
+    follow_ups:
+      - add a C++ test job to CI (build-windows builds PoseidonGame only, so ctest runs nothing)
+      - open tickets for the 4 failures kept visible by this change
+      - BUILDING.md documents a build preset that CMakePresets.json does not define

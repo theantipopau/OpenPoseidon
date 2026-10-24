@@ -101,7 +101,8 @@ TEST_CASE("PNG: a blended alpha survives decode and is reported as alpha", "[Gra
 {
     TextureSourceJPEG src;
     PacLevelMem mips[kMaxMips];
-    REQUIRE(src.Init(GET_FIXTURE("png/rgba_blend_32x32.png"), mips, kMaxMips));
+    const char* fixture = GET_FIXTURE("png/rgba_blend_32x32.png");
+    REQUIRE(src.Init(fixture, mips, kMaxMips));
     REQUIRE(src.GetFormat() == PacARGB8888);
     REQUIRE(src.IsAlpha());
     REQUIRE_FALSE(src.IsTransparent());
@@ -120,7 +121,8 @@ TEST_CASE("PNG: a 0/255 alpha is a punch-through cut-out", "[Graphics][PNG][sink
 {
     TextureSourceJPEG src;
     PacLevelMem mips[kMaxMips];
-    REQUIRE(src.Init(GET_FIXTURE("png/rgba_cutout_32x32.png"), mips, kMaxMips));
+    const char* fixture = GET_FIXTURE("png/rgba_cutout_32x32.png");
+    REQUIRE(src.Init(fixture, mips, kMaxMips));
     REQUIRE_FALSE(src.IsAlpha());
     REQUIRE(src.IsTransparent());
 }
@@ -131,7 +133,8 @@ TEST_CASE("PNG: RGB and all-255 RGBA images stay opaque", "[Graphics][PNG][sinkh
     {
         TextureSourceJPEG src;
         PacLevelMem mips[kMaxMips];
-        REQUIRE(src.Init(GET_FIXTURE(f), mips, kMaxMips));
+        const char* fixture = GET_FIXTURE(f);
+        REQUIRE(src.Init(fixture, mips, kMaxMips));
         REQUIRE_FALSE(src.IsAlpha());
         REQUIRE_FALSE(src.IsTransparent());
         // ForceAlpha is a no-op: the renderers call it on every 32-bit format, and an

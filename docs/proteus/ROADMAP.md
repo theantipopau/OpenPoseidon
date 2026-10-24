@@ -53,6 +53,7 @@
 | ID | Title | Status | GPU | Branch |
 | --- | --- | --- | --- | --- |
 | FIXTURE-FONT-1 | Authored font fixtures + tolerant post-build copy | done-unverified | no | `proteus/main (direct)` |
+| FIXTURE-SKIP-1 | An absent fixture SKIPs its own cases instead of aborting the whole test binary | done-unverified | no | `proteus/DX12-1-dx12-upscaler-fixes` |
 | FIXTURE-SYNTH-1 | Synthetic texture family + shape fuzz reproducers; wire test_mlod_tagg | done-unverified | no | `proteus/main (direct)` |
 | FIXTURE-VOICE-1 | Restored omitted voice fixture files; 2 failing UI tests fixed | done-unverified | no | `proteus/main (direct)` |
 | FSR31-ACCUM | FSR 3.1 consumes the agreed temporal accumulator (v2 core) | done-unverified | no | `proteus/DX12-1-dx12-upscaler-fixes` |
