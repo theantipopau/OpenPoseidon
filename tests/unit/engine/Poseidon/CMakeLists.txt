@@ -362,6 +362,26 @@ list(APPEND POSEIDON_TEST_SOURCES
 
 
     # P3D format tests
+    #
+    # The phase-by-phase P3D/MLOD cases were unbuilt from the moment the source
+    # release dropped the licensed models they pin: every one of them opens a
+    # fixture that is not here, so they were left out of the target rather than
+    # aborting the binary. P3D-CORPUS-1 authors that corpus, so they are built now.
+    Asset/Formats/P3D/test_p3d_header.cpp
+    Asset/Formats/P3D/test_p3d_empty.cpp
+    Asset/Formats/P3D/test_p3d_sky_plane.cpp
+    Asset/Formats/P3D/test_p3d_complex_vehicle.cpp
+    Asset/Formats/P3D/test_p3d_proxy_structure.cpp
+    Asset/Formats/P3D/test_p3d_crew_proxy_lod0.cpp
+    Asset/Formats/P3D/test_p3d_small_models.cpp
+    Asset/Formats/P3D/test_odol_loader.cpp
+    Asset/Formats/P3D/test_odol_mlod_parity.cpp
+    Asset/Formats/P3D/test_loader_cross_platform.cpp
+    Asset/Formats/P3D/MLOD/test_mlod_header.cpp
+    Asset/Formats/P3D/MLOD/test_mlod_sp3x.cpp
+    Asset/Formats/P3D/MLOD/test_mlod_faces.cpp
+    Asset/Formats/P3D/MLOD/test_mlod_parity.cpp
+    BinaryFormats/test_p3d_mlod_to_odol_conversion.cpp
     Asset/Formats/P3D/test_mlod_loader.cpp
     Asset/Formats/P3D/test_mlod_writer.cpp
     Asset/Formats/P3D/MLOD/test_mlod_lod_dispatch.cpp

@@ -5,6 +5,7 @@
 #include <Poseidon/Asset/Formats/P3D/MLODLoader.hpp>
 #include <Poseidon/World/Model/Model.hpp>
 #include "../../../test_fixtures.hpp"
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -58,8 +59,11 @@ TEST_CASE("MLODLoader: Basic loading - complex_vehicle_mlod.p3d", "[mlod][loader
     REQUIRE(model.sourceVersion == 11); // 1.1
     REQUIRE(model.sourcePath == GET_FIXTURE("mlod/complex_vehicle_mlod.p3d"));
 
-    // LOD count
-    REQUIRE(model.lodLevels.size() == 3);
+    // LOD count. The container declares 19 and the loader keeps every one it can
+    // decode -- the three-LOD figure this used to assert belonged to a file the
+    // corpus no longer ships, and the parity cases compare it with the ODOL
+    // build of the same model, which is 19.
+    REQUIRE(model.lodLevels.size() == 19);
 
     // Model should be compiled
     REQUIRE(model.isCompiled());
@@ -85,10 +89,12 @@ TEST_CASE("MLODLoader: Geometry data", "[mlod][loader]")
     int totalFaces = static_cast<int>(mesh.triangles.size() + mesh.quads.size());
     REQUIRE(totalFaces >= 4);
 
-    // Verify some vertices have valid positions
-    REQUIRE(mesh.vertices[0].position.x != 0.0f);
-    REQUIRE(mesh.vertices[0].position.y != 0.0f);
-    REQUIRE(mesh.vertices[0].position.z != 0.0f);
+    // Verify some vertices have valid positions. Testing "not zero" passed only by
+    // accident of the removed model's first point; finiteness is the property that
+    // actually matters to every consumer.
+    REQUIRE(std::isfinite(mesh.vertices[0].position.x));
+    REQUIRE(std::isfinite(mesh.vertices[0].position.y));
+    REQUIRE(std::isfinite(mesh.vertices[0].position.z));
 
     // Verify triangles have valid indices
     REQUIRE(mesh.triangles[0].indices[0] < mesh.vertices.size());
@@ -165,9 +171,16 @@ TEST_CASE("MLODLoader: Proxies (generated)", "[mlod][loader]")
 
     const auto& mesh = model.lodLevels[0].mesh;
 
-    // The synthetic fixture has no proxy selections; compile should preserve a
-    // valid empty proxy list.
+    // SP3X carries no proxy records, so every proxy in an MLOD model comes from a
+    // `proxy:` named selection of exactly three points. This model's selections
+    // span points that several faces share, and each shared point expands to one
+    // vertex per face corner -- so its proxy selections resolve to more than three
+    // vertices and cannot form a frame. The extraction itself is covered by
+    // mlod/proxy_probe.p3d, whose marker triangle is the only user of its points.
     REQUIRE(mesh.proxies.empty());
+    for (const auto& selection : mesh.selections)
+        if (selection.name.rfind("proxy:", 0) == 0)
+            REQUIRE(selection.vertexIndices.size() != 3);
 }
 
 TEST_CASE("MLODLoader: Bounding volumes", "[mlod][loader]")
@@ -191,7 +204,7 @@ TEST_CASE("MLODLoader: Multiple LODs", "[mlod][loader]")
     auto model = Poseidon::Asset::Formats::MLODLoader::load(GET_FIXTURE("mlod/complex_vehicle_mlod.p3d"));
     model.compile();
 
-    REQUIRE(model.lodLevels.size() == 3);
+    REQUIRE(model.lodLevels.size() == 19);
 
     // LOD 0 should have the most detail
     REQUIRE(model.lodLevels[0].mesh.vertices.size() > 0);

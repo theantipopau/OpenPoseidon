@@ -281,7 +281,12 @@ TEST_CASE("MLOD proxies reach the IR with identity and frame", "[model][proxy][a
 {
     // Extraction existed but was never called, so MLOD models arrived with no
     // proxies at all -- nothing attached, no weapons, no crew.
-    const char* candidates[] = {"p3d/simple_proxy.p3d", "p3d/proxy_structure.p3d", "p3d/crew_proxy.p3d"};
+    // MLOD only: the extraction is MLOD's own, because SP3X has no proxy records
+    // at all. proxy_probe.p3d is the minimal legal case -- one marker triangle
+    // whose three points no other face uses, so it resolves to exactly three
+    // vertices. The p3d/* models are the compiled ODOL form of the same ideas and
+    // carry their proxies natively, so MLODLoader rightly refuses them.
+    const char* candidates[] = {"mlod/proxy_probe.p3d", "mlod/complex_vehicle_mlod.p3d"};
     size_t proxiesSeen = 0;
     for (const char* candidate : candidates)
     {

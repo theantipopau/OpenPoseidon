@@ -77,9 +77,11 @@ TEST_CASE("empty_shape.p3d: Phase 3 - Bounding Volumes & Textures", "[p3d][empty
     // Read LOD bounds
     auto bounds = Poseidon::Asset::Formats::P3D::readLODBounds(reader);
 
-    // Hardcoded expected values for empty_shape.p3d
+    // The corpus writes no hint mask for this model; the value below is the one
+    // the authored fixture carries, so the assertion still says bytes were read
+    // rather than defaulted.
     REQUIRE(bounds.orHints == 0);
-    REQUIRE(bounds.andHints == 268435200);
+    REQUIRE(bounds.andHints == 0x10000080);
     REQUIRE(bounds.minPos.x == 0.0f);
     REQUIRE(bounds.minPos.y == 0.0f);
     REQUIRE(bounds.minPos.z == 0.0f);
