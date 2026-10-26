@@ -79,10 +79,14 @@ release's deliberate omissions, and its comment said tests would "abort at runti
 These are real findings, not fixture noise. Left red on purpose — a green run must mean
 something.
 
-1. `Dev panel controls all go through the search filter` — the GI panel in
-   `Dev/Debug/DebugOverlay.cpp` calls `ImGui::SliderFloat/SliderInt/Combo/ColorEdit3/
-   TextUnformatted/InputText/IsItemHovered` directly (≈1569-1613, 4874-4906) instead of
-   the `Dev::` wrappers, so those rows escape the panel search filter.
+1. `Dev panel controls all go through the search filter` — **the GI tab is fixed**
+   (`G3c-panel-wrappers`: 14 controls at `DebugOverlay.cpp:4874-4906` now go through
+   `Dev::Combo/SliderFloat/SliderInt/ColorEdit3`). Still red for the rest of the panel:
+   `DebugOverlay.cpp` calls `ImGui::InputText` (1569, Zeus throw), `ImGui::ColorEdit3`
+   (1613, head torch) and `ImGui::IsItemHovered` (3902, grass tooltip) directly,
+   `SmokeTab.cpp` has 31 raw `ImGui::IsItemHovered` calls, and `MapEditorTab.cpp:58`
+   draws a modal message with `ImGui::TextUnformatted`, so those rows escape the panel
+   search filter.
 2. `WGPU instance translation storage belongs exclusively to the consumer` —
    `DrainInstanceOps` now looks up `_modelIdOf.find` (offset ~1425) before the slot
    invalidation (offset ~4153), reversing the ordering invariant the guard encodes.
