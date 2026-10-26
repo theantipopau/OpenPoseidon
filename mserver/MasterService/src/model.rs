@@ -334,6 +334,60 @@ pub struct SetModCompatibilityRequest {
     pub compatible_actvers: Vec<i32>,
 }
 
+/// What a publisher's `folder-claim` preflight answers: the install folder its next publish would
+/// claim, and whether another publish holds it.
+///
+/// `available` is false when the upload would be refused; `claimedBy` names the entry the folder
+/// belongs to — the caller's own, when a second publish of that entry holds it — and `refusal`
+/// carries the message the upload would fail with, so the publisher can report the conflict
+/// before it packs the source and sends the artifact.
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize, ToSchema)]
+pub struct InstallFolderClaim {
+    #[serde(rename = "modId")]
+    pub mod_id: String,
+    pub folder: String,
+    pub available: bool,
+    #[serde(rename = "claimedBy", skip_serializing_if = "Option::is_none")]
+    pub claimed_by: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refusal: Option<String>,
+}
+
+/// What `POST /v1/catalog/folder-claim` answers: the folder a publish holds, the token that proves
+/// the upload is that publish, and how often to renew the lease behind it.
+///
+/// `token` is present for every reservation, including a revision that keeps the folder its entry
+/// already installs into: that second publish of one entry is exactly the pair the token keeps
+/// from streaming at the same time. A master that predates this rule answers no token there, and
+/// the publisher then uploads as before.
+/// `renewAfterMs` accompanies a token: a pack and transfer can outlast any fixed age, so the
+/// publisher renews the reservation while it works and `check-names --fix` can tell a live publish
+/// from a crashed one.
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize, ToSchema)]
+pub struct FolderClaimReservation {
+    #[serde(rename = "modId")]
+    pub mod_id: String,
+    pub folder: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token: Option<String>,
+    #[serde(
+        rename = "renewAfterMs",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub renew_after_ms: Option<u64>,
+}
+
+/// The token that commits or aborts a reservation. The folder names the claim object, so the
+/// request needs no index to find it; the token says the caller is the publish that took it.
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize, ToSchema)]
+pub struct FolderClaimToken {
+    #[serde(rename = "modId")]
+    pub mod_id: String,
+    pub folder: String,
+    pub token: String,
+}
+
 pub(crate) const fn default_package_revision() -> u64 {
     1
 }

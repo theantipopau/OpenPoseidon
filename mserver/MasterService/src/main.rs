@@ -4,13 +4,15 @@ use std::fs;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use clap::{Args, Parser, Subcommand};
 use papa_bear_master_service::dev_seed::{seed_dev_data, seed_dev_mods};
 use papa_bear_master_service::http::build_router_with_store;
-use papa_bear_master_service::mods::{ModStore, S3StoreConfig};
+use papa_bear_master_service::mods::{
+    ArtifactFault, CatalogScan, ModStore, S3StoreConfig, UnusedClaimReason, UnusedClaimSweep,
+};
 use papa_bear_master_service::repository::{sqlite_url_for_path, SqliteServerDirectory};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
@@ -28,6 +30,9 @@ enum Command {
     Server(ServerArgs),
     /// Run the reachability prober loop against a running service.
     Probe(ProbeArgs),
+    /// Sweep the mod catalog for rejected `modId`/`folderName` values, shared install folders,
+    /// unused install-folder claims and damaged artifacts.
+    CheckNames(CheckNamesArgs),
 }
 
 #[derive(Args, Debug)]
@@ -56,6 +61,22 @@ struct ServerArgs {
 
     #[arg(long)]
     dev: bool,
+}
+
+#[derive(Args, Debug)]
+struct CheckNamesArgs {
+    /// Mods directory to sweep. Omit to use the `MODS_S3_*` bucket the server would use.
+    #[arg(long)]
+    mods_dir: Option<String>,
+
+    /// Remove the install-folder claims no catalog entry needs: those naming no entry, and the
+    /// ones left on a folder an entry has moved off. A claim whose reservation lease is still
+    /// running belongs to a publisher that is packing or streaming and is kept, whatever its age;
+    /// without one, a claim whose entry is not written yet, or a move that has taken its
+    /// destination and not made the new revision current, is kept for five minutes; a claim the
+    /// catalog has already moved past is removed whatever its age.
+    #[arg(long)]
+    fix: bool,
 }
 
 #[derive(Args, Debug)]
@@ -100,6 +121,9 @@ fn main() -> Result<()> {
     init_tracing();
     match Cli::parse().command {
         Command::Server(args) => tokio::runtime::Runtime::new()?.block_on(run_server(args)),
+        Command::CheckNames(args) => {
+            tokio::runtime::Runtime::new()?.block_on(run_check_names(args))
+        }
         Command::Probe(args) => probe::run(&probe::ProbeConfig {
             master_server: args.master_server,
             interval: Duration::from_secs(args.interval_secs),
@@ -110,6 +134,245 @@ fn main() -> Result<()> {
             admin_api_key: args.admin_api_key,
         }),
     }
+}
+
+const fn plural(count: usize, one: &'static str, many: &'static str) -> &'static str {
+    if count == 1 {
+        one
+    } else {
+        many
+    }
+}
+
+/// A name in single quotes, so its own punctuation stays readable in a row.
+fn quoted(value: &str) -> String {
+    format!("'{value}'")
+}
+
+/// `a`, `a and b`, `a, b and c` — already-quoted items, joined for a one-line row.
+fn joined(items: &[String]) -> String {
+    match items.split_last() {
+        Some((last, [])) => last.clone(),
+        Some((last, rest)) => format!("{} and {last}", rest.join(", ")),
+        None => String::new(),
+    }
+}
+
+/// A compact age for a maintenance row: `3d 4h`, `2h 5m`, `45m`, `12s`.
+fn format_age(age: Duration) -> String {
+    let secs = age.as_secs();
+    let (days, hours, minutes) = (secs / 86_400, secs % 86_400 / 3_600, secs % 3_600 / 60);
+    if days > 0 {
+        format!("{days}d {hours}h")
+    } else if hours > 0 {
+        format!("{hours}h {minutes}m")
+    } else if minutes > 0 {
+        format!("{minutes}m")
+    } else {
+        format!("{secs}s")
+    }
+}
+
+/// The age a claim must reach before `check-names --fix` removes it.
+///
+/// A publish takes its folder's claim and only then makes the entry current, and a move takes the
+/// new claim and releases the folder it left only after the new revision is current. A claim
+/// younger than this can belong to a publish that is still finishing; deleting that one would hand
+/// the folder to a second publisher while the first writes into it — the race the claim decides.
+const UNUSED_CLAIM_MIN_AGE: Duration = Duration::from_secs(5 * 60);
+
+/// One-off catalog sweep, in four halves. Names: a `mod_id` is a store key
+/// (`<mod_id>/<mod_id>.pbo.zst`) and a `folderName` becomes `<modsRoot>/<folderName>` on every
+/// client, so both must be one path component; entries published before the rule tightened are
+/// still served. Install folders: two entries that resolve to one folder overwrite each other,
+/// because an install clears `<modsRoot>/<folder>` before unpacking. Artifacts: a listed entry
+/// whose current object is missing or no longer hashes to its recorded `sha256` is a download that
+/// fails — or is refused by the installer after the client has fetched the whole file. Claims: a
+/// publish takes its folder's claim before it writes the entry, and a move records the folder it
+/// leaves in the claim it takes and releases that folder only after the new revision is current,
+/// so a claim naming no catalog directory — or one naming an entry that installs elsewhere and
+/// that no claimed move explains — is a folder nothing explains and nobody can take; `--fix`
+/// deletes every claim the catalog has already moved past, and one a running publish could still
+/// explain only once it is older than [`UNUSED_CLAIM_MIN_AGE`] and its reservation lease has run
+/// out. One line per problem, then a
+/// failing exit, so the sweep can gate a maintenance window. Read-only otherwise: it never
+/// rewrites metadata or moves an object.
+async fn run_check_names(args: CheckNamesArgs) -> Result<()> {
+    let mods_dir = args
+        .mods_dir
+        .as_deref()
+        .map(resolve_user_path)
+        .transpose()?;
+    if mods_dir.is_none() && std::env::var("MODS_S3_BUCKET").is_err() {
+        bail!("check-names needs --mods-dir, or the MODS_S3_* environment the server uses");
+    }
+    let store = build_mod_store(mods_dir.as_deref())?
+        .ok_or_else(|| anyhow::anyhow!("check-names: no mod store configured"))?;
+    let scan = store.scan_catalog().await?;
+    for name in &scan.rejected_names {
+        println!(
+            "{}: {} '{}' is not one path component",
+            name.directory, name.field, name.value
+        );
+    }
+    for collision in &scan.install_collisions {
+        if collision.spells_one_folder() {
+            let directories: Vec<String> = collision
+                .claims
+                .iter()
+                .map(|claim| quoted(&claim.directory))
+                .collect();
+            println!(
+                "install collision: {} install into the same folder '{}'",
+                joined(&directories),
+                collision.folder()
+            );
+        } else {
+            // Case-only spellings are one directory on Windows, the platform the installer runs
+            // on; the row says so instead of pretending the strings are equal.
+            let claims: Vec<String> = collision
+                .claims
+                .iter()
+                .map(|claim| format!("{} ({})", quoted(&claim.directory), quoted(&claim.folder)))
+                .collect();
+            println!(
+                "install collision: {} name one folder on a case-insensitive filesystem",
+                joined(&claims)
+            );
+        }
+    }
+    for artifact in &scan.damaged_artifacts {
+        match &artifact.fault {
+            ArtifactFault::Missing => println!(
+                "{}: revision {} artifact is missing",
+                artifact.directory, artifact.revision
+            ),
+            ArtifactFault::Sha256Mismatch { expected, actual } => println!(
+                "{}: revision {} artifact sha256 is '{expected}' but the object hashes to '{actual}'",
+                artifact.directory, artifact.revision
+            ),
+        }
+    }
+    let unused = sweep_unused_claims(&store, &scan, args.fix).await?;
+    let entries = plural(scan.entries_checked, "entry", "entries");
+    let mut problems = Vec::new();
+    if !scan.rejected_names.is_empty() {
+        problems.push(format!(
+            "{} rejected {}",
+            scan.rejected_names.len(),
+            plural(scan.rejected_names.len(), "name", "names")
+        ));
+    }
+    if !scan.install_collisions.is_empty() {
+        problems.push(format!(
+            "{} install {}",
+            scan.install_collisions.len(),
+            plural(scan.install_collisions.len(), "collision", "collisions")
+        ));
+    }
+    if !scan.damaged_artifacts.is_empty() {
+        problems.push(format!(
+            "{} damaged {}",
+            scan.damaged_artifacts.len(),
+            plural(scan.damaged_artifacts.len(), "artifact", "artifacts")
+        ));
+    }
+    if unused > 0 {
+        problems.push(format!(
+            "{unused} unused {}",
+            plural(unused, "claim", "claims")
+        ));
+    }
+    if problems.is_empty() {
+        println!(
+            "check-names: checked {} catalog {entries}, no rejected names, no shared install folders, no unused folder claims, every artifact intact",
+            scan.entries_checked
+        );
+        return Ok(());
+    }
+    bail!(
+        "check-names: {} in {} catalog {entries}",
+        problems.join(", "),
+        scan.entries_checked
+    );
+}
+
+/// Report the claim objects no catalog entry needs, and remove the ones `--fix` may. Answers how
+/// many are left, so the summary counts a fixed leftover as gone.
+///
+/// A leftover holds its folder against every publish with nothing to explain it, which is why it
+/// is worth a row; it is reported after the entry checks because those are what tell a live claim
+/// from an unused one. A reservation's lease is the first word: while it is still running its
+/// publisher is packing or streaming — however long that takes — and `--fix` leaves the claim no
+/// matter how old the object is. A lease that ran out on a folder the entry installs into is a
+/// lapsed reservation: the catalog supplies the folder without the claim, so it is removed at
+/// once. Otherwise the claim's own record of the folder it replaces
+/// splits the rows: one that names the entry's current folder is a move that has not written its
+/// revision yet, so `--fix` leaves it while it is younger than [`UNUSED_CLAIM_MIN_AGE`]; one that
+/// names any other folder cannot be a move in flight, and goes regardless of age. The sweep reads
+/// each claim again before deleting it, so one that was released and taken by another publish
+/// after the scan is kept and says so rather than being removed on the scan's older decision.
+async fn sweep_unused_claims(store: &ModStore, scan: &CatalogScan, fix: bool) -> Result<usize> {
+    let sweep = if fix {
+        store
+            .remove_unused_claims(&scan.unused_claims, UNUSED_CLAIM_MIN_AGE)
+            .await?
+    } else {
+        UnusedClaimSweep::default()
+    };
+    let now = SystemTime::now();
+    let now_ms = i64::try_from(
+        now.duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or(Duration::ZERO)
+            .as_millis(),
+    )
+    .unwrap_or(i64::MAX);
+    for unused in &scan.unused_claims {
+        let age = now
+            .duration_since(unused.claimed_at)
+            .unwrap_or(Duration::ZERO);
+        let fate = if !fix {
+            ""
+        } else if sweep.removed.contains(&unused.path) {
+            "; removed"
+        } else if sweep.retaken.contains(&unused.path) {
+            "; kept, the claim changed after the scan"
+        } else if unused.lease_held(now_ms) {
+            "; kept, its reservation is still being renewed"
+        } else {
+            "; kept, a publish may still be finishing"
+        };
+        let folder = quoted(&unused.claim.folder);
+        let entry = quoted(&unused.claim.directory);
+        match &unused.reason {
+            UnusedClaimReason::NoEntry => println!(
+                "orphan claim: {folder} is reserved by {entry}, which is not a catalog entry (claimed {} ago{fate})",
+                format_age(age)
+            ),
+            UnusedClaimReason::LapsedReservation => println!(
+                "lapsed reservation: {folder} is reserved for {entry}, whose reservation stopped renewing (claimed {} ago{fate})",
+                format_age(age)
+            ),
+            UnusedClaimReason::MovePending { from } => println!(
+                "pending move: {folder} is reserved for {entry}, which still installs into {} (claimed {} ago{fate})",
+                quoted(from),
+                format_age(age)
+            ),
+            UnusedClaimReason::MovedAway { folder: current } => println!(
+                "stale claim: {folder} is reserved by {entry}, which now installs into {} (claimed {} ago{fate})",
+                quoted(current),
+                format_age(age)
+            ),
+        }
+    }
+    if !sweep.removed.is_empty() {
+        println!(
+            "check-names: removed {} unused install-folder {}",
+            sweep.removed.len(),
+            plural(sweep.removed.len(), "claim", "claims")
+        );
+    }
+    Ok(scan.unused_claims.len() - sweep.removed.len())
 }
 
 async fn run_server(args: ServerArgs) -> Result<()> {
