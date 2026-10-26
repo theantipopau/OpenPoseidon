@@ -392,6 +392,21 @@ tickets:
       - p3d render/loader corpus needs model-generator ticket (ODOL research) -> FIXTURE-P3D-1
       - complex_vehicle content-asserting tests need owner decision (retarget vs data)
       - wrp/jpg/pbo/rtm gaps; Core post-build pbo copy failure
+  - id: G3b-cpp-tests
+    title: CI job that builds and runs the C++ test binaries (per-case CTest gate)
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - .github/workflows/proteus.yml
+      - tests/unit/apps/Studio/CMakeLists.txt
+      - docs/proteus/G3b-cpp-tests.md
+    toggle: n/a (CI configuration + configure-time discovery guard; no engine behaviour)
+    evidence: "Before this ticket no CI run executed a C++ test case: both build jobs link PoseidonGame only (their ctest step had no executables), their build command used --build --preset for a preset file that defines configure presets only, and ctest aborted project-wide on PoseidonStudioTests_tests.cmake -- a POST_BUILD discovery file the build could not produce because the imgui test-engine headers are not installed. New main/dispatch cpp-tests job on windows-latest builds the six compiling suites (directory-form cmake --build) and runs ctest -E <three named cases> --output-on-failure --no-tests=error. Locally: 3,886 tests, 100% passed, exit 0, 111.8 s; without the machine-content exclusion 1 failed (installed DayZ corpus off-revision, known failure 3). Three cases excluded by name: two red on every machine and one that answers from an installed corpus. Studio discovery now registered only when imgui_te_engine.h is found; ctest -N lists tests again."
+    gpu_verified: false
+    follow_ups:
+      - not yet exercised on Actions; cold vcpkg install time unknown
+      - imgui test-engine vcpkg feature + PoseidonStudioTests in the gate
+      - run on pull requests once main timings are known
   - id: QSTREAM-ESCAPE-1
     title: A mod-relative path that walks above its root can no longer resolve
     branch: proteus/main (direct)
@@ -404,6 +419,41 @@ tickets:
     gpu_verified: false
     follow_ups:
       - audit the remaining directory-join sites (bank paths) for the same escape
+  - id: FIXTURE-P3D-1
+    title: Synthetic P3D/MLOD corpus generated from one model description (both encodings)
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - tests/fixtures/p3d/make_p3d_corpus.py
+      - tests/fixtures/p3d/complex_vehicle.p3d
+      - tests/fixtures/p3d/proxy_structure.p3d
+      - tests/fixtures/p3d/crew_proxy.p3d
+      - tests/fixtures/p3d/simple_proxy.p3d
+      - tests/fixtures/p3d/simple_tree.p3d
+      - tests/fixtures/p3d/multi_lod_vehicle.p3d
+      - tests/fixtures/p3d/animated_actor.p3d
+      - tests/fixtures/p3d/sky_plane.p3d
+      - tests/fixtures/p3d/light_disc.p3d
+      - tests/fixtures/p3d/flat_quad.p3d
+      - tests/fixtures/p3d/empty_shape.p3d
+      - tests/fixtures/mlod/complex_vehicle_mlod.p3d
+      - tests/fixtures/mlod/animated_marker_mlod.p3d
+      - tests/fixtures/mlod/proxy_probe.p3d
+      - tests/fixtures/mlod/empty_mlod.p3d
+      - tests/fixtures/mlod/camera_path_a.p3d
+      - tests/fixtures/mlod/camera_path_b.p3d
+      - tests/fixtures/mlod/camera_path_c.p3d
+      - tests/unit/engine/Poseidon/Asset/Formats/P3D/test_p3d_complex_vehicle.cpp
+      - tests/unit/engine/Poseidon/Asset/Formats/P3D/test_p3d_proxy_structure.cpp
+      - tests/unit/engine/Poseidon/Asset/Formats/test_poseidon_formats_capi.cpp
+      - tests/unit/engine/Poseidon/Asset/Cache/test_ast004_model_ddc.cpp
+      - docs/proteus/FIXTURE-P3D-1.md
+    toggle: n/a (test data + retargeted assertions; no engine behaviour change)
+    evidence: "Both encodings (ODOL 7 and MLOD 1.1/SP3X) emitted from one model description; LZSS payloads are literal-only streams with the checksum SsCompress::Decode requires. [p3d],[mlod] 177 cases: 168 passed, 0 failed, 9 skipped; 344,603 assertions pass. The 9 skips are the env-var real-corpus gates (POSEIDON_ODOL73_FIXTURE/CORPUS, POSEIDON_ODOL40_CORPUS), not fixture absence. PoseidonTests full: 3 failed (the three documented pre-existing failures), 154 skipped. PoseidonCoreTests: 895 cases 870 passed / 1 failed (qstream mod-path escape, pre-existing) / 24 skipped; DDC base-form digest re-pinned. Zero p3d/ or mlod/ files remain in the absent list (19 other-family fixtures left)."
+    gpu_verified: false
+    follow_ups:
+      - wrp/jpg/pbo/rtm/audio/cfg/png fixture families still absent
+      - no check ties the generator to the readers beyond the tests that load its output
   - id: UI-THEME-C
     title: Proteus theme on the mission-editor dialogs (no art backdrop)
     branch: proteus/main (direct)
@@ -605,6 +655,21 @@ tickets:
       - add a C++ test job to CI (build-windows builds PoseidonGame only, so ctest runs nothing)
       - open tickets for the 4 failures kept visible by this change
       - BUILDING.md documents a build preset that CMakePresets.json does not define
+  - id: G3c-panel-wrappers
+    title: "GI dev-panel tab draws through the Dev:: wrappers (panel search covers its rows)"
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - engine/Poseidon/Dev/Debug/DebugOverlay.cpp
+      - docs/proteus/G3c-panel-wrappers.md
+      - docs/proteus/FIXTURE-SKIP-1.md
+    toggle: n/a (panel search is pass-through with an empty filter; a filtered control returns false)
+    evidence: "FIXTURE-SKIP-1 known failure 1, GI part closed. DrawGiTab's 14 raw controls (Combo, SliderFloat x9, SliderInt x2, ColorEdit3; lines 4874-4906) now call Dev::, so they match the panel search and pick up their PanelHelp text. The source-invariant case drops from 7 failing needles to 4 ([dev] 383 assertions, 379 passed) and reports zero hits inside the GI tab. The four left are outside it -- Zeus InputText, head-torch ColorEdit3, grass IsItemHovered, SmokeTab's 31 IsItemHovered -- plus MapEditorTab's modal TextUnformatted, so the case stays red on purpose until those tabs are migrated. PoseidonTests builds (clang-cl exit 0); check-format OK (40 changed files)."
+    gpu_verified: false
+    follow_ups:
+      - migrate the remaining DebugOverlay bypasses (Zeus InputText, head-torch ColorEdit3, grass IsItemHovered)
+      - SmokeTab's 31 ImGui::IsItemHovered -> Dev::PanelItemHovered; decide MapEditorTab's modal TextUnformatted
+      - drop the panel case from cpp-tests' ctest -E exclusion once the invariant is green
   - id: PATH-JOIN-AUDIT-1
     title: Audit of the remaining directory joins (bank path helpers first)
     branch: proteus/main (direct)
