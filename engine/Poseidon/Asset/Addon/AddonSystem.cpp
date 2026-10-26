@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <string>
 #include <system_error>
+#include <Poseidon/Foundation/Common/Filenames.hpp>
 #include <Poseidon/Foundation/Containers/Array.hpp>
 #include <Poseidon/Foundation/Framework/AppFrame.hpp>
 #include <Poseidon/Foundation/Framework/DebugLog.hpp>
@@ -32,8 +33,14 @@ AutoArray<SRef<ParamFile>> AddonSystem::s_addonConfigs;
 
 namespace
 {
+// Resolve one file name inside an addon directory.  `name` must be a single component:
+// this is a directory join, and the only caller passes a literal, but the helper stays
+// safe by construction rather than by the caller's good behaviour (PATH-JOIN-AUDIT-1).
 bool ResolveAddonFile(RStringB dir, const char* name, RString& resolvedPath)
 {
+    if (!name || !Foundation::IsSinglePathComponent(name))
+        return false;
+
     resolvedPath = dir + RString(name);
     if (QIFStreamB::FileExist(resolvedPath))
         return true;

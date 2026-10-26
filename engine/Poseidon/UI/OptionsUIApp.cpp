@@ -1615,7 +1615,7 @@ static std::string BareModId(const RString& modId)
 }
 
 static bool BuildCheckedDownloadTasks(CModsList* list, const std::string& root, std::vector<DownloadTask>& tasks,
-                                      std::vector<StagedModInstall>& installs, bool& hasUpdates)
+                                      std::vector<StagedModInstall>& installs, bool& hasUpdates, bool& refused)
 {
     const AutoArray<ModRow>& rows = list->GetRows();
     for (int i = 0; i < rows.Size(); i++)
@@ -1626,6 +1626,14 @@ static bool BuildCheckedDownloadTasks(CModsList* list, const std::string& root, 
         const std::string modId = BareModId(r.modId);
         const std::string folderName = (const char*)r.folderName;
         const std::string destDir = ModInstallDir(root, modId, folderName);
+        if (destDir.empty())
+        {
+            // The catalog named a folder that is not one path component (a separator, "..",
+            // a drive, ...). Refuse the whole batch rather than install a differently-named
+            // folder or a path outside the mods root.
+            refused = true;
+            return false;
+        }
         StagedModInstall preserved;
         if (FindPreservedStagedModInstall(destDir, modId, r.packageRevision, (const char*)r.sha256, preserved))
         {
@@ -1738,13 +1746,23 @@ void DisplayMods::OnButtonClicked(int idc)
 
         std::vector<DownloadTask> tasks;
         bool hasUpdates = false;
+        bool refused = false;
         DiscardStagedModInstalls(_stagedInstalls);
-        if (BuildCheckedDownloadTasks(list, WorkshopModsRoot(), tasks, _stagedInstalls, hasUpdates))
+        if (BuildCheckedDownloadTasks(list, WorkshopModsRoot(), tasks, _stagedInstalls, hasUpdates, refused))
         {
             std::string proxy = (const char*)GetNetworkProxy();
             CreateChild(
                 new DisplayModDownload(this, std::move(tasks), MakeMasterServerTransport(proxy), {},
                                        hasUpdates ? "STR_DISP_MODS_UPDATE_SUMMARY" : "STR_DISP_MODS_DOWNLOAD_SUMMARY"));
+            return;
+        }
+        if (refused)
+        {
+            DiscardStagedModInstalls(_stagedInstalls);
+            CreateMsgBox(MB_BUTTON_OK,
+                         LocalizeStringWithFallback("STR_DISP_MODS_INSTALL_INVALID_NAME",
+                                                    "A selected mod has an invalid folder name and cannot be "
+                                                    "installed. Nothing was downloaded."));
             return;
         }
 
