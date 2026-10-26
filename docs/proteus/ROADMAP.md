@@ -68,8 +68,31 @@
 - SHUTDOWN-T-1: SHUTDOWN-TIME phase probes in UnloadGameData + live proof
 - UPSCALER-1: Upscaler decision (in-house TAAU default; vendor paths optional-only)
 - UI-THEME-B: Proteus art backdrop on Server/Login/NewUser/Revert (Phase A continued)
+- QSTREAM-ESCAPE-1: A mod-relative path that walks above its root can no longer resolve
 - UI-THEME-C: Proteus theme on the mission-editor dialogs (no art backdrop)
 - UI-THEME-C1: Editor popups keep retail backdrop under themed buttons
 - RUST-TESTS-1: The four standing cargo test --lib failures (ABI pin, GI test-device limits, NaN atlas UV)
 - RUST-TESTS-1a: Parallel cargo test access violation (Vulkan validation layer race) + check-format cp1252 crash
 - RUST-TESTS-1b: CI runs the serial validation-layer pass on main
+- PATH-JOIN-AUDIT-1: Audit of the remaining directory joins (bank path helpers first)
+- MODINSTALL-PATH-1: Workshop installer joins a remote folder name onto the mods root (remove_all/rename sink)
+- MP-MISSION-NAME-1: A mission template name that is not one path component is refused, not joined
+- MSERVER-FOLDERNAME-1: A publish manifest folderName that names a directory outside the mods root is refused
+- MSERVER-PATHCHARSET-1: mod_id and folderName are held to the engine's one-component set, not a coarser rule
+- MSERVER-CLI-RULE-1: The publisher CLI validates mod ids and folder names with the service's shared rule
+- MSERVER-NORMALIZE-1: One folderName normalizer (trim, blank means @<modId>) shared by publisher and service
+- MSERVER-NAME-CASES-1: One shared case list for the catalog-name boundary, read by C++ and Rust
+- MSERVER-CHECK-NAMES-1: A check-names sweep for catalog entries published before the name rule
+- MSERVER-CHECK-ARTIFACTS-1: The check-names sweep reports catalog artifacts that are missing or no longer match their sha256
+- MSERVER-CHECK-COLLISIONS-1: The check-names sweep reports catalog entries that install into the same folder
+- MSERVER-FOLDER-CLAIM-1: A publish cannot claim an install folder another catalog entry holds
+- MSERVER-PREFLIGHT-1: papa publish asks the catalog about its install folder before packing and uploading
+- MSERVER-FOLDER-RESERVE-1: An install folder is taken with a conditional reservation, so two concurrent publishes cannot both pass
+- MSERVER-ORPHAN-CLAIMS-1: check-names reports install-folder claims that name no catalog entry, and --fix removes the stale ones
+- MSERVER-STALE-CLAIMS-1: check-names reports install-folder claims left on a folder an entry moved off, and --fix removes them
+- MSERVER-CLAIM-MOVES-1: a move records the folder it leaves, so check-names decides a leftover without the age floor
+- MSERVER-CLAIM-RECHECK-1: check-names --fix re-reads a claim before deleting it, so a folder taken after the scan survives
+- MSERVER-CLAIM-RESERVE-1: a publish reserves its install folder before it streams, and the losing publisher is refused before the upload
+- MSERVER-CLAIM-LEASE-1: a reservation carries a lease its publisher renews, so check-names --fix cannot take a live folder
+- MSERVER-CLAIM-KEEP-1: a revision that keeps its folder reserves it too, with a lease the sweep can age out
+- MSERVER-CLAIM-CAS-1: a claim write carries the generation it was decided against, so a renewal cannot resurrect a consumed token
