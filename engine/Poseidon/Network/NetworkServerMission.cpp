@@ -29,6 +29,7 @@
 #include <sys/stat.h>
 #include <string>
 #include <system_error>
+#include <Poseidon/Foundation/Common/Filenames.hpp>
 #include <Poseidon/Foundation/Common/FltOpts.hpp>
 #include <Poseidon/Foundation/Common/GamePaths.hpp>
 #include <Poseidon/Foundation/Containers/Array.hpp>
@@ -240,10 +241,24 @@ static std::string LowerCopy(std::string value)
     return value;
 }
 
+bool Poseidon::IsMissionTemplateNameValid(RString templateName)
+{
+    return Foundation::IsSinglePathComponent((const char*)templateName);
+}
+
 RString Poseidon::ResolveMPMissionTemplateBase(RString mission, RString world)
 {
     const std::string missionName = (const char*)mission;
     const std::string worldName = (const char*)world;
+    // The name is joined onto the MPMissions tree below, so each part must be one relative
+    // component; a traversal-shaped template would make the server test, mount and parse a
+    // PBO from outside that tree. Refused before any directory is consulted.
+    if (!Foundation::IsSinglePathComponent(missionName) || !Foundation::IsSinglePathComponent(worldName))
+    {
+        LOG_WARN(Network, "MP mission template refused: mission='{}' world='{}' is not a single path component",
+                 missionName, worldName);
+        return RString();
+    }
     std::vector<std::string> templateNames;
     templateNames.push_back(missionName + "." + worldName);
 
@@ -278,6 +293,16 @@ void NetworkServer::CreateMission(RString mission, RString world)
     if (mission.GetLength() > 0)
     {
         RString filename = ResolveMPMissionTemplateBase(mission, world);
+        if (filename.GetLength() == 0)
+        {
+            // Refused name: behave like "no mission" instead of mounting something outside
+            // the mission tree.
+            LOG_ERROR(Network, "Mission template '{}' refused: not a single path component", (const char*)mission);
+            _originalName = RString();
+            _missionBank = RString();
+            RemoveBank(GameDirs::MPCurrentPrefix().c_str());
+            return;
+        }
         _missionBank = filename + RString(".pbo");
         CreateMPMissionBank(filename, world);
     }
@@ -487,7 +512,16 @@ void NetworkServer::InitMission(bool cadetMode)
         _missionHeader.fileName = _originalName + RString(".") + _missionHeader.island;
         if (_missionBank.GetLength() == 0)
         {
-            _missionBank = ResolveMPMissionTemplateBase(_originalName, _missionHeader.island) + RString(".pbo");
+            const RString resolved = ResolveMPMissionTemplateBase(_originalName, _missionHeader.island);
+            if (resolved.GetLength() > 0)
+            {
+                _missionBank = resolved + RString(".pbo");
+            }
+            else
+            {
+                LOG_ERROR(Network, "[InitMission] refusing mission template '{}': not a single path component",
+                          (const char*)_originalName);
+            }
         }
     }
     else

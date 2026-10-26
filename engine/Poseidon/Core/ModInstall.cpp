@@ -1,6 +1,7 @@
 #include <Poseidon/Core/ModInstall.hpp>
 
 #include <Poseidon/Core/ModCollection.hpp>
+#include <Poseidon/Foundation/Common/Filenames.hpp>
 
 #include <cjson/cJSON.h>
 
@@ -167,6 +168,8 @@ bool VerifyModArtifact(const std::string& path, int64_t expectedBytes, const std
 
 StagedModInstall MakeStagedModInstall(const std::string& destinationDir, const std::string& modId)
 {
+    if (destinationDir.empty())
+        return {modId, {}, {}, {}};
     static std::atomic<uint64_t> sequence{0};
     const std::string suffix = std::to_string(sequence.fetch_add(1));
     return {modId, destinationDir + ".staging-" + suffix, destinationDir, destinationDir + ".backup-" + suffix};
@@ -300,6 +303,8 @@ bool FindPreservedStagedModInstall(const std::string& destinationDir, const std:
                                    const std::string& sha256, StagedModInstall& install)
 {
     namespace fs = std::filesystem;
+    if (destinationDir.empty())
+        return false;
     const fs::path preserved = PreservedInstallDir(destinationDir);
     std::error_code ec;
     if (!fs::is_directory(preserved, ec))
@@ -317,14 +322,17 @@ bool FindPreservedStagedModInstall(const std::string& destinationDir, const std:
 
 std::string ModInstallDir(const std::string& modsRoot, const std::string& modId)
 {
-    return modsRoot + "/@" + modId;
+    return ModInstallDir(modsRoot, modId, std::string());
 }
 
 std::string ModInstallDir(const std::string& modsRoot, const std::string& modId, const std::string& folderName)
 {
-    if (!folderName.empty())
-        return modsRoot + "/" + folderName;
-    return ModInstallDir(modsRoot, modId);
+    // The mod id is the manifest/matching key, so it is held to the same rule even when a
+    // folder name supplies the path component; a catalog entry that fails either is refused.
+    const std::string component = folderName.empty() ? ("@" + modId) : folderName;
+    if (!Foundation::IsSinglePathComponent(modId) || !Foundation::IsSinglePathComponent(component))
+        return {};
+    return modsRoot + "/" + component;
 }
 
 std::string FindInstalledModDir(const std::string& modsRoot, const std::string& modId)

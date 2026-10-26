@@ -1,0 +1,52 @@
+{
+  "$comment": [
+    "The catalog-name boundary, as one list for every language that applies it.",
+    "refused: Foundation::IsSinglePathComponent (C++, engine/Poseidon/Foundation/Common/Filenames.hpp)",
+    "and papa_bear_client::catalog::is_single_path_component (Rust) must both answer false.",
+    "accepted: both must answer true, and the composed install directory must stay directly",
+    "under the mods root.",
+    "Readers: tests/unit/engine/Poseidon/Core/test_mod_install.cpp (runtime, cJSON),",
+    "mserver/Client/src/catalog.rs and mserver/MasterService/src/mods.rs (compile time, include_str!).",
+    "No case is blank: an empty folderName means 'no folder name' (installs fall back to",
+    "@<modId>) while an empty modId is refused, so one verdict cannot describe both spellings.",
+    "Adding a reserved character here fails the C++ suite and both Rust suites at once."
+  ],
+  "refused": [
+    "..",
+    ".",
+    "../..",
+    "..\\..\\Documents",
+    "@../../x",
+    "anims/../..",
+    "a/b",
+    "a\\b",
+    "C:",
+    "C:/Windows",
+    "\\\\server\\share",
+    ".. ",
+    "escape.",
+    "a*b",
+    "a?b",
+    "a\"b",
+    "a<b",
+    "a>b",
+    "a|b",
+    "a:b",
+    "a\u0007b",
+    "a\u007fb",
+    "trailing.",
+    "trailing.."
+  ],
+  "accepted": [
+    "csla",
+    "@fixturemod",
+    "@CSLA",
+    "carwars-2.5",
+    "carwars2.5",
+    "ver2.0",
+    "Mod Folder 2",
+    "a.b",
+    "Sth..else",
+    "naïve"
+  ]
+}

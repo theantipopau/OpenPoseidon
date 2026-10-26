@@ -1177,6 +1177,19 @@ bool DisplayMultiplayer::BeginModdedJoin(const SessionInfo& info)
     _joinTasks.clear();
     Poseidon::DiscardStagedModInstalls(_joinStagedInstalls);
     const std::string root = Poseidon::ModsWorkshopRoot();
+    // The server chooses each folder name and it becomes an install path, so refuse the join
+    // outright when one is not a single path component instead of installing elsewhere.
+    for (const Poseidon::ModDownload& d : res.ToDownload())
+    {
+        if (Poseidon::ModInstallDir(root, d.id.Value(), d.folderName).empty())
+        {
+            CreateMsgBox(MB_BUTTON_OK,
+                         LocalizeStringWithFallback("STR_DISP_MODS_JOIN_INVALID_NAME",
+                                                    "A mod required by this server has an invalid folder name. "
+                                                    "You cannot join this server."));
+            return true;
+        }
+    }
     for (const Poseidon::ModDownload& d : res.ToDownload())
         _joinTasks.push_back(Poseidon::MakeModDownloadTask(d.id.Value(), d.name, d.downloadUrl, d.sizeBytes, root,
                                                            _joinStagedInstalls, d.folderName, d.version,
