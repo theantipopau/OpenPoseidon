@@ -143,11 +143,15 @@ jobs:
           # autoconf/automake/libtool + libltdl-dev: vcpkg's libxcrypt port (a dependency
           # of the manifest on Linux) builds through autoreconf, and its portfile checks
           # for both the autotools programs and the ltdl development files, failing with
-          # BUILD_FAILED without them. The `Ninja` error printed after such a failure is a
-          # cascade: the toolchain include aborts inside CMakeDetermineSystem, so CMake
-          # never resolves the generator's build program -- ninja-build is enough.
+          # BUILD_FAILED without them. gettext: the libmount overlay port copies
+          # /usr/share/gettext/config.rpath and po/Makefile.in.in out of the host into
+          # the util-linux tree before autoreconf, so a runner without the gettext
+          # package fails that `file(COPY)` outright. The `Ninja` error printed after
+          # either failure is a cascade: the toolchain include aborts inside
+          # CMakeDetermineSystem, so CMake never resolves the generator's build program
+          # -- ninja-build is enough.
           sudo apt-get install -y -qq clang ninja-build cmake ccache python3-pip pkg-config \
-            autoconf autoconf-archive automake libtool libltdl-dev \
+            autoconf autoconf-archive automake libtool libltdl-dev gettext \
             libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxinerama-dev libxi-dev \
             libxss-dev libgl1-mesa-dev libasound2-dev libpulse-dev
           python3 -m pip install Pillow numpy
