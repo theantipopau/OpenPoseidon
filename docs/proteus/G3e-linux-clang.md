@@ -1,7 +1,7 @@
 # G3e-linux-clang — PoseidonGame builds with clang in GNU mode
 
-Status: done-unverified (built and linked locally on Ubuntu 26.04 / clang 21.1.8; the CI job's own
-run is the confirmation)
+Status: done-unverified (built and linked locally on Ubuntu 26.04 / clang 21.1.8; the CI job is green
+on this PR's head)
 
 ## Problem
 
@@ -85,6 +85,11 @@ off POSIX); the RNG diagnostic prints the same address on MSVC.
 - **Clean rebuild after the fixes:** `ninja -t clean`, then 673 C++ TUs compiled, exit 0, and
   `Linking CXX executable apps/cwr/Game/ProteusGame` — the engine and the game target build and link
   on Linux for the first time on this line.
+- **CI (run 40450018964, head `3d8dad1`):** `build (linux-x64-clang-rwdi)` succeeded — `toolchain`, the
+  vcpkg restore, `cmake --preset linux-x64-clang-rwdi`, then 707/708 edges with no `error:` line and
+  `Linking CXX executable apps/cwr/Game/ProteusGame`. `asset registry`, `format (changed hunks)` and
+  `rust unit tests (Lavapipe)` were already green; the Windows and validation-layer jobs are skipped on PR
+  runs by design.
 - **Repo gates:** `check-format.py --base <merge-base>` OK (136 changed files); `check-assets.py`,
   `gen-roadmap.py --check` and the `perf_parse`/`imgdiff` selftests OK.
 - The earlier `git diff` of the branch's own DX12-1 terrain fix is what the Rust job's first compile
