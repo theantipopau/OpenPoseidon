@@ -14,7 +14,13 @@
 // the simulation, and no existing collision or ray-cast path is replaced. See
 // PHY-001 §1.3 for why the line sits here and what crossing it would cost.
 
+// Poseidon::LODShape, not a global one: Core/Types.hpp imports it into the global
+// namespace with `using Poseidon::LODShape`, and a bare `class LODShape;` here would
+// declare a second class of that name and conflict wherever both are visible.
+namespace Poseidon
+{
 class LODShape;
+}
 
 namespace Poseidon::Physics
 {

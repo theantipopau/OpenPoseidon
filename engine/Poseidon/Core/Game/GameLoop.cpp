@@ -122,7 +122,11 @@ static void PaceToFps(int targetFps, Foundation::unsigned64 frameStartUs)
         {
             gLastPace.sleepReqUs = static_cast<int64_t>(sleepMillis) * 1000;
             const Foundation::unsigned64 t0 = Poseidon::Foundation::getSystemTime();
-            ::Sleep(static_cast<DWORD>(sleepMillis));
+            // Not `::Sleep`: on POSIX, Foundation/platform.hpp defines Sleep(ms) as a
+            // function-like macro onto sleepMs(), and the leading `::` would be left
+            // stranded in front of the expansion. Bare Sleep() is the Windows API on
+            // Windows and the macro everywhere else.
+            Sleep(static_cast<DWORD>(sleepMillis));
             gLastPace.sleepActUs = static_cast<int64_t>(Poseidon::Foundation::getSystemTime() - t0);
         }
         return;
