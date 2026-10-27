@@ -1,7 +1,7 @@
 #include <filesystem>
-#include <windows.h>
 
 #include <Poseidon/Core/Application.hpp>
+#include <Poseidon/Foundation/Common/PlatformPaths.hpp>
 #include <Poseidon/Foundation/Platform/AppConfig.hpp>
 
 #include <Poseidon/Graphics/Core/Engine.hpp>
@@ -202,10 +202,10 @@ std::string ResolveMappedFontPath(const char* ttfPath)
         return modPath;
 
     // Faces shipped beside the executable (assets\fonts\...) for the Proteus menu.
-    char exe[MAX_PATH] = {};
-    if (GetModuleFileNameA(nullptr, exe, MAX_PATH))
+    const std::string exePath = Poseidon::Foundation::getExecutablePath();
+    if (!exePath.empty())
     {
-        const std::filesystem::path beside = std::filesystem::path(exe).parent_path() / ttfPath;
+        const std::filesystem::path beside = std::filesystem::path(exePath).parent_path() / ttfPath;
         if (std::filesystem::exists(beside))
             return beside.string();
     }

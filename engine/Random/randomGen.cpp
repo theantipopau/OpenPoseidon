@@ -1,6 +1,8 @@
 #include <cstdio>
 #include <cstdlib>
-#include <intrin.h> // _ReturnAddress, for the POSEIDON_RNG_TRACE diagnostic
+#if defined(_MSC_VER) // _ReturnAddress, for the POSEIDON_RNG_TRACE diagnostic
+#include <intrin.h>
+#endif
 #include <Random/randomGen.hpp>
 #include <Poseidon/Foundation/Framework/AppFrame.hpp>
 
@@ -17,6 +19,21 @@
 #include <atomic>
 #include <thread>
 #endif
+
+// The POSEIDON_RNG_TRACE diagnostic prints the DRAW's return address. MSVC spells that
+// _ReturnAddress() (declared in <intrin.h>); GCC and clang have the same thing as
+// __builtin_return_address(0). The helper keeps the call site the same on both, and is
+// a function rather than a macro so it cannot capture an inner block's frame.
+static void* RngDrawReturnAddress()
+{
+#if defined(_MSC_VER)
+    return _ReturnAddress();
+#elif defined(__GNUC__) || defined(__clang__)
+    return __builtin_return_address(0);
+#else
+    return nullptr;
+#endif
+}
 
 // Phase 8.2 guard: the sequential entry points share one mutable stream, so using
 // them from two threads is both a data race and a scheduler-order dependency. The
@@ -80,7 +97,7 @@ float RandomGenerator::RandomValue() const
         }();
         if (_sequentialDraws >= w.lo && _sequentialDraws < w.hi)
         {
-            std::printf("[rngtrace] draw=%llu ret=%p\n", _sequentialDraws, _ReturnAddress());
+            std::printf("[rngtrace] draw=%llu ret=%p\n", _sequentialDraws, RngDrawReturnAddress());
         }
     }
     return _valueTable(_seed++) * (1.0 / static_cast<double>(RandomTable::Size));
