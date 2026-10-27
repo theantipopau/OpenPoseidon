@@ -19,6 +19,7 @@
 | G3a-fmt-base | fmt-changed compared against origin/main, not the Proteus line (red on 169 files) | done-unverified | no | `proteus/DX12-1-dx12-upscaler-fixes` |
 | G3b-cpp-tests | CI job that builds and runs the C++ test binaries (per-case CTest gate) | done-unverified | no | `proteus/main (direct)` |
 | G3c-panel-wrappers | GI dev-panel tab draws through the Dev:: wrappers (panel search covers its rows) | done-unverified | no | `proteus/main (direct)` |
+| G3e-linux-clang | PoseidonGame builds with clang in GNU mode, so the Linux build job can run its gate | done-unverified | no | `proteus/DX12-1-dx12-upscaler-fixes` |
 | G4 | Roadmap and renderer-systems ledger | done-unverified | no | `proteus/G4-roadmap-ledger` |
 
 ## Phase T — GPU verification tooling

@@ -1047,3 +1047,26 @@ tickets:
     follow_ups:
       - sweep stale write windows too, so a marker left by a master that died is removed even when nothing writes its claim again
       - use the S3 PutMode::Update mode when the backend is S3, so a claim write is one request there and the marker remains the local-backend path
+
+  - id: G3e-linux-clang
+    title: PoseidonGame builds with clang in GNU mode, so the Linux build job can run its gate
+    branch: proteus/DX12-1-dx12-upscaler-fixes
+    status: done-unverified
+    files:
+      - engine/Poseidon/World/Entities/Weapons/Ballistics.hpp
+      - engine/Poseidon/World/Physics/PhysicsWorld.hpp
+      - engine/Poseidon/World/Physics/PhysicsBackend.hpp
+      - engine/Poseidon/Dev/Diag/ProbeMeshes.hpp
+      - engine/Poseidon/Core/Game/GameLoop.cpp
+      - engine/Poseidon/Foundation/Common/PlatformPaths.hpp
+      - engine/Poseidon/Foundation/Common/PlatformPaths_posix.cpp
+      - engine/Poseidon/Foundation/Common/PlatformPaths_win.cpp
+      - engine/Poseidon/Graphics/Rendering/Draw/Font.cpp
+      - engine/Poseidon/UI/ProteusTheme.cpp
+      - engine/Random/randomGen.cpp
+      - docs/proteus/G3e-linux-clang.md
+    toggle: 'n/a (no behaviour change: forward declarations move into the namespace their class is in, the executable path resolves through one helper with the same platform calls, Sleep without :: is the same Win32 function on Windows)'
+    evidence: 'G3d-ci-repair follow-up, requested by the owner. Once vcpkg and configure were fixed, build-linux reached the compiler for the first time on this line, at [16/708], and clang in GNU mode stopped on Ballistics.hpp:46 - a global class AmmoType; beside Core/Types.hpp using Poseidon::AmmoType, which declares a second class of that name and then makes every unqualified use ambiguous (Network/NetworkIface.hpp:392). MSVC accepts the pair, so nothing had ever reported it. A CI-only loop would have cost ~20 minutes per error class, since ninja stops at the first failing edge, so the build was reproduced locally instead: Ubuntu 26.04 WSL, clang 21.1.8, CMake 4.2.3, vcpkg manifest x64-linux-clang (42 ports) configured with the preset into /root/bld and built with -k 0, which keeps going after a failure and so lists every broken TU in one pass. That pass found eight errors in three classes and six files: three global forward declarations that collide with Types.hpp using-declarations (AmmoType in Ballistics.hpp, LODShape in PhysicsWorld.hpp and PhysicsBackend.hpp, LODShapeWithShadow in ProbeMeshes.hpp); ::Sleep in GameLoop.cpp, where Foundation/platform.hpp defines Sleep(ms) as a function-like macro onto sleepMs() on POSIX and the leading :: is left stranded in front of the expansion; an unguarded windows.h and GetModuleFileNameA/MAX_PATH in Font.cpp and ProteusTheme.cpp; and an unguarded intrin.h in randomGen.cpp, since clang resource-dir intrin.h forwards to MSVC own. Both executable-path sites now call the new Foundation::getExecutablePath() in PlatformPaths (GetModuleFileNameW / /proc/self/exe / _NSGetExecutablePath) instead of each pasting a POSIX branch, and _ReturnAddress() became RngDrawReturnAddress() with __builtin_return_address(0) behind the same call, intrin.h staying under _MSC_VER. Evidence: the enumerating build compiled 673 of 681 edges and reported exactly those eight; after the fixes ninja -t clean plus a full rebuild compiled 673 C++ TUs to exit 0 and linked apps/cwr/Game/ProteusGame, the first Linux build and link of this line; check-format OK over 136 changed files, check-assets, gen-roadmap --check and the perf_parse/imgdiff selftests OK. Risks: the Windows side of these edits is not compiled locally (cpp-tests and build-windows are main-push/dispatch-gated), the macOS _NSGetExecutablePath branch is uncompiled, the local compiler is clang 21 where the runner has clang 18, and this is a build, not a run - no GPU or game data here. Follow-up: Font.cpp flat fallback still formats Fonts<backslash>%s, which cannot resolve on Linux.'
+    gpu_verified: false
+    follow_ups:
+      - give Font.cpp's flat Fonts fallback a portable prefix instead of a hardcoded backslash, which cannot resolve on Linux
