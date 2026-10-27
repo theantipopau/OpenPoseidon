@@ -66,9 +66,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rust-lang/rustup@v1
-        with:
-          toolchain: stable
+      - name: Rust toolchain
+        # The runner image ships rustup + stable, and `fmt-changed` already relies on it
+        # (`rustup component add rustfmt`). There is no `actions-rust-lang/rustup`
+        # action; that reference failed the whole job in "Set up job" (unresolvable
+        # action), so no Rust test had ever run. Print the versions instead of adding a
+        # third-party action dependency: a missing toolchain fails here, on a step that
+        # says what it is for, rather than permanently poisoning the job.
+        run: |
+          rustc --version
+          cargo --version
       - uses: actions/cache@v4
         with:
           path: |
@@ -94,9 +101,11 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rust-lang/rustup@v1
-        with:
-          toolchain: stable
+      - name: Rust toolchain
+        # Same as `rust-tests`: the image's stable toolchain, no action to resolve.
+        run: |
+          rustc --version
+          cargo --version
       - uses: actions/cache@v4
         with:
           path: |
@@ -131,7 +140,13 @@ jobs:
       - name: toolchain
         run: |
           sudo apt-get update -qq
+          # autoconf/automake/libtool: vcpkg's libxcrypt port (a dependency of the
+          # manifest on Linux) builds through autoreconf and stops with BUILD_FAILED
+          # on a runner that has none of them. The `Ninja` error printed after it is a
+          # cascade: the toolchain include aborts inside CMakeDetermineSystem, so CMake
+          # never resolves the generator's build program -- ninja-build is enough.
           sudo apt-get install -y -qq clang ninja-build cmake ccache python3-pip pkg-config \
+            autoconf autoconf-archive automake libtool \
             libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxinerama-dev libxi-dev \
             libxss-dev libgl1-mesa-dev libasound2-dev libpulse-dev
           python3 -m pip install Pillow numpy
