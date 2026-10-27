@@ -149,9 +149,11 @@ jobs:
           # package fails that `file(COPY)` outright. The `Ninja` error printed after
           # either failure is a cascade: the toolchain include aborts inside
           # CMakeDetermineSystem, so CMake never resolves the generator's build program
-          # -- ninja-build is enough.
+          # -- ninja-build is enough. libxtst-dev: the vcpkg sdl3 port builds its X11
+          # backend with XTEST on (it sets SDL_X11_XSCRNSAVER=OFF, not XTEST), and
+          # SDL's CheckX11 stops configuring when the XTest headers are absent.
           sudo apt-get install -y -qq clang ninja-build cmake ccache python3-pip pkg-config \
-            autoconf autoconf-archive automake libtool libltdl-dev gettext \
+            autoconf autoconf-archive automake libtool libltdl-dev gettext libxtst-dev \
             libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxinerama-dev libxi-dev \
             libxss-dev libgl1-mesa-dev libasound2-dev libpulse-dev
           python3 -m pip install Pillow numpy
