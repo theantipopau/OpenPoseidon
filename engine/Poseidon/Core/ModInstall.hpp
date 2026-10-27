@@ -36,6 +36,10 @@ enum class ModInstallStatus
 };
 
 /// Directory a catalog mod installs into: <modsRoot>/<folderName>, falling back to @<modId>.
+/// Empty when the name that would become the folder — or the mod id the manifest is keyed
+/// by — is not a single path component (`Foundation::IsSinglePathComponent`), so a hostile
+/// catalog entry cannot name a directory outside modsRoot. Callers must treat empty as
+/// "refuse this install".
 std::string ModInstallDir(const std::string& modsRoot, const std::string& modId);
 std::string ModInstallDir(const std::string& modsRoot, const std::string& modId, const std::string& folderName);
 
@@ -59,6 +63,8 @@ struct StagedModInstall
     bool stagingMoved = false;
 };
 
+/// Staging/backup siblings of destinationDir. Empty when destinationDir is empty, so a
+/// refused destination cannot turn into a relative ".staging-N" beside the process cwd.
 StagedModInstall MakeStagedModInstall(const std::string& destinationDir, const std::string& modId = {});
 bool SwapStagedModInstalls(std::vector<StagedModInstall>& installs, std::string* error = nullptr);
 void RestoreStagedModInstalls(std::vector<StagedModInstall>& installs);

@@ -66,9 +66,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rust-lang/rustup@v1
-        with:
-          toolchain: stable
+      - name: Rust toolchain
+        # The runner image ships rustup + stable, and `fmt-changed` already relies on it
+        # (`rustup component add rustfmt`). There is no `actions-rust-lang/rustup`
+        # action; that reference failed the whole job in "Set up job" (unresolvable
+        # action), so no Rust test had ever run. Print the versions instead of adding a
+        # third-party action dependency: a missing toolchain fails here, on a step that
+        # says what it is for, rather than permanently poisoning the job.
+        run: |
+          rustc --version
+          cargo --version
       - uses: actions/cache@v4
         with:
           path: |
@@ -94,9 +101,11 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rust-lang/rustup@v1
-        with:
-          toolchain: stable
+      - name: Rust toolchain
+        # Same as `rust-tests`: the image's stable toolchain, no action to resolve.
+        run: |
+          rustc --version
+          cargo --version
       - uses: actions/cache@v4
         with:
           path: |
@@ -131,7 +140,20 @@ jobs:
       - name: toolchain
         run: |
           sudo apt-get update -qq
+          # autoconf/automake/libtool + libltdl-dev: vcpkg's libxcrypt port (a dependency
+          # of the manifest on Linux) builds through autoreconf, and its portfile checks
+          # for both the autotools programs and the ltdl development files, failing with
+          # BUILD_FAILED without them. gettext: the libmount overlay port copies
+          # /usr/share/gettext/config.rpath and po/Makefile.in.in out of the host into
+          # the util-linux tree before autoreconf, so a runner without the gettext
+          # package fails that `file(COPY)` outright. The `Ninja` error printed after
+          # either failure is a cascade: the toolchain include aborts inside
+          # CMakeDetermineSystem, so CMake never resolves the generator's build program
+          # -- ninja-build is enough. libxtst-dev: the vcpkg sdl3 port builds its X11
+          # backend with XTEST on (it sets SDL_X11_XSCRNSAVER=OFF, not XTEST), and
+          # SDL's CheckX11 stops configuring when the XTest headers are absent.
           sudo apt-get install -y -qq clang ninja-build cmake ccache python3-pip pkg-config \
+            autoconf autoconf-archive automake libtool libltdl-dev gettext libxtst-dev \
             libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxinerama-dev libxi-dev \
             libxss-dev libgl1-mesa-dev libasound2-dev libpulse-dev
           python3 -m pip install Pillow numpy
@@ -147,8 +169,12 @@ jobs:
           git clone https://github.com/microsoft/vcpkg.git "$RUNNER_TEMP/vcpkg"
           echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
       - run: cmake --preset linux-x64-clang-rwdi
-      - run: cmake --build --preset linux-x64-clang-rwdi --target PoseidonGame
-      - run: ctest --test-dir build/linux-x64-clang-rwdi --output-on-failure
+      # Directory form, not `--build --preset`: this file defines configure presets only,
+      # so a build preset of the same name does not exist.
+      - run: cmake --build build/linux-x64-clang-rwdi --target PoseidonGame
+      # No ctest step: this job links the game only, and the C++ suite's test entries are
+      # per case, so every one of them would fail on an executable that was never built.
+      # `cpp-tests` builds and runs that suite.
 
   build-windows:
     # Windows runners + full vcpkg build are slow: main pushes and manual runs only.
@@ -172,5 +198,47 @@ jobs:
           echo "VCPKG_ROOT=$env:RUNNER_TEMP/vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
           echo "VCPKG_KEEP_ENV_VARS=LLVM_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
       - run: cmake --preset win-x64-clang-rwdi
-      - run: cmake --build --preset win-x64-clang-rwdi --target PoseidonGame
-      - run: ctest --test-dir build/win-x64-clang-rwdi --output-on-failure
+      - run: cmake --build build/win-x64-clang-rwdi --target PoseidonGame
+      # The test binaries are not built here; `cpp-tests` builds and runs them.
+
+  cpp-tests:
+    name: C++ unit tests (win-x64-clang-rwdi)
+    # Until this job existed no CI run executed a single C++ test case: the build jobs
+    # link PoseidonGame only, so the registered Catch2 tests had no executables, and
+    # `ctest` either found nothing to run or failed on a test it could not find. Windows
+    # is the platform the suite is developed and run on (docs/proteus/TOOLCHAIN-1.md).
+    # A cold configure + build of the engine and the test targets is heavy, so this runs
+    # on the Proteus line and on dispatch, like build-windows.
+    if: github.ref == 'refs/heads/proteus/main' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git "$env:RUNNER_TEMP/vcpkg"
+          echo "VCPKG_ROOT=$env:RUNNER_TEMP/vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "VCPKG_KEEP_ENV_VARS=LLVM_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - run: cmake --preset win-x64-clang-rwdi
+      - name: build the test binaries
+        # PoseidonStudioTests is left out: it includes imgui_te_engine.h, which only the
+        # imgui "test-engine" vcpkg feature installs, and vcpkg.json does not request it
+        # (docs/proteus/G3b-cpp-tests.md). A target that cannot compile would block the
+        # whole gate, so the six suites that do build are built here.
+        run: cmake --build build/win-x64-clang-rwdi -j 4 --target PoseidonCoreTests PoseidonTests PoseidonEvaluatorTests PoseidonServerTests PoseidonTetrisTests PoseidonFoundationTests
+      - name: run
+        # -E names three cases, and nothing else is excluded:
+        #   * two are red on every machine -- they scan the source for invariants the code
+        #     does not hold yet (FIXTURE-SKIP-1 known failures 1 and 2);
+        #   * one needs an installed Arma/DayZ corpus, so its answer is a property of the
+        #     machine (known failure 3): it SKIPs here, and on a developer box with an
+        #     off-revision install it fails, which is not something this gate can decide.
+        # So green here means the other ~3,900 cases passed. Fixture-dependent cases SKIP
+        # themselves and list what they could not cover at the end of the run.
+        # --no-tests=error: a build that produced no tests must fail, not pass vacuously.
+        run: >
+          ctest --test-dir build/win-x64-clang-rwdi
+          -E "Dev panel controls all go through the search filter|WGPU instance translation storage belongs exclusively to the consumer|Compat smoke - each generation's models are the revision that generation ships"
+          --output-on-failure --no-tests=error

@@ -362,13 +362,13 @@ TEST_CASE("MLODWriter: re-emitting a loaded P3DM fixture reproduces it", "[mlod]
     requireModelsAgree(original, reemit(original));
 }
 
-// The same round trip across the encoding boundary: an SP3X source re-emitted as
-// P3DM. Three LODs, one of them a Memory LOD with points and no faces at all --
-// the reader takes a different path for that, and the writer has to survive it.
+// The same round trip across the encoding boundary: a 19-LOD SP3X source
+// re-emitted as P3DM, including the geometry LOD whose 44 component selections
+// and single empty texture are the shape the writer has to survive.
 TEST_CASE("MLODWriter: an SP3X model re-emits as P3DM without losing geometry", "[mlod][writer]")
 {
     auto original = MLODLoader::load(GET_FIXTURE("mlod/complex_vehicle_mlod.p3d"));
-    REQUIRE(original.lodLevels.size() == 3);
+    REQUIRE(original.lodLevels.size() == 19);
     REQUIRE(original.lodLevels[0].sourceEncoding == "SP3X");
 
     requireModelsAgree(original, reemit(original));

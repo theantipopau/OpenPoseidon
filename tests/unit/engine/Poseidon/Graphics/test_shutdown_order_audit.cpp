@@ -171,7 +171,14 @@ TEST_CASE("I-05: FontSystem shutdown clears FreeType caches before engine destru
     const size_t unloadPos = shutdown.find("void UnloadGameData(bool keepEngine)");
     REQUIRE(unloadPos != std::string::npos);
 
-    const size_t scanEnd = std::min(shutdown.size(), unloadPos + 2000);
+    // Scan to the next top-level definition, not a fixed character count. The window was
+    // 2000 chars and stopped just short of DestroyEngine() once SHUTDOWN-T-1 added its
+    // phase probes, so the position came back npos and the ordering check could not run.
+    size_t scanEnd = shutdown.find("\nvoid ", unloadPos + 1);
+    if (scanEnd == std::string::npos)
+    {
+        scanEnd = shutdown.size();
+    }
     const std::string region = shutdown.substr(unloadPos, scanEnd - unloadPos);
 
     const size_t clearFontCachePos = region.find("GEngine->ClearFontCache()");

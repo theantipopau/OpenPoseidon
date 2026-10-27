@@ -75,6 +75,15 @@ inline DownloadTask MakeModDownloadTask(const std::string& modId, const std::str
                                         const std::string& sha256 = {})
 {
     const std::string destDir = ModInstallDir(root, modId, folderName);
+    if (destDir.empty())
+    {
+        // Refused name: hand back a task with no destination and no install, so the worker
+        // fails at the transport (which cannot open an empty path) having written nothing.
+        DownloadTask t;
+        t.label = name.empty() ? modId : name;
+        t.url = url;
+        return t;
+    }
     StagedModInstall install = MakeStagedModInstall(destDir, modId);
     const std::string stagingDir = install.stagingDir;
     DownloadTask t;

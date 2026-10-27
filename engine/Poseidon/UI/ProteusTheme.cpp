@@ -2,6 +2,7 @@
 
 #include <Poseidon/UI/Controls/UIControls.hpp>
 #include <Poseidon/Core/resincl.hpp>
+#include <Poseidon/Foundation/Common/PlatformPaths.hpp>
 #include <Poseidon/Foundation/Common/Win.h>
 #include <Poseidon/Graphics/Core/Engine.hpp>
 #include <Poseidon/Graphics/Textures/TexturePreload.hpp>
@@ -28,10 +29,10 @@ constexpr float kRefH = 639.0f;
 // so resolve it there. Empty when the file is missing and the picture simply isn't drawn.
 RString ArtPath(const char* file)
 {
-    char exe[MAX_PATH] = {};
-    if (!GetModuleFileNameA(nullptr, exe, MAX_PATH))
+    const std::string exePath = Poseidon::Foundation::getExecutablePath();
+    if (exePath.empty())
         return RString();
-    const std::filesystem::path path = std::filesystem::path(exe).parent_path() / "assets" / "ui" / file;
+    const std::filesystem::path path = std::filesystem::path(exePath).parent_path() / "assets" / "ui" / file;
     if (!std::filesystem::exists(path))
         return RString();
     return RString(path.string().c_str());

@@ -26,6 +26,7 @@
 #include <string.h>
 #include <string>
 #include <system_error>
+#include <Poseidon/Foundation/Common/Filenames.hpp>
 #include <Poseidon/Foundation/Common/FltOpts.hpp>
 #include <Poseidon/Foundation/Containers/Array.hpp>
 #include <Poseidon/Foundation/Enums/EnumNames.hpp>
@@ -552,6 +553,15 @@ void NetworkServer::SimulateDS()
                 CurrentMission = "";
 
                 SetBaseDirectory("");
+
+                // `t` becomes both a template path under the mission tree and a directory
+                // name below; refuse a traversal-shaped name before either join.
+                if (!Poseidon::IsMissionTemplateNameValid(t))
+                {
+                    LOG_ERROR(Network, "Mission template '{}' refused: not a single path component", (const char*)t);
+                    FailSimulateSmokeCheck("mission template name is not a single path component");
+                    break;
+                }
 
                 char mission[256];
                 snprintf(mission, sizeof(mission), "%s", (const char*)t);

@@ -5,9 +5,9 @@ use anyhow::Result;
 use sha2::Digest;
 
 use crate::model::{
-    DirectoryServerRecord, ListModsQuery, ListServersQuery, ModCatalogEntry, ModUsageServer,
-    RegisterServerRequest, ServerDetail, ServerModReference, ServerPlayer, ServerVersionGroup,
-    ServiceMetadata, ServiceSummary,
+    DirectoryServerRecord, FolderClaimReservation, InstallFolderClaim, ListModsQuery,
+    ListServersQuery, ModCatalogEntry, ModUsageServer, RegisterServerRequest, ServerDetail,
+    ServerModReference, ServerPlayer, ServerVersionGroup, ServiceMetadata, ServiceSummary,
 };
 use crate::mods::{ArtifactStream, ArtifactUpload, ModStore, ModUploadMeta};
 use crate::repository::{SqliteServerDirectory, TokenRelocation};
@@ -204,6 +204,61 @@ impl PapaBearService {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("mods store is not configured"))?;
         store.finalize_revision(upload, mod_id, meta).await
+    }
+
+    /// Answer a publisher's preflight: the install folder its next publish would claim and
+    /// whether another catalog entry already holds it. Reads the catalog, writes nothing.
+    pub async fn check_install_folder(
+        &self,
+        mod_id: &str,
+        folder_name: Option<&str>,
+    ) -> Result<InstallFolderClaim> {
+        let store = self
+            .mod_store
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("mods store is not configured"))?;
+        store.check_install_folder(mod_id, folder_name).await
+    }
+
+    /// Reserve a publish's install folder before it packs and streams, answering the token that
+    /// holds it so the upload can prove it is the same publish.
+    pub async fn reserve_folder_claim(
+        &self,
+        mod_id: &str,
+        folder_name: Option<&str>,
+    ) -> Result<FolderClaimReservation> {
+        let store = self
+            .mod_store
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("mods store is not configured"))?;
+        store.reserve_folder_claim(mod_id, folder_name).await
+    }
+
+    /// Push a reservation's lease forward while its publish is still packing or streaming.
+    pub async fn renew_folder_claim(&self, mod_id: &str, folder: &str, token: &str) -> Result<()> {
+        let store = self
+            .mod_store
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("mods store is not configured"))?;
+        store.renew_folder_claim(mod_id, folder, token).await
+    }
+
+    /// Keep a reserved folder once its publisher is done, refusing another publish's token.
+    pub async fn commit_folder_claim(&self, mod_id: &str, folder: &str, token: &str) -> Result<()> {
+        let store = self
+            .mod_store
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("mods store is not configured"))?;
+        store.commit_folder_claim(mod_id, folder, token).await
+    }
+
+    /// Release a reserved folder that nothing was written into.
+    pub async fn abort_folder_claim(&self, mod_id: &str, folder: &str, token: &str) -> Result<()> {
+        let store = self
+            .mod_store
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("mods store is not configured"))?;
+        store.abort_folder_claim(mod_id, folder, token).await
     }
 
     pub async fn mod_revisions(&self, mod_id: &str) -> Result<Vec<ModCatalogEntry>> {

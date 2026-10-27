@@ -10,7 +10,12 @@
 // Jolt as the fallback and lists three points at which that choice is revisited.
 // Everything the engine sees is above this line and does not change with it.
 
+// Poseidon::LODShape -- see the note in PhysicsWorld.hpp: a global forward
+// declaration here would clash with Core/Types.hpp's `using Poseidon::LODShape`.
+namespace Poseidon
+{
 class LODShape;
+}
 
 namespace Poseidon::Physics
 {

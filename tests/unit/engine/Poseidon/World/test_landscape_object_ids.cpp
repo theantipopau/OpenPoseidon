@@ -107,7 +107,8 @@ TEST_CASE("Landscape upload view preserves row-major float heights", "[World][Te
 TEST_CASE("Landscape ID cache uses the highest sparse object ID", "[World][Terrain][ObjectID]")
 {
     WrpReader reader;
-    REQUIRE(reader.Load(GET_FIXTURE("wrp/test_world.wrp")));
+    const char* fixture = GET_FIXTURE("wrp/test_world.wrp");
+    REQUIRE(reader.Load(fixture));
 
     Landscape landscape(nullptr, nullptr);
     GlobalLandscapeScope globalLandscape(&landscape);

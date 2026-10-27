@@ -44,7 +44,8 @@ TEST_CASE("JPG: decodes 32x32 checkerboard via Init()", "[Graphics][JPG]")
 {
     TextureSourceJPEG src;
     PacLevelMem mips[kMaxMips];
-    REQUIRE(src.Init(GET_FIXTURE("jpg/checker_32x32.jpg"), mips, kMaxMips));
+    const char* fixture = GET_FIXTURE("jpg/checker_32x32.jpg");
+    REQUIRE(src.Init(fixture, mips, kMaxMips));
 
     // 32 = 2^5, so expect mips for 32,16,8,4 = 4 levels (floor(log2(32))+1 = 6,
     // minus the "<4px" floor = 4).
@@ -72,7 +73,8 @@ TEST_CASE("JPG: Init fails on non-power-of-two dimensions", "[Graphics][JPG]")
 {
     TextureSourceJPEG src;
     PacLevelMem mips[kMaxMips];
-    REQUIRE_FALSE(src.Init(GET_FIXTURE("jpg/nonpow2_33x33.jpg"), mips, kMaxMips));
+    const char* fixture = GET_FIXTURE("jpg/nonpow2_33x33.jpg");
+    REQUIRE_FALSE(src.Init(fixture, mips, kMaxMips));
 }
 
 TEST_CASE("JPG: Init fails on missing file", "[Graphics][JPG]")
@@ -90,7 +92,8 @@ TEST_CASE("JPG: generates full mip chain for 64x64", "[Graphics][JPG]")
 {
     TextureSourceJPEG src;
     PacLevelMem mips[kMaxMips];
-    REQUIRE(src.Init(GET_FIXTURE("jpg/gradient_64x64.jpg"), mips, kMaxMips));
+    const char* fixture = GET_FIXTURE("jpg/gradient_64x64.jpg");
+    REQUIRE(src.Init(fixture, mips, kMaxMips));
 
     REQUIRE(src.GetMipmapCount() == 5); // 64, 32, 16, 8, 4
     REQUIRE(mips[0]._w == 64);
@@ -101,7 +104,8 @@ TEST_CASE("JPG: flat_quadangular 128x64 mips halve both dimensions", "[Graphics]
 {
     TextureSourceJPEG src;
     PacLevelMem mips[kMaxMips];
-    REQUIRE(src.Init(GET_FIXTURE("jpg/gradient_128x64.jpg"), mips, kMaxMips));
+    const char* fixture = GET_FIXTURE("jpg/gradient_128x64.jpg");
+    REQUIRE(src.Init(fixture, mips, kMaxMips));
 
     // max dim drives mip count; min dim still halves each step.
     REQUIRE(src.GetMipmapCount() >= 5);
@@ -117,7 +121,8 @@ TEST_CASE("JPG: GetMipmapData decodes to ARGB1555", "[Graphics][JPG]")
 {
     TextureSourceJPEG src;
     PacLevelMem mips[kMaxMips];
-    REQUIRE(src.Init(GET_FIXTURE("jpg/checker_32x32.jpg"), mips, kMaxMips));
+    const char* fixture = GET_FIXTURE("jpg/checker_32x32.jpg");
+    REQUIRE(src.Init(fixture, mips, kMaxMips));
 
     // Set destination format so the decoder knows how to convert the payload.
     mips[0].SetDestFormat(PacARGB1555, 8);
@@ -134,7 +139,8 @@ TEST_CASE("JPG: source metadata is opaque for custom faces", "[Graphics][JPG][Cu
 {
     TextureSourceJPEG src;
     PacLevelMem mips[kMaxMips];
-    REQUIRE(src.Init(GET_FIXTURE("jpg/checker_32x32.jpg"), mips, kMaxMips));
+    const char* fixture = GET_FIXTURE("jpg/checker_32x32.jpg");
+    REQUIRE(src.Init(fixture, mips, kMaxMips));
 
     REQUIRE_FALSE(src.IsAlpha());
     REQUIRE_FALSE(src.IsTransparent());
@@ -144,7 +150,8 @@ TEST_CASE("JPG: GetMipmapData decodes to ARGB8888", "[Graphics][JPG]")
 {
     TextureSourceJPEG src;
     PacLevelMem mips[kMaxMips];
-    REQUIRE(src.Init(GET_FIXTURE("jpg/checker_32x32.jpg"), mips, kMaxMips));
+    const char* fixture = GET_FIXTURE("jpg/checker_32x32.jpg");
+    REQUIRE(src.Init(fixture, mips, kMaxMips));
 
     mips[0].SetDestFormat(PacARGB8888, 8);
 
@@ -174,7 +181,8 @@ TEST_CASE("JPG: GetMipmapData rejects out-of-range mip level", "[Graphics][JPG]"
 {
     TextureSourceJPEG src;
     PacLevelMem mips[kMaxMips];
-    REQUIRE(src.Init(GET_FIXTURE("jpg/checker_32x32.jpg"), mips, kMaxMips));
+    const char* fixture = GET_FIXTURE("jpg/checker_32x32.jpg");
+    REQUIRE(src.Init(fixture, mips, kMaxMips));
 
     // 32x32 → 4 mips; asking for level 5 must fail cleanly rather than crash.
     mips[0].SetDestFormat(PacARGB1555, 8);
@@ -201,7 +209,8 @@ TEST_CASE("JPG: InitFromMemory matches Init() on the same bytes", "[Graphics][JP
 TEST_CASE("JPG: factory Check accepts existing file, rejects missing", "[Graphics][JPG]")
 {
     TextureSourceJPEGFactory factory;
-    REQUIRE(factory.Check(GET_FIXTURE("jpg/checker_32x32.jpg")));
+    const char* fixture = GET_FIXTURE("jpg/checker_32x32.jpg");
+    REQUIRE(factory.Check(fixture));
     std::string missing = GET_FIXTURE("jpg/checker_32x32.jpg");
     missing.replace(missing.size() - 17, 17, "surely_missing.jpg");
     REQUIRE_FALSE(factory.Check(missing.c_str()));

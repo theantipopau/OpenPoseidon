@@ -1311,6 +1311,634 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn http_mod_publish_rejects_a_folder_name_that_could_leave_the_mods_root() {
+        // The endpoint turns a finalize rejection into 400; this pins that a manifest carrying a
+        // traversal-shaped install folder is refused there, with nothing advertised and nothing
+        // written -- the value becomes `<modsRoot>/<folderName>` on every client.
+        let temp_dir = tempdir().unwrap();
+        let directory = Arc::new(
+            SqliteServerDirectory::open_path(temp_dir.path().join("folder-name.sqlite"))
+                .await
+                .unwrap(),
+        );
+        let mods_dir = temp_dir.path().join("mods");
+        let app = build_router_with_options(
+            directory,
+            Some("secret-key".to_string()),
+            Some(mods_dir.clone()),
+            None,
+            false,
+        );
+
+        let boundary = "folderboundary";
+        let publish = |folder: &str| {
+            Request::builder()
+                .method("POST")
+                .uri("/v1/mods")
+                .header(
+                    "content-type",
+                    format!("multipart/form-data; boundary={boundary}"),
+                )
+                .header("x-api-key", "secret-key")
+                .body(Body::from(multipart_body(
+                    boundary,
+                    &[
+                        ("modId", "folder-name-mod"),
+                        ("name", "Folder Name Mod"),
+                        ("folderName", folder),
+                    ],
+                    Some(("file", b"artifact".as_slice())),
+                )))
+                .unwrap()
+        };
+
+        let refused = app
+            .clone()
+            .oneshot(publish(r"..\..\Documents\x"))
+            .await
+            .unwrap();
+        assert_eq!(refused.status(), StatusCode::BAD_REQUEST);
+        let message = to_bytes(refused.into_body(), usize::MAX).await.unwrap();
+        assert!(
+            String::from_utf8_lossy(&message).contains("invalid folder name"),
+            "got: {}",
+            String::from_utf8_lossy(&message)
+        );
+
+        let list = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/mods")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(list.status(), StatusCode::OK);
+        let mods: Vec<ModCatalogEntry> =
+            serde_json::from_slice(&to_bytes(list.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert!(mods.is_empty(), "refused publish advertised {mods:?}");
+        assert!(!mods_dir.join("folder-name-mod").exists());
+
+        // The widened rule rides the same mapping: a Windows-reserved character is one component
+        // but uninstallable, so it is a 400 like the traversal shapes rather than a 500.
+        let reserved = app.clone().oneshot(publish("bad?name")).await.unwrap();
+        assert_eq!(reserved.status(), StatusCode::BAD_REQUEST);
+        let message = to_bytes(reserved.into_body(), usize::MAX).await.unwrap();
+        assert!(
+            String::from_utf8_lossy(&message).contains("invalid folder name 'bad?name'"),
+            "got: {}",
+            String::from_utf8_lossy(&message)
+        );
+
+        // The same manifest with a legitimate folder name still publishes, keeping it verbatim.
+        let accepted = app
+            .clone()
+            .oneshot(publish("@folder-name-mod"))
+            .await
+            .unwrap();
+        assert_eq!(accepted.status(), StatusCode::OK);
+        let entry: ModCatalogEntry =
+            serde_json::from_slice(&to_bytes(accepted.into_body(), usize::MAX).await.unwrap())
+                .unwrap();
+        assert_eq!(entry.folder_name.as_deref(), Some("@folder-name-mod"));
+    }
+
+    #[tokio::test]
+    async fn http_mod_publish_refuses_a_folder_name_another_entry_already_claims() {
+        // The install destination is cleared before unpacking, so two entries in one folder
+        // overwrite each other. Only the service can see the pair, and it answers 409 (a
+        // conflict with the catalog), not 400: the manifest itself is well formed.
+        let temp_dir = tempdir().unwrap();
+        let directory = Arc::new(
+            SqliteServerDirectory::open_path(temp_dir.path().join("folder-claim.sqlite"))
+                .await
+                .unwrap(),
+        );
+        let mods_dir = temp_dir.path().join("mods");
+        let app = build_router_with_options(
+            directory,
+            Some("secret-key".to_string()),
+            Some(mods_dir.clone()),
+            None,
+            false,
+        );
+
+        let boundary = "claimboundary";
+        let publish = |mod_id: &'static str, folder: &str| {
+            Request::builder()
+                .method("POST")
+                .uri("/v1/mods")
+                .header(
+                    "content-type",
+                    format!("multipart/form-data; boundary={boundary}"),
+                )
+                .header("x-api-key", "secret-key")
+                .body(Body::from(multipart_body(
+                    boundary,
+                    &[("modId", mod_id), ("name", mod_id), ("folderName", folder)],
+                    Some(("file", b"artifact".as_slice())),
+                )))
+                .unwrap()
+        };
+
+        let first = app
+            .clone()
+            .oneshot(publish("folder-one-claim", "shared"))
+            .await
+            .unwrap();
+        assert_eq!(first.status(), StatusCode::OK);
+
+        let refused = app
+            .clone()
+            .oneshot(publish("folder-two-claim", "SHARED"))
+            .await
+            .unwrap();
+        assert_eq!(refused.status(), StatusCode::CONFLICT);
+        let message = to_bytes(refused.into_body(), usize::MAX).await.unwrap();
+        let message = String::from_utf8_lossy(&message);
+        assert!(
+            message.contains("already claimed by catalog entry 'folder-one-claim'"),
+            "got: {message}"
+        );
+        assert!(message.contains("as 'shared'"), "got: {message}");
+
+        let list = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/mods")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(list.status(), StatusCode::OK);
+        let mods: Vec<ModCatalogEntry> =
+            serde_json::from_slice(&to_bytes(list.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(mods.len(), 1, "refused publish advertised {mods:?}");
+        assert!(!mods_dir.join("folder-two-claim").exists());
+
+        // The same manifest with a free folder name still publishes.
+        let accepted = app
+            .clone()
+            .oneshot(publish("folder-two-claim", "shared-two"))
+            .await
+            .unwrap();
+        assert_eq!(accepted.status(), StatusCode::OK);
+        let entry: ModCatalogEntry =
+            serde_json::from_slice(&to_bytes(accepted.into_body(), usize::MAX).await.unwrap())
+                .unwrap();
+        assert_eq!(entry.folder_name.as_deref(), Some("shared-two"));
+    }
+
+    /// Ask the read-only install-folder preflight and answer its status and body.
+    async fn claim(app: axum::Router, uri: &str) -> (StatusCode, Vec<u8>) {
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(uri)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let status = response.status();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        (status, body.to_vec())
+    }
+
+    #[tokio::test]
+    async fn http_folder_claim_answers_before_an_upload() {
+        // The publisher cannot see the catalog, so `papa publish` asks this before packing and
+        // uploading. It must answer exactly as the upload would, including the refusal text, and
+        // reading must not create the entry it asks about.
+        let temp_dir = tempdir().unwrap();
+        let directory = Arc::new(
+            SqliteServerDirectory::open_path(temp_dir.path().join("preflight.sqlite"))
+                .await
+                .unwrap(),
+        );
+        let mods_dir = temp_dir.path().join("mods");
+        let app = build_router_with_options(
+            directory,
+            Some("secret-key".to_string()),
+            Some(mods_dir.clone()),
+            None,
+            false,
+        );
+
+        let boundary = "preflightboundary";
+        let first = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/mods")
+                    .header(
+                        "content-type",
+                        format!("multipart/form-data; boundary={boundary}"),
+                    )
+                    .header("x-api-key", "secret-key")
+                    .body(Body::from(multipart_body(
+                        boundary,
+                        &[
+                            ("modId", "claim-alpha"),
+                            ("name", "Alpha"),
+                            ("folderName", "shared"),
+                        ],
+                        Some(("file", b"artifact".as_slice())),
+                    )))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(first.status(), StatusCode::OK);
+
+        let (status, body) = claim(
+            app.clone(),
+            "/v1/catalog/folder-claim?modId=claim-beta&folderName=SHARED",
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        let answer: crate::model::InstallFolderClaim = serde_json::from_slice(&body).unwrap();
+        assert!(!answer.available, "{answer:?}");
+        assert_eq!(answer.folder, "SHARED");
+        assert_eq!(answer.claimed_by.as_deref(), Some("claim-alpha"));
+        assert!(
+            answer
+                .refusal
+                .as_deref()
+                .unwrap()
+                .contains("already claimed by catalog entry 'claim-alpha'"),
+            "{answer:?}"
+        );
+
+        let (status, body) = claim(
+            app.clone(),
+            "/v1/catalog/folder-claim?modId=claim-beta&folderName=shared-two",
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        let free: crate::model::InstallFolderClaim = serde_json::from_slice(&body).unwrap();
+        assert!(free.available, "{free:?}");
+        assert_eq!(free.folder, "shared-two");
+        assert_eq!(free.refusal, None);
+
+        // A revision that names no folder keeps the one it holds, so its own entry cannot block it.
+        let (status, body) = claim(app.clone(), "/v1/catalog/folder-claim?modId=claim-alpha").await;
+        assert_eq!(status, StatusCode::OK);
+        let own: crate::model::InstallFolderClaim = serde_json::from_slice(&body).unwrap();
+        assert!(own.available, "{own:?}");
+        assert_eq!(own.folder, "shared");
+
+        // With no `modId`, the id is derived from the name, exactly as a first publish does.
+        let (status, body) = claim(app.clone(), "/v1/catalog/folder-claim?name=Claim%20Beta").await;
+        assert_eq!(status, StatusCode::OK);
+        let derived: crate::model::InstallFolderClaim = serde_json::from_slice(&body).unwrap();
+        assert_eq!(derived.mod_id, "claim-beta");
+        assert_eq!(derived.folder, "@claim-beta");
+        assert!(derived.available, "{derived:?}");
+
+        // Bad names are the request's fault, not a claim answer.
+        for uri in [
+            "/v1/catalog/folder-claim?modId=claim-beta&folderName=..%2Fescaped",
+            "/v1/catalog/folder-claim?modId=bad%2Fid",
+            "/v1/catalog/folder-claim",
+        ] {
+            let (status, body) = claim(app.clone(), uri).await;
+            assert_eq!(
+                status,
+                StatusCode::BAD_REQUEST,
+                "{uri}: {}",
+                String::from_utf8_lossy(&body)
+            );
+        }
+
+        // None of the questions wrote anything.
+        let list = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/v1/mods")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let mods: Vec<ModCatalogEntry> =
+            serde_json::from_slice(&to_bytes(list.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert_eq!(mods.len(), 1, "{mods:?}");
+        assert!(!mods_dir.join("claim-beta").exists());
+        assert!(!mods_dir.join("@claim-beta").exists());
+    }
+
+    /// Post a JSON body, optionally with the admin key, and answer the status and body.
+    async fn post_json(
+        app: axum::Router,
+        uri: &str,
+        body: String,
+        key: Option<&str>,
+    ) -> (StatusCode, Vec<u8>) {
+        let mut request = Request::builder()
+            .method("POST")
+            .uri(uri)
+            .header("content-type", "application/json");
+        if let Some(key) = key {
+            request = request.header("x-api-key", key);
+        }
+        let response = app
+            .oneshot(request.body(Body::from(body)).unwrap())
+            .await
+            .unwrap();
+        let status = response.status();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        (status, body.to_vec())
+    }
+
+    #[tokio::test]
+    async fn http_folder_reservation_stops_a_second_publisher_before_an_upload() {
+        // MSERVER-CLAIM-RESERVE-1: the read-only preflight can answer two publishers of a free
+        // folder with `available`, and the loser learns the truth only after streaming the whole
+        // artifact. The reservation answers 409 instead, and the token it hands out is what the
+        // upload needs to take the folder.
+        let temp_dir = tempdir().unwrap();
+        let directory = Arc::new(
+            SqliteServerDirectory::open_path(temp_dir.path().join("reserve.sqlite"))
+                .await
+                .unwrap(),
+        );
+        let mods_dir = temp_dir.path().join("mods");
+        let app = build_router_with_options(
+            directory,
+            Some("secret-key".to_string()),
+            Some(mods_dir.clone()),
+            None,
+            false,
+        );
+
+        // A reservation refuses the folder to everyone else, so it is admin-gated.
+        let (status, _) = post_json(
+            app.clone(),
+            "/v1/catalog/folder-claim",
+            r#"{"modId":"alpha"}"#.to_string(),
+            None,
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
+
+        let (status, body) = post_json(
+            app.clone(),
+            "/v1/catalog/folder-claim",
+            r#"{"modId":"alpha"}"#.to_string(),
+            Some("secret-key"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        let reservation: crate::model::FolderClaimReservation =
+            serde_json::from_slice(&body).unwrap();
+        assert_eq!(reservation.mod_id, "alpha");
+        assert_eq!(reservation.folder, "@alpha");
+        let token = reservation
+            .token
+            .expect("a new folder is reserved with a token");
+        let renew_after = reservation
+            .renew_after_ms
+            .expect("a reservation answers how often to renew its lease");
+        assert!(renew_after > 0, "{renew_after}");
+
+        let (status, body) = post_json(
+            app.clone(),
+            "/v1/catalog/folder-claim",
+            r#"{"modId":"beta","folderName":"@alpha"}"#.to_string(),
+            Some("secret-key"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert!(
+            String::from_utf8_lossy(&body).contains("already claimed by catalog entry 'alpha'"),
+            "{}",
+            String::from_utf8_lossy(&body)
+        );
+
+        // An upload that reaches the service some other way cannot take a reserved folder, and
+        // the refusal does not advertise the entry.
+        let boundary = "reserveboundary";
+        let upload = |fields: Vec<(&'static str, String)>, artifact: &'static [u8]| {
+            let fields: Vec<(&str, &str)> = fields
+                .iter()
+                .map(|(name, value)| (*name, value.as_str()))
+                .collect();
+            Request::builder()
+                .method("POST")
+                .uri("/v1/mods")
+                .header(
+                    "content-type",
+                    format!("multipart/form-data; boundary={boundary}"),
+                )
+                .header("x-api-key", "secret-key")
+                .body(Body::from(multipart_body(
+                    boundary,
+                    &fields,
+                    Some(("file", artifact)),
+                )))
+                .unwrap()
+        };
+
+        let refused = app
+            .clone()
+            .oneshot(upload(
+                vec![
+                    ("modId", "alpha".to_string()),
+                    ("name", "Alpha".to_string()),
+                ],
+                b"alpha-artifact",
+            ))
+            .await
+            .unwrap();
+        assert_eq!(refused.status(), StatusCode::CONFLICT);
+        let detail =
+            String::from_utf8_lossy(&to_bytes(refused.into_body(), usize::MAX).await.unwrap())
+                .to_string();
+        assert!(
+            detail.contains("reserved by a publish of 'alpha' that has not finished"),
+            "{detail}"
+        );
+        let list = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/mods")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let mods: Vec<ModCatalogEntry> =
+            serde_json::from_slice(&to_bytes(list.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert!(mods.is_empty(), "{mods:?}");
+        assert!(!mods_dir.join("@alpha").exists());
+
+        // The upload carrying the token is the reservation's publish, and it takes the folder.
+        let published = app
+            .clone()
+            .oneshot(upload(
+                vec![
+                    ("modId", "alpha".to_string()),
+                    ("name", "Alpha".to_string()),
+                    ("claimToken", token.clone()),
+                ],
+                b"alpha-artifact",
+            ))
+            .await
+            .unwrap();
+        assert_eq!(published.status(), StatusCode::OK);
+        let entry: ModCatalogEntry =
+            serde_json::from_slice(&to_bytes(published.into_body(), usize::MAX).await.unwrap())
+                .unwrap();
+        assert_eq!(entry.mod_id, "alpha");
+
+        let token_body = format!(r#"{{"modId":"alpha","folder":"@alpha","token":"{token}"}}"#);
+        // The publish consumed the token, so the folder can no longer be given back...
+        let (status, body) = post_json(
+            app.clone(),
+            "/v1/catalog/folder-claim/abort",
+            token_body.clone(),
+            Some("secret-key"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert!(
+            String::from_utf8_lossy(&body).contains("belongs to another publish"),
+            "{}",
+            String::from_utf8_lossy(&body)
+        );
+        // ...while commit is idempotent, so a publisher can send it after every publish.
+        let (status, _) = post_json(
+            app.clone(),
+            "/v1/catalog/folder-claim/commit",
+            token_body,
+            Some("secret-key"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::NO_CONTENT);
+        assert!(mods_dir.join("alpha").exists());
+
+        // A revision that keeps the folder is reserved too, because two publishes of one entry
+        // are the pair that could otherwise both stream into it.
+        let (status, body) = post_json(
+            app.clone(),
+            "/v1/catalog/folder-claim",
+            r#"{"modId":"alpha"}"#.to_string(),
+            Some("secret-key"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        let keeps: crate::model::FolderClaimReservation = serde_json::from_slice(&body).unwrap();
+        assert_eq!(keeps.folder, "@alpha");
+        assert!(keeps.renew_after_ms.is_some(), "{keeps:?}");
+        let keeps_token = keeps.token.expect("a keeps-folder revision is reserved");
+
+        let (status, body) = post_json(
+            app.clone(),
+            "/v1/catalog/folder-claim",
+            r#"{"modId":"alpha"}"#.to_string(),
+            Some("secret-key"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert!(
+            String::from_utf8_lossy(&body)
+                .contains("already reserved by another publish of 'alpha'"),
+            "{}",
+            String::from_utf8_lossy(&body)
+        );
+        // The read-only answer names the entry whose own publish holds it.
+        let (status, body) = claim(app.clone(), "/v1/catalog/folder-claim?modId=alpha").await;
+        assert_eq!(status, StatusCode::OK);
+        let held: crate::model::InstallFolderClaim = serde_json::from_slice(&body).unwrap();
+        assert!(!held.available, "{held:?}");
+        assert_eq!(held.claimed_by.as_deref(), Some("alpha"));
+
+        // Aborting it works even though the catalog already installs into the folder.
+        let keeps_body =
+            format!(r#"{{"modId":"alpha","folder":"@alpha","token":"{keeps_token}"}}"#);
+        let (status, _) = post_json(
+            app.clone(),
+            "/v1/catalog/folder-claim/abort",
+            keeps_body,
+            Some("secret-key"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::NO_CONTENT);
+        assert!(mods_dir.join("alpha").exists());
+    }
+
+    #[tokio::test]
+    async fn http_folder_claim_renewal_answers_only_its_own_publish() {
+        // A reservation is held while the source is packed and the artifact streamed, which can
+        // take longer than its lease. The publisher renews it, so `check-names --fix` can tell a
+        // live publish from a crashed one; only the token that took the claim may do so.
+        let temp_dir = tempdir().unwrap();
+        let directory = Arc::new(
+            SqliteServerDirectory::open_path(temp_dir.path().join("renew.sqlite"))
+                .await
+                .unwrap(),
+        );
+        let app = build_router_with_options(
+            directory,
+            Some("secret-key".to_string()),
+            Some(temp_dir.path().join("mods")),
+            None,
+            false,
+        );
+
+        let (status, body) = post_json(
+            app.clone(),
+            "/v1/catalog/folder-claim",
+            r#"{"modId":"alpha"}"#.to_string(),
+            Some("secret-key"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        let reservation: crate::model::FolderClaimReservation =
+            serde_json::from_slice(&body).unwrap();
+        let token = reservation.token.unwrap();
+        let token_body = format!(r#"{{"modId":"alpha","folder":"@alpha","token":"{token}"}}"#);
+
+        let (status, _) = post_json(
+            app.clone(),
+            "/v1/catalog/folder-claim/renew",
+            token_body,
+            Some("secret-key"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::NO_CONTENT);
+        // Only the token that took the claim can keep it alive.
+        let (status, _) = post_json(
+            app.clone(),
+            "/v1/catalog/folder-claim/renew",
+            r#"{"modId":"alpha","folder":"@alpha","token":"not-the-token"}"#.to_string(),
+            Some("secret-key"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        // A folder no publish holds has nothing to renew.
+        let (status, _) = post_json(
+            app.clone(),
+            "/v1/catalog/folder-claim/renew",
+            format!(r#"{{"modId":"alpha","folder":"@nobody","token":"{token}"}}"#),
+            Some("secret-key"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
     async fn http_mod_revision_routes_keep_stable_identity_and_history() {
         let temp_dir = tempdir().unwrap();
         let directory = Arc::new(
@@ -3020,6 +3648,7 @@ mod tests {
         assert!(paths.contains_key("/v1/mods/{modId}/revisions/{revision}"));
         assert!(paths.contains_key("/v1/mods/{modId}/revisions/{revision}/download"));
         assert!(paths.contains_key("/v1/mods/{modId}/servers"));
+        assert!(paths.contains_key("/v1/catalog/folder-claim"));
         assert!(paths.contains_key("/v1/meta/service"));
         assert!(paths.contains_key("/v1/meta/summary"));
         assert!(paths.contains_key("/openapi/v1.yaml"));
@@ -3055,6 +3684,7 @@ mod tests {
         assert!(schemas.contains_key("ServerRecentSession"));
         assert!(schemas.contains_key("ModUsageServer"));
         assert!(schemas.contains_key("ModCatalogEntry"));
+        assert!(schemas.contains_key("InstallFolderClaim"));
         assert!(schemas.contains_key("PruneServersRequest"));
         assert!(schemas.contains_key("PruneServersResponse"));
         assert!(schemas.contains_key("ServiceMetadata"));

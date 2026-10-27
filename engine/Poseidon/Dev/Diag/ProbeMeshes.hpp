@@ -11,7 +11,13 @@
 // orientation is three column vectors and scaling them scales the model. So one
 // box mesh serves every box, whatever its dimensions.
 
+// Poseidon::LODShapeWithShadow -- Core/Types.hpp imports it into the global namespace
+// with a using-declaration, so a global forward declaration here would declare a
+// second class of that name and conflict wherever both are visible.
+namespace Poseidon
+{
 class LODShapeWithShadow;
+}
 
 namespace Poseidon::Dev
 {

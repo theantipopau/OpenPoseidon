@@ -409,8 +409,16 @@ impl Terrain {
         // and jitter map landed in unwritten slots and read as null (black terrain, RX 9070
         // XT). Padding the array to its full size keeps every binding where the layout
         // says. Vulkan is unaffected and keeps the partially bound path.
-        let partially_bound =
-            partially_bound && unsafe { device.as_hal::<wgpu::hal::api::Dx12>() }.is_none();
+        //
+        // The probe is target-gated because `wgpu::hal::api::Dx12` only exists where
+        // wgpu-hal compiles its DX12 backend (`#[cfg(dx12)]`, which is Windows in this
+        // build). Written unconditionally it is a Linux compile error, and the CI test
+        // job is the first thing that compiles this crate there.
+        #[cfg(windows)]
+        let dx12 = unsafe { device.as_hal::<wgpu::hal::api::Dx12>() }.is_some();
+        #[cfg(not(windows))]
+        let dx12 = false;
+        let partially_bound = partially_bound && !dx12;
         // group 1 (vertex): terrain params UBO + heightmap (R32Float, textureLoad).
         let group1_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("wgr_terrain_group1_layout"),

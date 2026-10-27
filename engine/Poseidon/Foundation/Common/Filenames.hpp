@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string.h>
+#include <string>
 #include <Poseidon/Foundation/platform.hpp>
 
 namespace Poseidon::Foundation
@@ -104,6 +105,42 @@ inline void GetFilename(char* dst, const char* sname)
 inline bool IsRelativePath(const char* path)
 {
     return (*path != '\\' && *path != '/' && !strstr(path, "..") && !strchr(path, ':'));
+}
+
+// True when `name` is exactly one relative path component: a name that means the same folder
+// on every supported filesystem. Non-empty, not "." or "..", no '/' or '\\' (so no
+// separator, no absolute path, no UNC root), no drive/stream ':', no control characters, no
+// Windows-reserved '*' '?' '"' '<' '>' '|', and no trailing '.' or ' ' (Windows trims those,
+// so ".. " would collapse back to ".."). Names that come from catalogs, server configs or
+// packets are held to this before they are joined onto a directory.
+inline bool IsSinglePathComponent(const std::string& name)
+{
+    if (name.empty() || name == "." || name == "..")
+        return false;
+    if (name.back() == '.' || name.back() == ' ')
+        return false;
+    for (char raw : name)
+    {
+        const unsigned char c = static_cast<unsigned char>(raw);
+        if (c < 0x20 || c == 0x7f)
+            return false;
+        switch (raw)
+        {
+            case '/': // separator / absolute / UNC
+            case '\\':
+            case ':': // drive designator, NTFS alternate stream
+            case '*':
+            case '?':
+            case '"':
+            case '<':
+            case '>':
+            case '|':
+                return false;
+            default:
+                break;
+        }
+    }
+    return true;
 }
 
 } // namespace Poseidon::Foundation

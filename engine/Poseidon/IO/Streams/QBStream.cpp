@@ -70,6 +70,41 @@ const char* LastPathComponent(const char* path)
     return last;
 }
 
+// A relative name is only ever joined onto a game root or a mod folder, so a ".." that
+// walks above its own start names something outside that root. It must be refused
+// before the join: "<mod>/../<mod>/voice/x" is not the file "<mod>/voice/x" says it
+// is, but Windows collapses the pair at open time and hands back the one inside the
+// mod -- a mod-relative "..\\@voicemod\\voice\\x" opened @voicemod's own file, i.e. a
+// path that escaped its prefix still resolved.
+bool EscapesRoot(const char* relPath)
+{
+    if (!relPath || !*relPath)
+        return false;
+
+    int depth = 0;
+    for (const char* p = relPath; *p;)
+    {
+        const char* sep = strpbrk(p, "/\\");
+        const size_t len = sep ? static_cast<size_t>(sep - p) : strlen(p);
+        const bool parent = len == 2 && p[0] == '.' && p[1] == '.';
+        const bool current = len == 1 && p[0] == '.';
+        if (parent)
+        {
+            if (depth == 0)
+                return true;
+            --depth;
+        }
+        else if (len > 0 && !current)
+        {
+            ++depth;
+        }
+        if (!sep)
+            break;
+        p = sep + 1;
+    }
+    return false;
+}
+
 struct ModRootAliasContext
 {
     const char* prefix;
@@ -111,7 +146,7 @@ std::string ResolveModRootAlias(const char* name)
     context.prefix = name;
     context.prefixLen = separator - name;
     context.rest = separator + 1;
-    if (context.prefixLen == 0 || !*context.rest)
+    if (context.prefixLen == 0 || !*context.rest || EscapesRoot(context.rest))
         return {};
 
     ModSystem::EnumDirectories(ResolveModRootAliasCallback, &context);
@@ -201,6 +236,9 @@ std::string ResolveModOverride(const char* relPath)
     for (char& c : context.rel)
         if (c == '\\')
             c = '/';
+
+    if (EscapesRoot(context.rel.c_str()))
+        return {};
 
     ModSystem::EnumDirectories(ResolveModOverrideCallback, &context);
     return context.resolved;

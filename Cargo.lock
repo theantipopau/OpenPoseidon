@@ -2009,6 +2009,9 @@ dependencies = [
 [[package]]
 name = "papa-bear-client"
 version = "0.1.0"
+dependencies = [
+ "serde_json",
+]
 
 [[package]]
 name = "papa-bear-master-service"

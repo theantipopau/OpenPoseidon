@@ -8,6 +8,7 @@
 #include <Poseidon/Asset/Formats/BISBinaryStream.hpp>
 #include <Poseidon/IO/Streams/QStream.hpp>
 #include "../../../../test_fixtures.hpp"
+#include <algorithm>
 #include <fstream>
 #include <iterator>
 #include <vector>
@@ -70,15 +71,18 @@ TEST_CASE("MLOD TAGG: complex_vehicle_mlod.p3d - Read TAGG sections", "[mlod][ta
     // Verify named selections count (should match ODOL: 30)
     REQUIRE(tagg.namedSelections.size() == 30);
 
-    // Check first named selection
+    // Check first named selection. The corpus is authored, not extracted, so the
+    // names are roles rather than the removed model's labels; the encoding under
+    // test -- name in a fixed 64-byte field, payload sized nPos + nFace -- is the
+    // same either way.
     const auto& sel0 = tagg.namedSelections[0];
-    REQUIRE(sel0.name == "velka vrtule");           // "big propeller" in Czech
+    REQUIRE(sel0.name == "part_01");
     REQUIRE(sel0.pointWeights.size() == sp3x.nPos); // 2617 points
     REQUIRE(sel0.faceFlags.size() == sp3x.nFace);   // 1341 faces
 
     // Check another named selection
     const auto& sel1 = tagg.namedSelections[1];
-    REQUIRE(sel1.name == "mala vrtule"); // "small propeller" in Czech
+    REQUIRE(sel1.name == "part_02");
 
     // Check proxy selection
     bool foundCargoProxy = false;
@@ -95,6 +99,9 @@ TEST_CASE("MLOD TAGG: complex_vehicle_mlod.p3d - Read TAGG sections", "[mlod][ta
     // Check last selection
     const auto& selLast = tagg.namedSelections.back();
     REQUIRE(selLast.name == "proxy:flag_alone.01");
+    // Every weight byte selects, so a reader that keeps only membership and drops
+    // the byte is distinguishable from one that keeps it (AST-018).
+    REQUIRE(*std::max_element(selLast.pointWeights.begin(), selLast.pointWeights.end()) > 0);
 
     // Verify properties (should have 1: lodnoshadow)
     REQUIRE(tagg.namedProperties.size() == 1);

@@ -5,6 +5,7 @@
 //! its current status. The live socket round-trip (`query`) and directory/workshop helpers
 //! come later; the engine will consume this crate via a C ABI in a separate phase.
 
+pub mod catalog;
 pub mod codec;
 pub mod framing;
 pub mod query;

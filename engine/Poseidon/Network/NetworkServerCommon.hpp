@@ -22,6 +22,11 @@ RString GetMissionDirectory();
 // the mission browser offers folders.
 constexpr int MaxMPMissionFolderDepth = 4;
 std::vector<std::string> GetMPMissionLookupDirectories();
+// True when a "<mission>.<world>" template name is one relative path component, i.e. when it
+// may be joined onto a mission lookup directory. Checked before every such join.
+bool IsMissionTemplateNameValid(RString templateName);
+// Empty when `mission` or `world` is not a single relative path component: the name would be
+// joined onto the MPMissions tree, so a traversal-shaped template must not resolve at all.
 RString ResolveMPMissionTemplateBase(RString mission, RString world);
 void RunInitScript();
 } // namespace Poseidon

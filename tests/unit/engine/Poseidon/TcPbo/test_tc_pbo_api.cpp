@@ -130,9 +130,11 @@ static std::string GetPluginPath()
 
 static std::string GetPboFixturePath(const char* name)
 {
-    char path[MAX_PATH];
-    snprintf(path, sizeof(path), "%s\\fixtures\\pbo\\%s", TestFixtures::GetExecutableDirectory(), name);
-    return path;
+    // GET_FIXTURE rather than a hand-built exe-relative path: it also finds the repo copy,
+    // and it SKIPs the case when the pbo family is absent from this checkout instead of
+    // letting the plugin return a null handle that reads as a plugin bug.
+    const std::string relative = std::string("pbo/") + name;
+    return GET_FIXTURE(relative.c_str());
 }
 
 TEST_CASE("TcPbo - Plugin DLL loads", "[tcpbo]")

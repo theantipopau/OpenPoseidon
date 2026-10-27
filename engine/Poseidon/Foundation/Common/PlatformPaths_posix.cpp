@@ -4,9 +4,14 @@
 #include <cerrno>
 #include <cstring>
 #include <filesystem>
-#include <sys/stat.h>
 #include <string>
+#include <system_error>
+#include <vector>
+#include <sys/stat.h>
 #include <unistd.h>
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 
 namespace
 {
@@ -122,6 +127,29 @@ std::string getCurrentUserName()
 {
     const char* loginName = getlogin();
     return loginName ? loginName : std::string();
+}
+
+std::string getExecutablePath()
+{
+#ifdef __APPLE__
+    // _NSGetExecutablePath reports the required size by returning -1 with size set.
+    uint32_t size = 0;
+    _NSGetExecutablePath(nullptr, &size);
+    std::vector<char> buf(size > 1 ? size : 1, '\0');
+    if (_NSGetExecutablePath(buf.data(), &size) != 0)
+        return {};
+    std::error_code ec;
+    const auto canonical = std::filesystem::weakly_canonical(buf.data(), ec);
+    return ec ? std::string(buf.data()) : canonical.string();
+#else
+    // /proc/self/exe is the kernel's own record of the loaded image; unlike argv[0]
+    // it survives a PATH lookup, a symlink, or a chdir.
+    std::error_code ec;
+    const auto exe = std::filesystem::read_symlink("/proc/self/exe", ec);
+    if (ec)
+        return {};
+    return exe.string();
+#endif
 }
 
 } // namespace Poseidon::Foundation
