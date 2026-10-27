@@ -1,7 +1,7 @@
 # G3e-linux-clang — PoseidonGame builds with clang in GNU mode
 
-Status: done-unverified (built and linked locally on Ubuntu 26.04 / clang 21.1.8; the CI job is green
-on this PR's head)
+Status: done-unverified (Linux built and linked locally on Ubuntu 26.04 / clang 21.1.8; the walk-in run
+40456099564 is fully green, including the Windows build and the 3,887-case C++ gate)
 
 ## Problem
 
@@ -90,17 +90,24 @@ off POSIX); the RNG diagnostic prints the same address on MSVC.
   `Linking CXX executable apps/cwr/Game/ProteusGame`. `asset registry`, `format (changed hunks)` and
   `rust unit tests (Lavapipe)` were already green; the Windows and validation-layer jobs are skipped on PR
   runs by design.
-- **Repo gates:** `check-format.py --base <merge-base>` OK (136 changed files); `check-assets.py`,
+- **Windows, local (job commands):** `cmake --build build/win-x64-clang-rwdi --target PoseidonGame`
+  exit 0, `ProteusGame.exe` linked; the six test targets built with no error and
+  `ctest -E "<three named cases>" --output-on-failure --no-tests=error` reported **3,887 tests, 100 %
+  passed**, 138 s — identical to the pre-change result, so the portability edits are inert there.
+- **CI walk-in run 40456099564 (workflow_dispatch, head `17f9296`):** all seven jobs green —
+  `build (win-x64-clang-rwdi)`, `C++ unit tests (win-x64-clang-rwdi)` (3,887 passed, 148.8 s),
+  `build (linux-x64-clang-rwdi)`, `rust unit tests (Lavapipe)`, `rust unit tests (validation layer,
+  serial)` (its first run), `asset registry`, `format (changed hunks)`. It is the first fully green run
+  of this workflow on the line.
+- **Repo gates:** `check-format.py --base <merge-base>` OK (137 changed files); `check-assets.py`,
   `gen-roadmap.py --check` and the `perf_parse`/`imgdiff` selftests OK.
 - The earlier `git diff` of the branch's own DX12-1 terrain fix is what the Rust job's first compile
   caught (`DX12-1a`, already landed); no Rust source is touched here.
 
 ## Risks
 
-- **The Windows side of these edits is not compiled here.** `cpp-tests` and `build-windows` are
-  main-push/dispatch-gated, so a PR run skips them. The touched Windows code is a six-line
-  `GetModuleFileNameW` wrapper using helpers already in that file, two call sites that now go through
-  it, and `Sleep` without the global qualifier. First Windows run is the owner's.
+- **The Windows jobs still do not run on ordinary PR pushes** — they are main-push/dispatch-gated, so
+  their coverage of these edits came from the manual dispatch above and will not repeat per PR.
 - **The macOS branch** (`_NSGetExecutablePath`) is uncompiled; the file already had macOS branches and
   macOS is not in CI.
 - **clang 21 locally vs clang 18 on the runner.** No diagnostic here is version-specific, but the
@@ -111,8 +118,7 @@ off POSIX); the RNG diagnostic prints the same address on MSVC.
 
 - `Font.cpp`'s flat fallback still formats `"Fonts\\%s"` with a backslash; on Linux that is a filename
   containing a backslash, so the fallback can never resolve. It is a silent miss, not a compile error.
-- The Linux build now exists locally; running the two Windows-gated jobs (manual dispatch) would close
-  the first risk above.
+- Nothing open for this ticket; `Font.cpp`'s backslash fallback above is the next piece of the port.
 
 ## Verify on GPU
 
