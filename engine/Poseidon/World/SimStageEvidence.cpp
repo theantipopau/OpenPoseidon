@@ -373,6 +373,15 @@ std::vector<SimResourceCensusEntry> BuildCensus()
             OutOfTick("Dev/Diag/PhysicsProbe.cpp", "", "dev panel"),
             OutOfTick("Dev/Diag/PhysicsRayAudit.cpp", "", "dev panel"),
             OutOfTick("Dev/Diag/PhysicsTab.cpp", "", "dev panel"),
+            InTick("World/Physics/CorpseArticulation.hpp", "", SimStage::Vehicles, false,
+                   "CorpseArticulation::Ready() -- the corpse solver's identity guard, evaluated from "
+                   "the soldier's simulate; it compares against the live world and never steps it"),
+            InTick("World/Entities/Infantry/SoldierOld.cpp", "", SimStage::Vehicles, true,
+                   "PrepareAutomaticInfantryTerrain(), reached from the soldier's simulate: the first "
+                   "automatic infantry death registers the shared terrain into the solver"),
+            OutOfTick("Dev/Harness/HarnessBuiltins.cpp", "",
+                      "dev harness commands (terrain_state, dev_physics_probe), driven by a socket "
+                      "request outside every tick"),
         };
         c.push_back(std::move(e));
     }

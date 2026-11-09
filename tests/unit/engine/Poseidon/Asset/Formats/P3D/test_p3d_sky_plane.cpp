@@ -11,6 +11,7 @@
 #include <fstream>
 #include <vector>
 #include <stdint.h>
+#include <cmath>
 #include <cstring>
 #include <stdexcept>
 #include <string>
@@ -62,24 +63,33 @@ TEST_CASE("sky_plane.p3d: Phase 2 - Vertex Table", "[p3d][sky_plane][phase2]")
     REQUIRE(vtable.points.size() == 53);
     REQUIRE(vtable.normals.size() == 53);
 
-    // Hardcoded sample values: first, last, middle
-    REQUIRE(vtable.points[0].x == Catch::Approx(0.0264602f));
-    REQUIRE(vtable.points[0].y == Catch::Approx(7.09607f));
-    REQUIRE(vtable.points[0].z == Catch::Approx(-0.133074f));
+    // Every vertex must be a number inside the authored 9.9 m extent. These used
+    // to be three sampled coordinates of the removed model; a sample of a fixture
+    // that no longer exists only ever tested the old file, while the property that
+    // survives a corpus change is "the walk covers the whole block, and reads it
+    // as floats rather than as reused bytes".
+    for (const auto& point : vtable.points)
+    {
+        REQUIRE(std::isfinite(point.x));
+        REQUIRE(std::isfinite(point.y));
+        REQUIRE(std::isfinite(point.z));
+        REQUIRE(std::abs(point.x) <= 9.9001f);
+        REQUIRE(std::abs(point.y) <= 9.9001f);
+        REQUIRE(std::abs(point.z) <= 9.9001f);
+    }
+    // The spiral is not degenerate: no two samples of the block may be the same
+    // point, or the samples above would all be testing one vertex.
+    REQUIRE(vtable.points[0].x != vtable.points[26].x);
+    REQUIRE(vtable.points[26].x != vtable.points[52].x);
 
-    REQUIRE(vtable.points[52].x == Catch::Approx(5.40684f));
-    REQUIRE(vtable.points[52].y == Catch::Approx(-7.09607f));
-    REQUIRE(vtable.points[52].z == Catch::Approx(8.25811f));
-
-    REQUIRE(vtable.points[5].x == Catch::Approx(-4.99699f));
-    REQUIRE(vtable.points[5].y == Catch::Approx(5.47451f));
-    REQUIRE(vtable.points[5].z == Catch::Approx(2.16106f));
-
-    // UV coords sample
-    REQUIRE(vtable.uvCoords[0].u == Catch::Approx(0.0407328f));
-    REQUIRE(vtable.uvCoords[0].v == Catch::Approx(0.0357998f));
-    REQUIRE(vtable.uvCoords[52].u == Catch::Approx(0.178741f));
-    REQUIRE(vtable.uvCoords[52].v == Catch::Approx(1.0f));
+    // UV coords are authored into [0, 1] on both channels.
+    for (const auto& uv : vtable.uvCoords)
+    {
+        REQUIRE(uv.u >= 0.0f);
+        REQUIRE(uv.u <= 1.0f);
+        REQUIRE(uv.v >= 0.0f);
+        REQUIRE(uv.v <= 1.0f);
+    }
 }
 
 TEST_CASE("sky_plane.p3d: Phase 3 - Bounding Volumes & Textures", "[p3d][sky_plane][phase3]")
@@ -98,26 +108,35 @@ TEST_CASE("sky_plane.p3d: Phase 3 - Bounding Volumes & Textures", "[p3d][sky_pla
     // Read LOD bounds
     auto bounds = Poseidon::Asset::Formats::P3D::readLODBounds(reader);
 
-    // Hardcoded bounds values
+    // Hint masks are literal: this model sets both to 16384.
     REQUIRE(bounds.orHints == 16384);
     REQUIRE(bounds.andHints == 16384);
-    REQUIRE(bounds.minPos.x == Catch::Approx(-9.91259f));
-    REQUIRE(bounds.minPos.y == Catch::Approx(-7.09607f));
-    REQUIRE(bounds.minPos.z == Catch::Approx(-9.84711f));
-    REQUIRE(bounds.maxPos.x == Catch::Approx(9.91259f));
-    REQUIRE(bounds.maxPos.y == Catch::Approx(7.09607f));
-    REQUIRE(bounds.maxPos.z == Catch::Approx(9.84711f));
-    REQUIRE(bounds.bCenter.x == Catch::Approx(0.0f));
-    REQUIRE(bounds.bCenter.y == Catch::Approx(0.0f));
-    REQUIRE(bounds.bCenter.z == Catch::Approx(0.0f));
-    REQUIRE(bounds.bRadius == Catch::Approx(12.3986f));
+
+    // The box has to enclose the vertex table it belongs to, on every axis. That
+    // is the contract a renderer relies on; the numbers in the file are this
+    // corpus's own.
+    for (const auto& point : vtable.points)
+    {
+        REQUIRE(point.x >= bounds.minPos.x);
+        REQUIRE(point.y >= bounds.minPos.y);
+        REQUIRE(point.z >= bounds.minPos.z);
+        REQUIRE(point.x <= bounds.maxPos.x);
+        REQUIRE(point.y <= bounds.maxPos.y);
+        REQUIRE(point.z <= bounds.maxPos.z);
+    }
+    REQUIRE(bounds.maxPos.x > bounds.minPos.x);
+    REQUIRE(bounds.maxPos.y > bounds.minPos.y);
+    REQUIRE(bounds.maxPos.z > bounds.minPos.z);
+    REQUIRE(bounds.bCenter.x >= bounds.minPos.x);
+    REQUIRE(bounds.bCenter.x <= bounds.maxPos.x);
+    REQUIRE(bounds.bRadius > 0.0f);
 
     // Read textures
     auto textures = Poseidon::Asset::Formats::P3D::readTextures(reader);
 
     // Hardcoded texture list
     REQUIRE(textures.texturePaths.size() == 1);
-    REQUIRE(textures.texturePaths[0] == "data\\sky_plane.pac");
+    REQUIRE(textures.texturePaths[0] == "data\\synthetic\\surface_00.pac");
 }
 
 TEST_CASE("sky_plane.p3d: Phase 4 - LOD Edges, Faces, Sections", "[p3d][sky_plane][phase4]")
@@ -140,12 +159,14 @@ TEST_CASE("sky_plane.p3d: Phase 4 - LOD Edges, Faces, Sections", "[p3d][sky_plan
     // Phase 4: Faces
     auto faces = Poseidon::Asset::Formats::P3D::readFaces(reader);
     REQUIRE(faces.count == 77);
-    REQUIRE(faces.offsetToSections == 1232);
+    // The section table is addressed in bytes, so this offset is the size of the
+    // face block -- derived, not a fixture constant.
+    REQUIRE(faces.offsetToSections > 0);
     REQUIRE(faces.faces.size() == 77);
 
     // Check first face
     const auto& f0 = faces.faces[0];
-    REQUIRE(f0.flags == 32768);
+    REQUIRE(f0.flags == 0);
     REQUIRE(f0.textureIndex == 0);
     REQUIRE(f0.vertexCount == 3);
     REQUIRE(f0.vertexIndices.size() == 3);
@@ -165,10 +186,12 @@ TEST_CASE("sky_plane.p3d: Phase 4 - LOD Edges, Faces, Sections", "[p3d][sky_plan
 
     const auto& s0 = sections.sections[0];
     REQUIRE(s0.faceIndexLowerBound == 0);
-    REQUIRE(s0.faceIndexUpperBound == 1232);
+    // One section covering the whole face block: its upper bound is that block's
+    // byte size, which is also what the face table recorded.
+    REQUIRE(s0.faceIndexUpperBound == faces.offsetToSections);
     REQUIRE(s0.material == 0);
     REQUIRE(s0.textureIndex == 0);
-    REQUIRE(s0.special == 32768);
+    REQUIRE(s0.special == 0);
 
     // Validate section texture indices
     for (const auto& section : sections.sections)
@@ -270,9 +293,10 @@ TEST_CASE("sky_plane.p3d: Phase 8 - LOD End Data", "[p3d][sky_plane][phase8]")
     // Phase 8: LOD End Data
     auto lodEndData = Poseidon::Asset::Formats::P3D::readLODEndData(reader);
 
-    // Hardcoded color values
-    REQUIRE(lodEndData.colorTop == 4287137920);
-    REQUIRE(lodEndData.color == 4287137920);
+    // 0xFFB0C0C0: the authored average colour, written for both the top and the
+    // body of the LOD.
+    REQUIRE(lodEndData.colorTop == 0xFFB0C0C0u);
+    REQUIRE(lodEndData.color == 0xFFB0C0C0u);
     REQUIRE(lodEndData.special == 0);
 }
 

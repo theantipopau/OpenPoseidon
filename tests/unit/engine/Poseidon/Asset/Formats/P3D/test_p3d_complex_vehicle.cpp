@@ -11,6 +11,7 @@
 #include <vector>
 #include "../../../test_fixtures.hpp"
 #include <stdint.h>
+#include <cmath>
 #include <cstring>
 #include <stdexcept>
 #include <string>
@@ -61,25 +62,29 @@ TEST_CASE("complex_vehicle.p3d: Phase 2 - Vertex Table LOD 0", "[p3d][complex_ve
     REQUIRE(vtable.points.size() == 2617);
     REQUIRE(vtable.normals.size() == 2617);
 
-    // Sample vertices
-    REQUIRE(vtable.points[0].x == Catch::Approx(0.205741f));
-    REQUIRE(vtable.points[0].y == Catch::Approx(2.520592f));
-    REQUIRE(vtable.points[0].z == Catch::Approx(7.612178f));
+    // Every vertex must be a finite point inside the authored 9 m extent. The
+    // sampled literals this replaces came from the removed model's geometry; the
+    // property that matters is that the whole block was walked and read as floats.
+    for (const auto& point : vtable.points)
+    {
+        REQUIRE(std::isfinite(point.x));
+        REQUIRE(std::isfinite(point.y));
+        REQUIRE(std::isfinite(point.z));
+        REQUIRE(std::abs(point.x) <= 9.0001f);
+        REQUIRE(std::abs(point.y) <= 9.0001f);
+        REQUIRE(std::abs(point.z) <= 9.0001f);
+    }
+    REQUIRE(vtable.points[0].x != vtable.points[100].x);
+    REQUIRE(vtable.points[100].x != vtable.points.back().x);
 
-    REQUIRE(vtable.points.back().x == Catch::Approx(0.085317f));
-    REQUIRE(vtable.points.back().y == Catch::Approx(-1.780597f));
-    REQUIRE(vtable.points.back().z == Catch::Approx(-1.890425f));
-
-    REQUIRE(vtable.points[100].x == Catch::Approx(-0.183578f));
-    REQUIRE(vtable.points[100].y == Catch::Approx(0.871943f));
-    REQUIRE(vtable.points[100].z == Catch::Approx(8.710945f));
-
-    // Sample UVs
-    REQUIRE(vtable.uvCoords[0].u == Catch::Approx(0.005356f));
-    REQUIRE(vtable.uvCoords[0].v == Catch::Approx(-0.001051f));
-
-    REQUIRE(vtable.uvCoords.back().u == Catch::Approx(0.490648f));
-    REQUIRE(vtable.uvCoords.back().v == Catch::Approx(1.332385f));
+    // UVs are authored into [0, 1].
+    for (const auto& uv : vtable.uvCoords)
+    {
+        REQUIRE(uv.u >= 0.0f);
+        REQUIRE(uv.u <= 1.0f);
+        REQUIRE(uv.v >= 0.0f);
+        REQUIRE(uv.v <= 1.0f);
+    }
 }
 
 TEST_CASE("complex_vehicle.p3d: Phase 3 - Bounding Volumes & Textures LOD 0", "[p3d][complex_vehicle][phase3]")
@@ -97,27 +102,29 @@ TEST_CASE("complex_vehicle.p3d: Phase 3 - Bounding Volumes & Textures LOD 0", "[
     // Read LOD bounds
     auto bounds = Poseidon::Asset::Formats::P3D::readLODBounds(reader);
 
-    // Hardcoded bounds
-    REQUIRE(bounds.minPos.x == Catch::Approx(-8.955186f));
-    REQUIRE(bounds.minPos.y == Catch::Approx(-2.520592f));
-    REQUIRE(bounds.minPos.z == Catch::Approx(-10.471918f));
-
-    REQUIRE(bounds.maxPos.x == Catch::Approx(8.955186f));
-    REQUIRE(bounds.maxPos.y == Catch::Approx(2.520592f));
-    REQUIRE(bounds.maxPos.z == Catch::Approx(10.447238f));
-
-    REQUIRE(bounds.bCenter.x == Catch::Approx(0.0f));
-    REQUIRE(bounds.bCenter.y == Catch::Approx(0.0f));
-    REQUIRE(bounds.bCenter.z == Catch::Approx(-0.012340f));
+    // The declared box must enclose the vertex table it belongs to.
+    for (const auto& point : vtable.points)
+    {
+        REQUIRE(point.x >= bounds.minPos.x);
+        REQUIRE(point.y >= bounds.minPos.y);
+        REQUIRE(point.z >= bounds.minPos.z);
+        REQUIRE(point.x <= bounds.maxPos.x);
+        REQUIRE(point.y <= bounds.maxPos.y);
+        REQUIRE(point.z <= bounds.maxPos.z);
+    }
+    REQUIRE(bounds.bRadius > 0.0f);
+    REQUIRE(bounds.bCenter.x >= bounds.minPos.x);
+    REQUIRE(bounds.bCenter.x <= bounds.maxPos.x);
 
     // Read textures
     auto tex = Poseidon::Asset::Formats::P3D::readTextures(reader);
 
-    // Hardcoded texture count and samples
+    // 69 slots: 68 authored surfaces and one empty name, which is legal and means
+    // "the untextured surface".
     REQUIRE(tex.texturePaths.size() == 69);
-    REQUIRE(tex.texturePaths[0] == "data\\uh_rotorosa_side.pac");
-    REQUIRE(tex.texturePaths[10] == "data\\complex_vehicle_list_vrtule.pac");
-    REQUIRE(tex.texturePaths.back() == ""); // Empty texture name is valid
+    REQUIRE(tex.texturePaths[0] == "data\\synthetic\\surface_00.pac");
+    REQUIRE(tex.texturePaths[10] == "data\\synthetic\\surface_10.pac");
+    REQUIRE(tex.texturePaths.back() == "");
 }
 
 TEST_CASE("complex_vehicle.p3d: Phase 4 - LOD Edges, Faces, Sections LOD 0", "[p3d][complex_vehicle][phase4]")
@@ -137,36 +144,42 @@ TEST_CASE("complex_vehicle.p3d: Phase 4 - LOD Edges, Faces, Sections LOD 0", "[p
     REQUIRE(edges.mlodIndex.edges.size() == 1679);
     REQUIRE(edges.vertexIndex.edges.size() == 2617);
 
-    // Sample mlodIndex edges
-    REQUIRE(edges.mlodIndex.edges[0] == 1);
-    REQUIRE(edges.mlodIndex.edges[100] == 155);
-    REQUIRE(edges.mlodIndex.edges.back() == 2360);
+    // Both edge arrays are the authored sequences: the mlod index runs 0..1678 and
+    // the vertex index is (i * 3) mod 2617, so these are exact, not sampled.
+    REQUIRE(edges.mlodIndex.edges[0] == 0);
+    REQUIRE(edges.mlodIndex.edges[100] == 100);
+    REQUIRE(edges.mlodIndex.edges.back() == 1678);
 
-    // Sample vertexIndex edges
     REQUIRE(edges.vertexIndex.edges[0] == 0);
-    REQUIRE(edges.vertexIndex.edges[100] == 74);
-    REQUIRE(edges.vertexIndex.edges.back() == 1389);
+    REQUIRE(edges.vertexIndex.edges[100] == 300);
+    REQUIRE(edges.vertexIndex.edges.back() == 2614);
 
     // Phase 4: Faces
     auto faces = Poseidon::Asset::Formats::P3D::readFaces(reader);
     REQUIRE(faces.count == 1341);
-    REQUIRE(faces.offsetToSections == 23040);
+    REQUIRE(faces.offsetToSections > 0);
     REQUIRE(faces.faces.size() == 1341);
 
-    // Sample faces
+    // Every face is a triangle or a quad over the vertex block, in the authored
+    // texture slot 0, with no face flags. The counts below are the split the
+    // generator wrote: 549 triangles then 792 quads.
+    size_t triangles = 0, quads = 0;
+    for (const auto& face : faces.faces)
+    {
+        REQUIRE(face.flags == 0);
+        REQUIRE(face.textureIndex == 0);
+        REQUIRE((face.vertexCount == 3 || face.vertexCount == 4));
+        REQUIRE(face.vertexIndices.size() == face.vertexCount);
+        for (uint16_t index : face.vertexIndices)
+            REQUIRE(index < vtable.points.size());
+        ++(face.vertexCount == 3 ? triangles : quads);
+    }
+    REQUIRE(triangles == 549);
+    REQUIRE(quads == 792);
+
     const auto& f0 = faces.faces[0];
-    REQUIRE(f0.flags == 809549824);
-    REQUIRE(f0.textureIndex == 68);
     REQUIRE(f0.vertexCount == 3);
     REQUIRE(f0.vertexIndices.size() == 3);
-
-    const auto& f100 = faces.faces[100];
-    REQUIRE(f100.flags == 49152);
-    REQUIRE(f100.textureIndex == 8);
-
-    const auto& flast = faces.faces.back();
-    REQUIRE(flast.flags == 180480);
-    REQUIRE(flast.textureIndex == 49);
 
     // Validate texture indices in range
     for (const auto& face : faces.faces)
@@ -181,21 +194,21 @@ TEST_CASE("complex_vehicle.p3d: Phase 4 - LOD Edges, Faces, Sections LOD 0", "[p
     auto sections = Poseidon::Asset::Formats::P3D::readSections(reader);
     REQUIRE(sections.sections.size() == 101);
 
-    // Sample sections
-    const auto& s0 = sections.sections[0];
-    REQUIRE(s0.faceIndexLowerBound == 0);
-    REQUIRE(s0.faceIndexUpperBound == 240);
-    REQUIRE(s0.material == 0);
-    REQUIRE(s0.textureIndex == -1);
-    REQUIRE(s0.special == 809549824);
-
-    const auto& s10 = sections.sections[10];
-    REQUIRE(s10.textureIndex == 2);
-    REQUIRE(s10.special == 8192);
-
-    const auto& slast = sections.sections.back();
-    REQUIRE(slast.textureIndex == 49);
-    REQUIRE(slast.special == 180480);
+    // Sections are byte ranges over the face block, one per authored material
+    // run: the first starts at 0, the last ends where the face block does, and the
+    // whole sequence is ordered and gapless.
+    REQUIRE(sections.sections.size() == 101);
+    REQUIRE(sections.sections[0].faceIndexLowerBound == 0);
+    REQUIRE(sections.sections[0].material == 0);
+    REQUIRE(sections.sections[0].textureIndex == 0);
+    REQUIRE(sections.sections[0].special == 0);
+    REQUIRE(sections.sections.back().faceIndexUpperBound == faces.offsetToSections);
+    for (size_t i = 1; i < sections.sections.size(); ++i)
+    {
+        REQUIRE(sections.sections[i].faceIndexLowerBound == sections.sections[i - 1].faceIndexUpperBound);
+        REQUIRE(sections.sections[i].faceIndexUpperBound > sections.sections[i].faceIndexLowerBound);
+        REQUIRE(sections.sections[i].material == static_cast<int32_t>(i));
+    }
 
     // Validate section texture indices
     for (const auto& section : sections.sections)
@@ -229,17 +242,18 @@ TEST_CASE("complex_vehicle.p3d: Phase 5 - Named Selections LOD 0", "[p3d][comple
 
     // Sample named selections
     const auto& sel0 = namedSelections.selections[0];
-    REQUIRE(sel0.name == "velka vrtule"); // "big propeller" in Czech
+    REQUIRE(sel0.name == "part_01");
     REQUIRE(sel0.vertexIndices.size() == 276);
-    REQUIRE(sel0.vertexIndices[0] == 50);
-    REQUIRE(sel0.vertexIndices.back() == 2315);
+    for (uint16_t index : sel0.vertexIndices)
+        REQUIRE(index < vtable.points.size());
 
     const auto& sel1 = namedSelections.selections[1];
-    REQUIRE(sel1.name == "mala vrtule"); // "small propeller" in Czech
-    REQUIRE(sel1.vertexIndices.size() == 92);
+    REQUIRE(sel1.name == "part_02");
+    REQUIRE_FALSE(sel1.vertexIndices.empty());
 
     const auto& sel10 = namedSelections.selections[10];
     REQUIRE(sel10.name == "proxy:cargo.01");
+    // A proxy selection is exactly three vertices: apex, direction, up.
     REQUIRE(sel10.vertexIndices.size() == 3);
 
     const auto& selLast = namedSelections.selections.back();
@@ -328,9 +342,9 @@ TEST_CASE("complex_vehicle.p3d: Phase 8 - LOD End Data LOD 0", "[p3d][complex_ve
     auto lodEndData = Poseidon::Asset::Formats::P3D::readLODEndData(reader);
 
     // Hardcoded color values (RGBA format)
-    REQUIRE(lodEndData.colorTop == 1313557311);
-    REQUIRE(lodEndData.color == 1515410247);
-    REQUIRE(lodEndData.special == 66304);
+    REQUIRE(lodEndData.colorTop == 0xFF808080u);
+    REQUIRE(lodEndData.color == 0xFF808080u);
+    REQUIRE(lodEndData.special == 0);
 }
 
 TEST_CASE("complex_vehicle.p3d: Phase 9 - Proxies LOD 0", "[p3d][complex_vehicle][phase9]")
@@ -359,9 +373,9 @@ TEST_CASE("complex_vehicle.p3d: Phase 9 - Proxies LOD 0", "[p3d][complex_vehicle
 
     // Sample proxies
     const auto& proxy0 = proxies.proxies[0];
-    REQUIRE(proxy0.name == "complex_vehiclepilot"); // Short name in file
+    REQUIRE(proxy0.name == "crew"); // Short name: prefix and id stripped
     REQUIRE(proxy0.sequenceId == 1);
-    REQUIRE(proxy0.namedSelectionIndex == 9); // Full name in namedSelections[9]: "proxy:complex_vehiclepilot.01"
+    REQUIRE(proxy0.namedSelectionIndex == 9); // namedSelections[9] is "proxy:crew.01"
 
     // Transform matrix (4x3) - identity rotation with translation
     REQUIRE(proxy0.transform[0].x == Catch::Approx(1.0f));
@@ -373,9 +387,10 @@ TEST_CASE("complex_vehicle.p3d: Phase 9 - Proxies LOD 0", "[p3d][complex_vehicle
     REQUIRE(proxy0.transform[2].x == Catch::Approx(0.0f).margin(0.00001f));
     REQUIRE(proxy0.transform[2].y == Catch::Approx(0.0f).margin(0.00001f));
     REQUIRE(proxy0.transform[2].z == Catch::Approx(1.0f));
-    REQUIRE(proxy0.transform[3].x == Catch::Approx(-0.485363f)); // Translation
-    REQUIRE(proxy0.transform[3].y == Catch::Approx(0.229392f));
-    REQUIRE(proxy0.transform[3].z == Catch::Approx(-3.662929f));
+    // Translation is the authored per-instance offset: row 3 is (i * 0.25, 0.5, -i * 0.5).
+    REQUIRE(proxy0.transform[3].x == Catch::Approx(0.0f));
+    REQUIRE(proxy0.transform[3].y == Catch::Approx(0.5f));
+    REQUIRE(proxy0.transform[3].z == Catch::Approx(0.0f));
 
     const auto& proxy1 = proxies.proxies[1];
     REQUIRE(proxy1.name == "cargo");           // Short name in file
@@ -422,18 +437,18 @@ TEST_CASE("complex_vehicle.p3d: Multi-LOD - Load LOD 0 and LOD 1", "[p3d][comple
     // Basic assertions for LOD 0
     REQUIRE(vtable0.points.size() == 2617);
     REQUIRE(textures0.texturePaths.size() == 69);
-    REQUIRE(textures0.texturePaths[0] == "data\\uh_rotorosa_side.pac");
+    REQUIRE(textures0.texturePaths[0] == "data\\synthetic\\surface_00.pac");
     REQUIRE(faces0.count == 1341);
     REQUIRE(sections0.sections.size() == 101);
     REQUIRE(namedSelections0.selections.size() == 30);
-    REQUIRE(namedSelections0.selections[0].name == "velka vrtule");
+    REQUIRE(namedSelections0.selections[0].name == "part_01");
     REQUIRE(namedSelections0.selections.back().name == "proxy:flag_alone.01");
     REQUIRE(namedProperties0.properties.size() == 1);
     REQUIRE(namedProperties0.properties[0].property == "lodnoshadow");
     REQUIRE(namedProperties0.properties[0].value == "1");
     REQUIRE(frames0.frames.size() == 0);
     REQUIRE(proxies0.proxies.size() == 15);
-    REQUIRE(proxies0.proxies[0].name == "complex_vehiclepilot");
+    REQUIRE(proxies0.proxies[0].name == "crew");
     REQUIRE(proxies0.proxies[0].namedSelectionIndex == 9);
     REQUIRE(proxies0.proxies.back().name == "flag_alone");
     REQUIRE(proxies0.proxies.back().namedSelectionIndex == 29);
@@ -474,10 +489,13 @@ TEST_CASE("complex_vehicle.p3d: Multi-LOD - Load LOD 0 and LOD 1", "[p3d][comple
     REQUIRE(frames1.frames.size() == 0);
 
     REQUIRE(proxies1.proxies.size() == 15); // Same proxy count as LOD 0
-    REQUIRE(proxies1.proxies[0].name == "flag_alone");
-    REQUIRE(proxies1.proxies[0].namedSelectionIndex == 2);
-    REQUIRE(proxies1.proxies.back().name == "complex_vehiclepilot");
-    REQUIRE(proxies1.proxies.back().namedSelectionIndex == 27);
+    // Both LODs reuse one role table, so the names and their selection indices
+    // must agree with LOD 0's rather than merely being plausible.
+    for (size_t i = 0; i < proxies1.proxies.size(); ++i)
+    {
+        REQUIRE(proxies1.proxies[i].name == proxies0.proxies[i].name);
+        REQUIRE(proxies1.proxies[i].namedSelectionIndex == proxies0.proxies[i].namedSelectionIndex);
+    }
 }
 TEST_CASE("complex_vehicle.p3d: All 19 LODs - Parse through to last LOD", "[p3d][complex_vehicle][all-lods]")
 {

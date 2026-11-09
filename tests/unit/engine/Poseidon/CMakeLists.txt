@@ -116,20 +116,38 @@ set_target_properties(PoseidonCoreTests PROPERTIES
     OUTPUT_NAME "PoseidonCoreTests"
 )
 
+# Same tolerant staging as PoseidonTests (FIXTURE-2): scripts/proteus/copy-fixtures.cmake
+# copies what exists and warns on the rest. A raw copy_directory on a family the
+# source release omits (tests/fixtures/pbo is absent) failed the POST_BUILD step, so
+# PoseidonCoreTests could not be built at all -- a missing fixture taking down the
+# build is the same failure class as one taking down the run.
 set(FIXTURES_ROOT ${CMAKE_SOURCE_DIR}/tests/fixtures)
 add_custom_command(TARGET PoseidonCoreTests POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:PoseidonCoreTests>/fixtures/pbo
-    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:PoseidonCoreTests>/fixtures/qstream
-    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:PoseidonCoreTests>/fixtures/config-replace
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/config-replace $<TARGET_FILE_DIR:PoseidonCoreTests>/fixtures/config-replace
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/config      $<TARGET_FILE_DIR:PoseidonCoreTests>/fixtures
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/xml         $<TARGET_FILE_DIR:PoseidonCoreTests>/fixtures
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/stringtable $<TARGET_FILE_DIR:PoseidonCoreTests>/fixtures
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/pbo         $<TARGET_FILE_DIR:PoseidonCoreTests>/fixtures/pbo
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/qstream     $<TARGET_FILE_DIR:PoseidonCoreTests>/fixtures/qstream
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${FIXTURES_ROOT}/evaluator   $<TARGET_FILE_DIR:PoseidonCoreTests>/fixtures
-    COMMENT "Copying PoseidonCore test fixtures"
+    COMMAND ${CMAKE_COMMAND} -DFIXTURES_ROOT=${FIXTURES_ROOT}
+        -DDEST_DIR=$<TARGET_FILE_DIR:PoseidonCoreTests>/fixtures
+        -P ${CMAKE_SOURCE_DIR}/scripts/proteus/copy-fixtures.cmake
+    COMMENT "Copying PoseidonCore test fixtures (missing dirs skipped)"
 )
+
+# Extras this target alone stages, each guarded so one absent directory can never
+# fail the link again. config-replace keeps its own subtree: its tests ask for
+# "config-replace/bin/config.cpp".
+foreach(extra_dir config stringtable evaluator)
+    if(EXISTS ${FIXTURES_ROOT}/${extra_dir})
+        add_custom_command(TARGET PoseidonCoreTests POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${FIXTURES_ROOT}/${extra_dir} $<TARGET_FILE_DIR:PoseidonCoreTests>/fixtures
+            COMMENT "Copying ${extra_dir} fixtures"
+        )
+    endif()
+endforeach()
+if(EXISTS ${FIXTURES_ROOT}/config-replace)
+    add_custom_command(TARGET PoseidonCoreTests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${FIXTURES_ROOT}/config-replace $<TARGET_FILE_DIR:PoseidonCoreTests>/fixtures/config-replace
+        COMMENT "Copying config-replace fixtures"
+    )
+endif()
 
 include(${CMAKE_SOURCE_DIR}/cmake/CatchWindowsSafe.cmake)
 ofpr_catch_discover_tests(PoseidonCoreTests
@@ -344,6 +362,26 @@ list(APPEND POSEIDON_TEST_SOURCES
 
 
     # P3D format tests
+    #
+    # The phase-by-phase P3D/MLOD cases were unbuilt from the moment the source
+    # release dropped the licensed models they pin: every one of them opens a
+    # fixture that is not here, so they were left out of the target rather than
+    # aborting the binary. P3D-CORPUS-1 authors that corpus, so they are built now.
+    Asset/Formats/P3D/test_p3d_header.cpp
+    Asset/Formats/P3D/test_p3d_empty.cpp
+    Asset/Formats/P3D/test_p3d_sky_plane.cpp
+    Asset/Formats/P3D/test_p3d_complex_vehicle.cpp
+    Asset/Formats/P3D/test_p3d_proxy_structure.cpp
+    Asset/Formats/P3D/test_p3d_crew_proxy_lod0.cpp
+    Asset/Formats/P3D/test_p3d_small_models.cpp
+    Asset/Formats/P3D/test_odol_loader.cpp
+    Asset/Formats/P3D/test_odol_mlod_parity.cpp
+    Asset/Formats/P3D/test_loader_cross_platform.cpp
+    Asset/Formats/P3D/MLOD/test_mlod_header.cpp
+    Asset/Formats/P3D/MLOD/test_mlod_sp3x.cpp
+    Asset/Formats/P3D/MLOD/test_mlod_faces.cpp
+    Asset/Formats/P3D/MLOD/test_mlod_parity.cpp
+    BinaryFormats/test_p3d_mlod_to_odol_conversion.cpp
     Asset/Formats/P3D/test_mlod_loader.cpp
     Asset/Formats/P3D/test_mlod_writer.cpp
     Asset/Formats/P3D/MLOD/test_mlod_lod_dispatch.cpp
@@ -828,7 +866,8 @@ target_include_directories(PoseidonTests PRIVATE
 # release's deliberate binary-fixture omissions (see ASSET_SOURCES.md):
 # scripts/proteus/copy-fixtures.cmake copies what exists and warns on the rest,
 # so one missing dir no longer fails the whole tests-target build. Tests that
-# need unrestored data abort at runtime via GetTestFixturePath (documented).
+# need unrestored data SKIP themselves via GetTestFixturePath and report it at
+# exit (docs/proteus/FIXTURE-SKIP-1.md), so the rest of the suite still runs.
 set(FIXTURES_ROOT ${CMAKE_SOURCE_DIR}/tests/fixtures)
 add_custom_command(TARGET PoseidonTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -DFIXTURES_ROOT=${FIXTURES_ROOT}

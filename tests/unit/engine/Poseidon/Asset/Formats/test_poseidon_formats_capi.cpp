@@ -32,7 +32,9 @@ TEST_CASE("PF C API: pf_last_error returns string", "[PoseidonFormats][API]")
 
 TEST_CASE("PF C API: load synthetic MLOD model", "[PoseidonFormats][Model]")
 {
-    const char* path = GET_FIXTURE("p3d/complex_vehicle.p3d");
+    // The SP3X build. p3d/complex_vehicle.p3d is the ODOL 7 form of the same
+    // model, and this case is the MLOD one.
+    const char* path = GET_FIXTURE("mlod/complex_vehicle_mlod.p3d");
     PF_HANDLE model = pf_model_load(path);
     REQUIRE(model != nullptr);
 
