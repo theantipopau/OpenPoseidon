@@ -10,9 +10,12 @@
 #include <Poseidon/IO/Streams/QBStream.hpp>
 #include <Poseidon/IO/Streams/QStream.hpp>
 #include "../Support/test_fixtures.hpp"
+#include <cstdint>
 #include <cstring>
-#include <string>
 #include <filesystem>
+#include <fstream>
+#include <string>
+#include <system_error>
 #include <Poseidon/Foundation/Strings/RString.hpp>
 
 using namespace TestFixtures;
@@ -479,6 +482,100 @@ TEST_CASE("QFBank SetPrefix - no slash in prefix", "[qstream][path][bank][edge]"
 }
 
 // A path naming its mod folder through a parent escape resolves into that mod.
+namespace
+{
+void PutBankInt(std::ofstream& out, int32_t v)
+{
+    out.write(reinterpret_cast<const char*>(&v), sizeof(v));
+}
+
+// PBO entry tail, in file order: mime, original size, offset, timestamp, data length.
+void PutBankEntry(std::ofstream& out, const std::string& name, int32_t offset, int32_t length)
+{
+    out.write(name.c_str(), static_cast<std::streamsize>(name.size()) + 1);
+    PutBankInt(out, 0);
+    PutBankInt(out, 0);
+    PutBankInt(out, offset);
+    PutBankInt(out, 0);
+    PutBankInt(out, length);
+}
+
+// One uncompressed member, OFP header shape (no property block, no trailer). Local
+// rather than a fixture: the committed pbo/ family is absent in a source checkout, and
+// a test that pins the bank namespace must not skip for that reason.
+bool WriteSingleMemberPbo(const std::filesystem::path& path, const std::string& member, const std::string& data)
+{
+    std::ofstream out(path, std::ios::binary | std::ios::trunc);
+    if (!out.good())
+        return false;
+    PutBankEntry(out, member, 0, static_cast<int32_t>(data.size()));
+    PutBankEntry(out, "", 0, 0); // terminator
+    out.write(data.data(), static_cast<std::streamsize>(data.size()));
+    out.close();
+    return out.good() || std::filesystem::exists(path);
+}
+} // namespace
+
+// The addon-bank fallback (NormalizeAddonBankPath) collapses a root-relative name and
+// indexes the bank table with the result. That is only sound while the collapsed name
+// still names something INSIDE the game root: a ".." that walks above its own start
+// leaves it, and must not be collapsed into a bank lookup. The positive rows are the
+// documented purpose of the fallback (a path that reaches addons/ the long way round);
+// the negative rows are the QSTREAM-ESCAPE-1 rule applied to the bank namespace.
+TEST_CASE("QIFStreamB FileExist - bank path names never climb above the game root",
+          "[qstream][path][bankexist][bankescape]")
+{
+    const int origSize = GFileBanks.Size();
+    const bool origUseBanks = GUseFileBanks;
+    GUseFileBanks = true;
+
+    const std::filesystem::path pboPath =
+        std::filesystem::temp_directory_path() / "qstream_bankescape_addon_fixture.pbo";
+    REQUIRE(WriteSingleMemberPbo(pboPath, "stringtable.csv", "key,value\n"));
+
+    const int idx = GFileBanks.Add();
+    QFBank& bank = GFileBanks.Set(idx);
+    bank.SetPrefix("addon_fixture\\");
+    bank.Lock();
+    std::string bankName = pboPath.string();
+    bankName.resize(bankName.size() - 4); // QFBank::open appends ".pbo"
+    REQUIRE(bank.open(bankName.c_str(), nullptr, nullptr));
+    REQUIRE_FALSE(bank.error());
+    REQUIRE(bank.FileExists("stringtable.csv"));
+
+    // By its bank prefix.
+    CHECK(QIFStreamB::FileExist("addon_fixture\\stringtable.csv"));
+
+    // The fallback's reason for existing: a root-relative name that collapses to
+    // addons/<bank>/<member> still names the bank member.
+    CHECK(QIFStreamB::FileExist("anims\\..\\addons\\addon_fixture\\stringtable.csv"));
+    CHECK(QIFStreamB::FileExist("addons\\..\\addons\\addon_fixture\\stringtable.csv"));
+
+    // Above the root: no collapse may turn these into a bank lookup.
+    CHECK_FALSE(QIFStreamB::FileExist("..\\addons\\addon_fixture\\stringtable.csv"));
+    CHECK_FALSE(QIFStreamB::FileExist("x\\..\\..\\addons\\addon_fixture\\stringtable.csv"));
+    CHECK_FALSE(QIFStreamB::FileExist("..\\addon_fixture\\stringtable.csv"));
+
+    // The open path shares the fallback, so it must agree with the existence check.
+    {
+        QIFStreamB stream;
+        stream.AutoOpen("anims\\..\\addons\\addon_fixture\\stringtable.csv");
+        CHECK_FALSE(stream.fail());
+        CHECK(stream.rest() > 0);
+    }
+    {
+        QIFStreamB stream;
+        stream.AutoOpen("..\\addons\\addon_fixture\\stringtable.csv");
+        CHECK(stream.fail());
+    }
+
+    GFileBanks.Delete(idx);
+    GUseFileBanks = origUseBanks;
+    std::error_code ec;
+    std::filesystem::remove(pboPath, ec);
+    REQUIRE(GFileBanks.Size() == origSize);
+}
+
 TEST_CASE("QIFStreamB FileExist - mod path escaping its prefix", "[qstream][path][bankexist][mod]")
 {
     const std::filesystem::path root = std::filesystem::temp_directory_path() / "cwr_modescape";

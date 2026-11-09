@@ -1,14 +1,19 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <Poseidon/Core/ModInstall.hpp>
+#include <Poseidon/Foundation/Common/Filenames.hpp>
+
+#include <cjson/cJSON.h>
 
 #include <filesystem>
 #include <fstream>
 #include <initializer_list>
+#include <iterator>
 #include <random>
 #include <set>
 #include <string>
 #include <system_error>
+#include <vector>
 
 using namespace Poseidon;
 
@@ -49,6 +54,47 @@ std::set<std::string> ScannedIds(const std::vector<ScannedMod>& mods)
     for (const auto& m : mods)
         ids.insert(m.modId);
     return ids;
+}
+
+// The catalog-name boundary is one fixture for both languages: this suite and the Rust suites
+// (papa_bear_client::catalog, MasterService::mods) read
+// tests/fixtures/mod_names/catalog_name_cases.json, so a reserved character added there fails
+// every suite without being re-typed per language. It is read from the source tree rather than
+// the staged copy: the staged one is refreshed only by a POST_BUILD step, so a fixture-only
+// change could otherwise be tested against yesterday's list. Absent or unparsable is a failure,
+// not a SKIP - this is checked-in text, unlike the binary fixtures FIXTURE-SKIP-1 covers.
+std::vector<std::string> LoadCatalogNameCases(const char* key)
+{
+    const std::filesystem::path path =
+        std::filesystem::path(TESTS_ROOT_DIR) / "fixtures" / "mod_names" / "catalog_name_cases.json";
+    std::ifstream in(path, std::ios::binary);
+    const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    cJSON* root = cJSON_Parse(text.c_str());
+    std::vector<std::string> cases;
+    bool ok = root != nullptr;
+    const cJSON* array = ok ? cJSON_GetObjectItemCaseSensitive(root, key) : nullptr;
+    ok = ok && cJSON_IsArray(array);
+    if (ok)
+    {
+        const cJSON* item = nullptr;
+        cJSON_ArrayForEach(item, array)
+        {
+            if (!cJSON_IsString(item))
+            {
+                ok = false;
+                break;
+            }
+            cases.emplace_back(item->valuestring);
+        }
+    }
+    cJSON_Delete(root);
+    if (!ok)
+    {
+        INFO("catalog name cases: '" << key << "' in " << path.string());
+        REQUIRE(ok);
+    }
+    REQUIRE_FALSE(cases.empty());
+    return cases;
 }
 } // namespace
 
@@ -194,6 +240,71 @@ TEST_CASE("ModInstallDir composes the @modId path", "[mods][install]")
 {
     CHECK(ModInstallDir("/x/mods", "csla") == "/x/mods/@csla");
     CHECK(ModInstallDir("/x/mods", "carwars-2.5", "carwars2.5") == "/x/mods/carwars2.5");
+}
+
+// MODINSTALL-PATH-1: the catalog's folderName/modId reach the filesystem through the install
+// transaction (rename the old dir to .backup-N, rename staging in, remove_all the backup). A
+// name that is not one path component must be refused at the join, so no destination — and
+// therefore no backup a commit later deletes — can name anything outside the mods root.
+TEST_CASE("ModInstallDir refuses catalog names that are not one path component", "[mods][install][path]")
+{
+    const std::string root = "/x/mods";
+    const std::vector<std::string> accepted = LoadCatalogNameCases("accepted");
+    const std::vector<std::string> refused = LoadCatalogNameCases("refused");
+    // A list that parsed to nothing would pass vacuously, so both sides carry a floor.
+    REQUIRE(accepted.size() >= 8);
+    REQUIRE(refused.size() >= 20);
+
+    // Ordinary catalog names still compose: bare id, explicit folder, spaces, interior dots.
+    CHECK(ModInstallDir(root, "csla") == "/x/mods/@csla");
+    CHECK(ModInstallDir(root, "carwars-2.5", "carwars2.5") == "/x/mods/carwars2.5");
+    CHECK(ModInstallDir(root, "fixture-mod", "Mod Folder 2") == "/x/mods/Mod Folder 2");
+    CHECK(ModInstallDir(root, "ver2.0-mod", "ver2.0") == "/x/mods/ver2.0");
+
+    for (const std::string& name : refused)
+    {
+        INFO("name: " << name);
+        CHECK_FALSE(Poseidon::Foundation::IsSinglePathComponent(name));
+        CHECK(ModInstallDir(root, "fixture-mod", name).empty()); // the folderName spelling
+        CHECK(ModInstallDir(root, name).empty());                // the "@" + modId spelling
+    }
+
+    // Anything accepted stays directly under the root: exactly one component to traverse with.
+    const std::filesystem::path base(root);
+    for (const std::string& name : accepted)
+    {
+        INFO("name: " << name);
+        CHECK(Poseidon::Foundation::IsSinglePathComponent(name));
+        const std::string dir = ModInstallDir(root, name, name);
+        REQUIRE_FALSE(dir.empty());
+        CHECK(std::filesystem::path(dir).parent_path() == base);
+        CHECK(std::filesystem::path(dir).filename() == std::filesystem::path(name));
+    }
+
+    // Not a fixture case: blank gets no single verdict. An empty folderName means "no folder
+    // name" (fall back to "@" + modId) while an empty modId is refused.
+    CHECK_FALSE(Poseidon::Foundation::IsSinglePathComponent(""));
+    CHECK(ModInstallDir(root, "fixture-mod") == "/x/mods/@fixture-mod"); // control: id alone works
+}
+
+TEST_CASE("a refused install destination cannot become a relative staging path", "[mods][install][path]")
+{
+    const std::string refused = ModInstallDir("/x/mods", "fixture-mod", "..\\..\\evil");
+    REQUIRE(refused.empty());
+
+    // No ".staging-N"/".backup-N" beside the process cwd, and the transaction refuses before
+    // renaming or deleting anything.
+    const StagedModInstall install = MakeStagedModInstall(refused);
+    CHECK(install.destinationDir.empty());
+    CHECK(install.stagingDir.empty());
+    CHECK(install.backupDir.empty());
+
+    std::vector<StagedModInstall> installs = {install};
+    std::string error;
+    CHECK_FALSE(SwapStagedModInstalls(installs, &error));
+    CHECK_FALSE(error.empty());
+    CHECK_FALSE(installs.front().previousMoved);
+    CHECK_FALSE(installs.front().stagingMoved);
 }
 
 TEST_CASE("install status resolves catalog modId from a different folderName", "[mods][install]")
