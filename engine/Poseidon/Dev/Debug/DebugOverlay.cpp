@@ -4871,7 +4871,7 @@ void DrawGiTab()
         const char* kBasis[] = {"Ambient cube (6 faces)", "SH-1 (worse -- see REN-GI-008)",
                                 "SH-2 (default)"};
         int basis = std::clamp(gi.basis, 0, 2);
-        if (ImGui::Combo("Probe basis", &basis, kBasis, IM_ARRAYSIZE(kBasis)))
+        if (Dev::Combo("Probe basis", &basis, kBasis, IM_ARRAYSIZE(kBasis)))
         {
             gi.basis = basis;
             changed = true;
@@ -4879,31 +4879,31 @@ void DrawGiTab()
         Dev::PanelHelp("  how each probe stores the light it gathered, and what the shading can");
         Dev::PanelHelp("  read back out of it for a given surface normal");
     }
-    changed |= ImGui::SliderFloat("Weight", &gi.weight, 0.0f, 1.0f, "%.2f");
+    changed |= Dev::SliderFloat("Weight", &gi.weight, 0.0f, 1.0f, "%.2f");
     Dev::PanelHelp("  0 = the old ambient exactly, 1 = the probes alone");
-    changed |= ImGui::SliderFloat("Interior AO share", &gi.interiorMix, 0.0f, 1.0f, "%.2f");
+    changed |= Dev::SliderFloat("Interior AO share", &gi.interiorMix, 0.0f, 1.0f, "%.2f");
     Dev::PanelHelp("  how much of the per-pixel interior-sky darkening still applies on top");
-    changed |= ImGui::SliderFloat("Indoor sky occlusion", &gi.indoorSky, 0.0f, 1.0f, "%.2f");
+    changed |= Dev::SliderFloat("Indoor sky occlusion", &gi.indoorSky, 0.0f, 1.0f, "%.2f");
     Dev::PanelHelp("  REN-GI-010. A probe's rays are tested against the terrain and, going UP,");
     Dev::PanelHelp("  against the interior-sky dome maps -- never sideways against a wall. So a");
     Dev::PanelHelp("  probe in a room took full sky from every horizontal direction and lit the");
     Dev::PanelHelp("  interior almost as brightly as the field outside. This darkens each probe");
     Dev::PanelHelp("  by how much sky it can see at its own position. 0 = the old look exactly.");
-    changed |= ImGui::SliderFloat("Spacing (m)", &gi.spacing, 1.0f, 16.0f, "%.1f");
-    changed |= ImGui::SliderInt("Rays per probe update", &gi.rays, 8, 64);
-    changed |= ImGui::SliderFloat("Hysteresis", &gi.hysteresis, 0.05f, 1.0f, "%.2f");
+    changed |= Dev::SliderFloat("Spacing (m)", &gi.spacing, 1.0f, 16.0f, "%.1f");
+    changed |= Dev::SliderInt("Rays per probe update", &gi.rays, 8, 64);
+    changed |= Dev::SliderFloat("Hysteresis", &gi.hysteresis, 0.05f, 1.0f, "%.2f");
     Dev::PanelHelp("  per-update blend toward the fresh integral; low = smoother, slower");
-    changed |= ImGui::ColorEdit3("Ground albedo", gi.groundAlbedo);
-    changed |= ImGui::SliderFloat("Ground bounce gain", &gi.groundGain, 0.0f, 4.0f, "%.2f");
-    changed |= ImGui::SliderFloat("Wall/roof albedo", &gi.wallAlbedo, 0.0f, 1.0f, "%.2f");
-    changed |= ImGui::SliderFloat("Ray length (m)", &gi.rayLength, 8.0f, 256.0f, "%.0f");
+    changed |= Dev::ColorEdit3("Ground albedo", gi.groundAlbedo);
+    changed |= Dev::SliderFloat("Ground bounce gain", &gi.groundGain, 0.0f, 4.0f, "%.2f");
+    changed |= Dev::SliderFloat("Wall/roof albedo", &gi.wallAlbedo, 0.0f, 1.0f, "%.2f");
+    changed |= Dev::SliderFloat("Ray length (m)", &gi.rayLength, 8.0f, 256.0f, "%.0f");
     Dev::PanelSeparator();
     Dev::PanelHelp("Sun proxy (stage 2): a map of every sunlit surface seen from the sun, with");
     Dev::PanelHelp("colour; each probe gathers the first sun bounce from a disc of it.");
-    changed |= ImGui::SliderInt("Sun-proxy samples", &gi.rsmSamples, 0, 64);
+    changed |= Dev::SliderInt("Sun-proxy samples", &gi.rsmSamples, 0, 64);
     Dev::PanelHelp("  0 turns the sun bounce off");
-    changed |= ImGui::SliderFloat("Sun-proxy radius (m)", &gi.rsmRadius, 1.0f, 40.0f, "%.0f");
-    changed |= ImGui::SliderFloat("Sun-bounce gain", &gi.rsmGain, 0.0f, 4.0f, "%.2f");
+    changed |= Dev::SliderFloat("Sun-proxy radius (m)", &gi.rsmRadius, 1.0f, 40.0f, "%.0f");
+    changed |= Dev::SliderFloat("Sun-bounce gain", &gi.rsmGain, 0.0f, 4.0f, "%.2f");
     if (changed)
     {
         GEngine->SetGiSettings(gi);
