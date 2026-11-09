@@ -4,12 +4,14 @@
 use std::fs;
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
 use clap::{Args, Parser, Subcommand};
 use papa_bear_archive::Pbo;
+use papa_bear_client::catalog::{is_single_path_component, normalize_folder_name};
 use papa_bear_client::codec::SessionResponse;
 use papa_bear_client::query::{query_server, ServerStatus};
 use sha2::{Digest, Sha256};
@@ -317,14 +319,16 @@ fn run_info(args: &InfoArgs) -> Result<()> {
 }
 
 fn run_publish(args: &PublishArgs, master: &str, insecure: bool) -> Result<()> {
-    let args = publish_args_with_manifest(args)?;
+    let mut args = publish_args_with_manifest(args)?;
+    // `--folder-name` goes through the service's own normalization (trim, blank means no field,
+    // then the component rule), so a bad value is refused before packing and uploading, and the
+    // value sent is the one the service would store.
+    args.folder_name = normalize_folder_name(args.folder_name.as_deref())?;
     let mod_id = args.mod_id.as_deref();
     if let Some(mod_id) = mod_id {
-        if mod_id.is_empty()
-            || mod_id.contains('/')
-            || mod_id.contains('\\')
-            || mod_id.contains("..")
-        {
+        // The same one-component rule the master service applies, from the crate both ends
+        // share: the publisher must refuse exactly what the catalog will, no more and no less.
+        if !is_single_path_component(mod_id) {
             bail!("invalid mod id '{mod_id}'");
         }
     }
@@ -336,7 +340,319 @@ fn run_publish(args: &PublishArgs, master: &str, insecure: bool) -> Result<()> {
     if !existing && name.is_empty() {
         bail!("new packages require --name or a name in the source mod.json");
     }
-    run_upload(&args, mod_id.filter(|_| existing), master, insecure)
+    // Before the source folder is packed (a large mod packs for minutes) and before a byte of the
+    // artifact is sent. The upload refuses the same claim, but only after the whole compressed
+    // body has arrived; reserving now makes the loser of two publishes stop here instead, and
+    // gives the folder back if this publish fails before the upload has finished.
+    let reservation = reserve_folder_claim(
+        master,
+        mod_id,
+        args.name.as_deref(),
+        args.folder_name.as_deref(),
+        &args.admin_key,
+        insecure,
+    )?;
+    // Keep the reservation's lease alive while the source is packed and the artifact streamed: a
+    // large mod takes longer than the master's lease, and a sweep that read the untouched claim as
+    // abandoned would hand the folder to a second publisher mid-upload.
+    let mut renewal = None;
+    let result =
+        match FolderClaimRenewal::start(master, reservation.as_ref(), &args.admin_key, insecure) {
+            Ok(started) => {
+                renewal = started;
+                run_upload(
+                    &args,
+                    mod_id.filter(|_| existing),
+                    master,
+                    insecure,
+                    reservation
+                        .as_ref()
+                        .map(|reservation| reservation.token.as_str()),
+                )
+            }
+            Err(error) => Err(error),
+        };
+    // Stop renewing before the reservation is committed or given back: the claim a renewal would
+    // read is gone once the release lands, so the only answer left is a refusal, and a publish
+    // should not spend its last moment on a request whose answer it ignores.
+    drop(renewal);
+    match &result {
+        Ok(()) => {
+            if let Some(reservation) = &reservation {
+                commit_folder_claim(master, reservation, &args.admin_key, insecure);
+            }
+        }
+        Err(_) => {
+            if let Some(reservation) = &reservation {
+                abort_folder_claim(master, reservation, &args.admin_key, insecure);
+            }
+        }
+    }
+    result
+}
+
+/// The folder a publish reserved before packing, and the token that holds it.
+#[derive(Clone)]
+struct FolderReservation {
+    mod_id: String,
+    folder: String,
+    token: String,
+    /// How often the master asked the lease to be renewed, or `None` when it issued no lease (a
+    /// master that predates them).
+    renew_after: Option<Duration>,
+}
+
+/// Keeps a reservation's lease alive while the publish that holds it packs and streams.
+///
+/// The reservation is taken before the source folder is packed, and the master's lease is shorter
+/// than a large mod's pack plus transfer, so a publish that simply held still would let
+/// `check-names --fix` read its claim as abandoned and give the folder to a second publisher — the
+/// race the reservation exists to decide. The first renewal is sent before packing, so a
+/// reservation the master no longer holds stops the publish here rather than after the whole
+/// artifact; the rest follow on the master's cadence until the publish ends.
+struct FolderClaimRenewal {
+    stop: Arc<AtomicBool>,
+    worker: Option<std::thread::JoinHandle<()>>,
+}
+
+impl FolderClaimRenewal {
+    /// Renew once, then keep renewing in the background. `Ok(None)` when there is nothing to renew:
+    /// no reservation, or a master that issues no lease.
+    fn start(
+        master: &str,
+        reservation: Option<&FolderReservation>,
+        admin_key: &str,
+        insecure: bool,
+    ) -> Result<Option<Self>> {
+        let Some(reservation) = reservation else {
+            return Ok(None);
+        };
+        let Some(renew_after) = reservation.renew_after else {
+            return Ok(None);
+        };
+        let agent = renewal_agent(insecure)?;
+        post_folder_claim(&agent, master, reservation, admin_key, "renew", false)
+            .with_context(|| format!("keeping install folder '{}' reserved", reservation.folder))?;
+
+        let stop = Arc::new(AtomicBool::new(false));
+        let worker = {
+            let stop = stop.clone();
+            let master = master.to_string();
+            let admin_key = admin_key.to_string();
+            let reservation = reservation.clone();
+            std::thread::spawn(move || {
+                while !sleep_until_stopped(&stop, renew_after) {
+                    if let Err(error) =
+                        post_folder_claim(&agent, &master, &reservation, &admin_key, "renew", false)
+                    {
+                        eprintln!(
+                            "warning: keeping install folder '{}' reserved failed: {error}",
+                            reservation.folder
+                        );
+                    }
+                }
+            })
+        };
+        Ok(Some(Self {
+            stop,
+            worker: Some(worker),
+        }))
+    }
+}
+
+impl Drop for FolderClaimRenewal {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::SeqCst);
+        if let Some(worker) = self.worker.take() {
+            let _ = worker.join();
+        }
+    }
+}
+
+/// Sleep for `interval`, answering early when `stop` is set, so a publish that ends mid-interval
+/// does not wait out the rest of it before its reservation is committed or given back.
+fn sleep_until_stopped(stop: &AtomicBool, interval: Duration) -> bool {
+    let slice = Duration::from_millis(100).min(interval);
+    let mut waited = Duration::ZERO;
+    while waited < interval {
+        if stop.load(Ordering::SeqCst) {
+            return true;
+        }
+        std::thread::sleep(slice);
+        waited += slice;
+    }
+    stop.load(Ordering::SeqCst)
+}
+
+/// How often the master asked this reservation to be renewed, or `None` when it sent no cadence.
+/// A zero value is no cadence either: renewing in a tight loop would help nobody.
+fn renewal_interval(answer: &serde_json::Value) -> Option<Duration> {
+    answer["renewAfterMs"]
+        .as_u64()
+        .filter(|millis| *millis > 0)
+        .map(Duration::from_millis)
+}
+
+/// Reserve this publish's install folder, so a second publisher of the same folder is refused
+/// before either streams an artifact.
+///
+/// A master that predates the route answers 404: the publisher then asks the read-only preflight
+/// (which still refuses a folder another entry holds) and uploads without a token, exactly as it
+/// did before this route existed.
+fn reserve_folder_claim(
+    master: &str,
+    mod_id: Option<&str>,
+    name: Option<&str>,
+    folder_name: Option<&str>,
+    admin_key: &str,
+    insecure: bool,
+) -> Result<Option<FolderReservation>> {
+    let mut request = serde_json::Map::new();
+    if let Some(mod_id) = mod_id {
+        request.insert("modId".to_string(), mod_id.into());
+    }
+    if let Some(name) = name {
+        request.insert("name".to_string(), name.into());
+    }
+    if let Some(folder_name) = folder_name {
+        request.insert("folderName".to_string(), folder_name.into());
+    }
+    let request = serde_json::Value::Object(request).to_string();
+    let base = master.trim_end_matches('/');
+
+    match http_agent(insecure)?
+        .post(&format!("{base}/v1/catalog/folder-claim"))
+        .set("x-api-key", admin_key)
+        .set("content-type", "application/json")
+        .send_string(&request)
+    {
+        Ok(response) => {
+            let answer: serde_json::Value = response
+                .into_json()
+                .context("parsing folder reservation response")?;
+            let folder = answer["folder"]
+                .as_str()
+                .context("folder reservation response names no folder")?;
+            let Some(token) = answer["token"].as_str() else {
+                // A master that predates reservations for a revision that keeps its folder answers
+                // no token: there is nothing to renew, and the upload checks the claim as before.
+                return Ok(None);
+            };
+            Ok(Some(FolderReservation {
+                mod_id: answer["modId"].as_str().unwrap_or(folder).to_string(),
+                folder: folder.to_string(),
+                token: token.to_string(),
+                renew_after: renewal_interval(&answer),
+            }))
+        }
+        // A second publisher of the same folder is refused here, before it packs anything.
+        Err(ureq::Error::Status(409, response)) => {
+            let detail = response.into_string().unwrap_or_default();
+            bail!("publish refused before uploading: {}", detail.trim());
+        }
+        Err(ureq::Error::Status(404, _)) => {
+            eprintln!(
+                "warning: this master predates install-folder reservations; the upload will check the folder after it arrives"
+            );
+            check_folder_claim(master, mod_id, name, folder_name, insecure)?;
+            Ok(None)
+        }
+        Err(ureq::Error::Status(code, response)) => {
+            let detail = response.into_string().unwrap_or_default();
+            bail!("folder reservation failed: HTTP {code}: {}", detail.trim());
+        }
+        Err(error) => bail!("folder reservation failed: {error}"),
+    }
+}
+
+/// Post one end-of-reservation call. Commit and abort are best effort: a failure leaves the claim
+/// for the sweep, and must not turn a finished publish into a reported failure.
+///
+/// `tolerate_missing` says how to read a 404: for a commit or abort it means the master predates
+/// these routes, while a renewal is only sent to a master that issued a lease, so there it means
+/// the reservation is gone.
+fn end_folder_claim(
+    master: &str,
+    reservation: &FolderReservation,
+    admin_key: &str,
+    insecure: bool,
+    route: &str,
+    tolerate_missing: bool,
+) -> Result<()> {
+    let agent = http_agent(insecure)?;
+    post_folder_claim(
+        &agent,
+        master,
+        reservation,
+        admin_key,
+        route,
+        tolerate_missing,
+    )
+}
+
+/// Post one reservation call on a given agent, so the renewal worker can bound its own request.
+fn post_folder_claim(
+    agent: &ureq::Agent,
+    master: &str,
+    reservation: &FolderReservation,
+    admin_key: &str,
+    route: &str,
+    tolerate_missing: bool,
+) -> Result<()> {
+    let body = serde_json::json!({
+        "modId": reservation.mod_id,
+        "folder": reservation.folder,
+        "token": reservation.token,
+    })
+    .to_string();
+    let base = master.trim_end_matches('/');
+    match agent
+        .post(&format!("{base}/v1/catalog/folder-claim/{route}"))
+        .set("x-api-key", admin_key)
+        .set("content-type", "application/json")
+        .send_string(&body)
+    {
+        // A master that predates the reservation also predates its end routes.
+        Ok(_) => Ok(()),
+        Err(ureq::Error::Status(404, _)) if tolerate_missing => Ok(()),
+        Err(ureq::Error::Status(404, _)) => bail!(
+            "the master no longer holds the reservation for '{}'",
+            reservation.folder
+        ),
+        Err(ureq::Error::Status(code, response)) => {
+            let detail = response.into_string().unwrap_or_default();
+            bail!("HTTP {code}: {}", detail.trim());
+        }
+        Err(error) => bail!("{error}"),
+    }
+}
+
+fn abort_folder_claim(
+    master: &str,
+    reservation: &FolderReservation,
+    admin_key: &str,
+    insecure: bool,
+) {
+    if let Err(error) = end_folder_claim(master, reservation, admin_key, insecure, "abort", true) {
+        eprintln!(
+            "warning: releasing install folder '{}' failed: {error}",
+            reservation.folder
+        );
+    }
+}
+
+fn commit_folder_claim(
+    master: &str,
+    reservation: &FolderReservation,
+    admin_key: &str,
+    insecure: bool,
+) {
+    if let Err(error) = end_folder_claim(master, reservation, admin_key, insecure, "commit", true) {
+        eprintln!(
+            "warning: committing install folder '{}' failed: {error}",
+            reservation.folder
+        );
+    }
 }
 
 fn remote_mod_exists(master: &str, mod_id: &str, insecure: bool) -> Result<bool> {
@@ -355,14 +671,111 @@ fn remote_mod_exists(master: &str, mod_id: &str, insecure: bool) -> Result<bool>
     }
 }
 
+/// Ask the master whether this publish could claim its install folder, before the source is
+/// packed and the artifact uploaded.
+///
+/// The publisher sees only its own manifest: the folder it falls back to (`@<modId>`) can already
+/// belong to another entry, and a case-only spelling is one directory on the Windows client. The
+/// upload refuses that claim too, but only once the whole compressed artifact has arrived, so the
+/// question is asked first and the answer costs one request instead of an upload. This is the
+/// read-only preflight, kept for a master that predates `reserve_folder_claim`; a current master
+/// answers that reservation instead, which is the same check plus the write that stops the loser
+/// of two publishes.
+fn check_folder_claim(
+    master: &str,
+    mod_id: Option<&str>,
+    name: Option<&str>,
+    folder_name: Option<&str>,
+    insecure: bool,
+) -> Result<()> {
+    let base = master.trim_end_matches('/');
+    let mut url = format!("{base}/v1/catalog/folder-claim");
+    let mut params = Vec::new();
+    if let Some(mod_id) = mod_id {
+        params.push(("modId", mod_id));
+    }
+    if let Some(name) = name {
+        params.push(("name", name));
+    }
+    if let Some(folder_name) = folder_name {
+        params.push(("folderName", folder_name));
+    }
+    if !params.is_empty() {
+        let query = params
+            .into_iter()
+            .map(|(key, value)| {
+                let encoded = percent_encode_query_value(value);
+                format!("{key}={encoded}")
+            })
+            .collect::<Vec<_>>()
+            .join("&");
+        url.push('?');
+        url.push_str(&query);
+    }
+
+    match http_agent(insecure)?.get(&url).call() {
+        Ok(response) => {
+            let claim: serde_json::Value = response
+                .into_json()
+                .context("parsing folder claim response")?;
+            match claim["available"].as_bool() {
+                Some(true) => Ok(()),
+                Some(false) => bail!(
+                    "publish refused before uploading: {}",
+                    claim["refusal"]
+                        .as_str()
+                        .unwrap_or("the install folder is already claimed")
+                ),
+                None => bail!("folder claim check failed: unexpected response"),
+            }
+        }
+        // A master that predates this endpoint cannot answer. The upload still refuses the claim,
+        // so a missing route narrows the preflight to "no early answer", not to a publish that
+        // would have been refused.
+        Err(ureq::Error::Status(404, _)) => {
+            eprintln!(
+                "warning: this master predates the folder-claim preflight; the upload will still check"
+            );
+            Ok(())
+        }
+        Err(ureq::Error::Status(code, response)) => {
+            let detail = response.into_string().unwrap_or_default();
+            bail!("folder claim check failed: HTTP {code}: {}", detail.trim());
+        }
+        Err(error) => bail!("folder claim check failed: {error}"),
+    }
+}
+
+/// Percent-encode one query-string value (RFC 3986 unreserved kept, everything else escaped per
+/// UTF-8 byte), so a folder name carrying a space, `&`, `+` or a non-ASCII letter arrives as
+/// written instead of being split into a different query.
+fn percent_encode_query_value(value: &str) -> String {
+    const HEX: &[u8; 16] = b"0123456789ABCDEF";
+    let mut out = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                out.push(char::from(byte));
+            }
+            _ => {
+                out.push('%');
+                out.push(char::from(HEX[usize::from(byte >> 4)]));
+                out.push(char::from(HEX[usize::from(byte & 0x0f)]));
+            }
+        }
+    }
+    out
+}
+
 fn run_upload(
     args: &PublishArgs,
     mod_id: Option<&str>,
     master: &str,
     insecure: bool,
+    claim_token: Option<&str>,
 ) -> Result<()> {
     let boundary = "----PapaBearCLIboundaryVqZ9k2bX7nMpL4tD";
-    let prelude = build_multipart_prelude(boundary, args);
+    let prelude = build_multipart_prelude(boundary, args, claim_token);
     let trailer = format!("\r\n--{boundary}--\r\n").into_bytes();
 
     // Produce the raw PBO (folder is packed; an already-packed .pbo is validated then streamed
@@ -584,13 +997,27 @@ fn compress_artifact(mut raw: Box<dyn Read>) -> Result<(NamedTempFile, u64)> {
 /// Build a ureq agent. By default native-tls validates against the OS trust store
 /// (so system-installed internal CAs work); `insecure` skips verification (curl -k).
 fn http_agent(insecure: bool) -> Result<ureq::Agent> {
-    let mut builder = native_tls::TlsConnector::builder();
+    build_http_agent(insecure, None)
+}
+
+/// The agent a renewal uses: a request that never answers must not hold the publish open, because
+/// the renewal worker is joined before the reservation is committed or given back.
+fn renewal_agent(insecure: bool) -> Result<ureq::Agent> {
+    build_http_agent(insecure, Some(Duration::from_secs(30)))
+}
+
+fn build_http_agent(insecure: bool, timeout: Option<Duration>) -> Result<ureq::Agent> {
+    let mut tls = native_tls::TlsConnector::builder();
     if insecure {
-        builder.danger_accept_invalid_certs(true);
-        builder.danger_accept_invalid_hostnames(true);
+        tls.danger_accept_invalid_certs(true);
+        tls.danger_accept_invalid_hostnames(true);
     }
-    let connector = builder.build().context("building TLS connector")?;
-    Ok(ureq::builder().tls_connector(Arc::new(connector)).build())
+    let connector = tls.build().context("building TLS connector")?;
+    let mut agent = ureq::builder().tls_connector(Arc::new(connector));
+    if let Some(timeout) = timeout {
+        agent = agent.timeout(timeout);
+    }
+    Ok(agent.build())
 }
 
 fn run_list(master: &str, insecure: bool) -> Result<()> {
@@ -880,12 +1307,11 @@ fn run_install(args: &InstallArgs, master: &str, insecure: bool) -> Result<()> {
     fs::create_dir_all(&args.dir).with_context(|| format!("creating mods dir {}", args.dir))?;
     let mut installed_ids: Vec<String> = Vec::new();
     for (mod_id, folder, entry) in &mods {
-        if folder.is_empty()
-            || folder.contains('/')
-            || folder.contains('\\')
-            || folder == "."
-            || folder == ".."
-        {
+        // The catalog's folder name becomes a directory under `--dir`, so it is held to the
+        // same one-component rule as the publisher's `--folder-name` — including the
+        // Windows-reserved characters and a drive prefix, which a plain separator check let
+        // through.
+        if !is_single_path_component(folder) {
             bail!("catalog returned unsafe folder name '{folder}' for {mod_id}");
         }
         let dest = Path::new(&args.dir).join(folder);
@@ -1263,7 +1689,11 @@ fn session_flags(s: &serde_json::Value) -> String {
 
 /// The multipart body up to (but excluding) the file bytes: the metadata fields plus the
 /// `file` part header. The caller streams the artifact bytes after this, then the trailer.
-fn build_multipart_prelude(boundary: &str, args: &PublishArgs) -> Vec<u8> {
+fn build_multipart_prelude(
+    boundary: &str,
+    args: &PublishArgs,
+    claim_token: Option<&str>,
+) -> Vec<u8> {
     let mut fields: Vec<(&str, String)> = Vec::new();
     if let Some(mod_id) = &args.mod_id {
         fields.push(("modId", mod_id.clone()));
@@ -1298,6 +1728,11 @@ fn build_multipart_prelude(boundary: &str, args: &PublishArgs) -> Vec<u8> {
     for author in &args.authors {
         fields.push(("author", author.clone()));
     }
+    if let Some(claim_token) = claim_token {
+        // Proves this upload is the publish that reserved the folder, and consumes the token so
+        // no later abort can release it.
+        fields.push(("claimToken", claim_token.to_string()));
+    }
 
     let mut body = Vec::new();
     for (name, value) in fields {
@@ -1320,8 +1755,9 @@ fn build_multipart_prelude(boundary: &str, args: &PublishArgs) -> Vec<u8> {
 mod tests {
     use super::{
         build_multipart_prelude, compress_artifact, decode_and_unpack, difficulty_flag_names,
-        install_is_current, publish_args_with_manifest, replace_install, upload_result_name,
-        with_default_port, workshop_slug, write_installed_mod_manifest, Cli, Command, PublishArgs,
+        install_is_current, percent_encode_query_value, publish_args_with_manifest,
+        replace_install, upload_result_name, with_default_port, workshop_slug,
+        write_installed_mod_manifest, Cli, Command, PublishArgs,
     };
     use clap::Parser;
     use papa_bear_archive::Pbo;
@@ -1333,6 +1769,20 @@ mod tests {
         assert_eq!(with_default_port("1.2.3.4"), "1.2.3.4:2302");
         assert_eq!(with_default_port("1.2.3.4:2402"), "1.2.3.4:2402");
         assert_eq!(with_default_port("host.example"), "host.example:2302");
+    }
+
+    // The folder-claim preflight puts a manifest folder name in a query string, and that name may
+    // hold a space, `&`, `+`, `%` or a non-ASCII letter: it is escaped per UTF-8 byte so the master
+    // receives the folder the publisher meant instead of a different query.
+    #[test]
+    fn folder_claim_query_values_are_percent_encoded() {
+        assert_eq!(percent_encode_query_value("CSLA"), "CSLA");
+        assert_eq!(percent_encode_query_value("Sth..else"), "Sth..else");
+        assert_eq!(percent_encode_query_value("ver2.0"), "ver2.0");
+        assert_eq!(percent_encode_query_value("@CSLA"), "%40CSLA");
+        assert_eq!(percent_encode_query_value("a b&c+d=e"), "a%20b%26c%2Bd%3De");
+        assert_eq!(percent_encode_query_value("100%"), "100%25");
+        assert_eq!(percent_encode_query_value("Žluť"), "%C5%BDlu%C5%A5");
     }
 
     #[test]
@@ -1467,12 +1917,36 @@ mod tests {
             folder_name: None,
             prefix: None,
         };
-        let body = String::from_utf8(build_multipart_prelude("boundary", &args)).unwrap();
+        let body = String::from_utf8(build_multipart_prelude("boundary", &args, None)).unwrap();
         assert!(!body.contains("name=\"name\""));
         assert!(!body.contains("name=\"app\""));
         assert!(!body.contains("name=\"actver\""));
         assert!(!body.contains("name=\"vertag\""));
+        assert!(!body.contains("name=\"claimToken\""));
         assert!(body.contains("name=\"file\""));
+    }
+
+    #[test]
+    fn publish_multipart_carries_the_reservation_token() {
+        let args = PublishArgs {
+            source: "fixture.pbo".to_string(),
+            admin_key: "key".to_string(),
+            mod_id: Some("fixture".to_string()),
+            name: Some("Fixture".to_string()),
+            app: None,
+            actver: None,
+            compatible_actvers: Vec::new(),
+            version_tag: None,
+            version: None,
+            description: None,
+            authors: Vec::new(),
+            homepage_url: None,
+            folder_name: None,
+            prefix: None,
+        };
+        let body =
+            String::from_utf8(build_multipart_prelude("boundary", &args, Some("tok"))).unwrap();
+        assert!(body.contains("name=\"claimToken\"\r\n\r\ntok"), "{body}");
     }
 
     #[test]
@@ -1494,7 +1968,7 @@ mod tests {
             prefix: None,
         };
 
-        let body = String::from_utf8(build_multipart_prelude("boundary", &args)).unwrap();
+        let body = String::from_utf8(build_multipart_prelude("boundary", &args, None)).unwrap();
         assert!(body.contains("name=\"app\"\r\n\r\nCWR"));
         assert!(body.contains("name=\"modId\"\r\n\r\nfixture"));
         assert!(body.contains("name=\"actver\"\r\n\r\n305"));
