@@ -43,7 +43,17 @@
 // The unguided-rocket half is ported too and lives further down (`SimulateUnguidedMissile*`,
 // `CompensateUnguidedMissile`). It is a genuinely different model, not a variation -- see the
 // comment above MissileParams for why a rocket droops less than a shell of the same speed.
+//
+// `AmmoType` is `Poseidon::AmmoType` (World/Entities/Weapons/Weapons.hpp). Declaring it at global
+// scope here declares a SECOND class of that name, which collides with the `using Poseidon::AmmoType`
+// in Core/Types.hpp wherever both headers are visible: clang reports "declaration conflicts with
+// target of using declaration" and then calls every unqualified use in Network/NetworkIface.hpp
+// ambiguous. MSVC accepts the declaration silently, which is why this only ever failed on the
+// clang/GNU-mode Linux build.
+namespace Poseidon
+{
 class AmmoType;
+}
 
 namespace Poseidon
 {

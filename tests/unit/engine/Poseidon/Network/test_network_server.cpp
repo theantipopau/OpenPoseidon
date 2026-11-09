@@ -723,6 +723,35 @@ TEST_CASE("MP mission lookup resolves active mod mission PBOs before base direct
     std::filesystem::remove_all(root, ec);
 }
 
+// MP-MISSION-NAME-1: the template name becomes a path under the MPMissions tree — the resolver
+// joins it onto each lookup directory, and the simulate path appends "/mission.sqm" to it — so
+// a traversal-shaped name must be refused instead of looked up.
+TEST_CASE("MP mission template names that leave the mission tree are refused", "[network][mission][path]")
+{
+    // Each half is checked on its own: concatenating first would hide a mission of "..".
+    for (const char* mission : {"..", ".", "../..", "..\\..\\x", "@../../x", "a/b", "C:\\missions\\x"})
+    {
+        INFO("mission: " << mission);
+        CHECK(Poseidon::ResolveMPMissionTemplateBase(mission, "Eden").GetLength() == 0);
+    }
+    CHECK(Poseidon::ResolveMPMissionTemplateBase("addon_lookup", "../..").GetLength() == 0);
+    CHECK(Poseidon::ResolveMPMissionTemplateBase("addon_lookup", "..").GetLength() == 0);
+
+    // The whole "<mission>.<world>" string is what the simulate path joins onto the tree.
+    for (const char* templateName : {"../x.Eden", "..\\..\\x.Eden", "@../../x.Eden", "a/b.Eden", "C:\\x.Eden"})
+    {
+        INFO("template: " << templateName);
+        CHECK_FALSE(Poseidon::IsMissionTemplateNameValid(templateName));
+    }
+
+    // An ordinary template still resolves (the documented fallback when nothing is installed).
+    CHECK(Poseidon::IsMissionTemplateNameValid("addon_lookup.Eden"));
+    CHECK(Poseidon::IsMissionTemplateNameValid("mfcti 1.16 everon.eden"));
+    const RString ok = Poseidon::ResolveMPMissionTemplateBase("addon_lookup", "Eden");
+    CHECK(ok.GetLength() > 0);
+    CHECK(std::string((const char*)ok).find("..") == std::string::npos);
+}
+
 TEST_CASE("voice channel routing targets normal network player ids", "[network][VoN]")
 {
     REQUIRE(Poseidon::SelectNetworkVoiceTargetPlayerId(42, 0) == 42);

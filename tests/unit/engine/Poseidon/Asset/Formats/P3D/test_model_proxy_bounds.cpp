@@ -326,10 +326,14 @@ TEST_CASE("Every MLOD fixture in the repository resolves", "[p3d][mlod][farfield
     // The denominator, not a sample. Refusing MLOD cost the far tier every model
     // of an imported world at once; a per-file spot check is exactly the shape of
     // test that would not have noticed.
-    const char* names[] = {"p3d/animated_actor.p3d",  "p3d/complex_vehicle.p3d", "p3d/crew_proxy.p3d",
-                           "p3d/flat_quad.p3d",       "p3d/light_disc.p3d",      "p3d/multi_lod_vehicle.p3d",
-                           "p3d/proxy_structure.p3d", "p3d/simple_proxy.p3d",    "p3d/simple_tree.p3d",
-                           "p3d/sky_plane.p3d"};
+    //
+    // The list is MLOD only. This case used to name every p3d/* fixture, and the
+    // p3d/ directory is the compiled ODOL 7 form of the same models -- which the
+    // next case asserts is refused, because revision 7 keeps ModelInfo behind
+    // every LOD body. Two containers, two answers.
+    const char* names[] = {"p3d/animated_actor.p3d",        "p3d/multi_lod_vehicle.p3d",    "p3d/simple_tree.p3d",
+                           "mlod/animated_marker_mlod.p3d", "mlod/camera_path_a.p3d",       "mlod/camera_path_b.p3d",
+                           "mlod/camera_path_c.p3d",        "mlod/complex_vehicle_mlod.p3d"};
     for (const char* name : names)
     {
         CAPTURE(name);
@@ -339,6 +343,24 @@ TEST_CASE("Every MLOD fixture in the repository resolves", "[p3d][mlod][farfield
         REQUIRE(bounds.radius > 0.0f);
         REQUIRE(bounds.maxY >= bounds.minY);
         REQUIRE_FALSE(bounds.colorKnown);
+    }
+}
+
+TEST_CASE("Every ODOL 7 fixture is refused, not parsed", "[p3d][odol][farfield]")
+{
+    // Revision 7 is the deliberate refusal: its ModelInfo is at the back of the
+    // file, so "reading" it is a full parse. A far-field tier handed a few hundred
+    // of these must be told to pay that cost explicitly, not be charged it here.
+    const char* names[] = {"p3d/animated_morph_odol.p3d", "p3d/complex_vehicle.p3d", "p3d/crew_proxy.p3d",
+                           "p3d/empty_shape.p3d",         "p3d/flat_quad.p3d",       "p3d/light_disc.p3d",
+                           "p3d/proxy_structure.p3d",     "p3d/simple_proxy.p3d",    "p3d/sky_plane.p3d"};
+    for (const char* name : names)
+    {
+        CAPTURE(name);
+        const auto data = readFile(GET_FIXTURE(name));
+        const auto bounds = P3D::ReadModelProxyBounds(data.data(), static_cast<int>(data.size()));
+        REQUIRE_FALSE(bounds.valid);
+        REQUIRE(bounds.radius == 0.0f);
     }
 }
 
@@ -376,9 +398,11 @@ TEST_CASE("Malformed MLOD is refused without reading past the input", "[p3d][mlo
 {
     SECTION("an MLOD whose first LOD has no vertices")
     {
-        // empty_shape.p3d is a real MLOD with nPos == 0. There is no geometry to
-        // derive bounds from, and a zero-sized proxy is not an answer.
-        const auto data = readFile(GET_FIXTURE("p3d/empty_shape.p3d"));
+        // empty_mlod.p3d is a real MLOD with nPos == 0. There is no geometry to
+        // derive bounds from, and a zero-sized proxy is not an answer. (p3d/
+        // empty_shape.p3d is the ODOL build of the same idea, refused above for a
+        // different reason, so it cannot stand in here.)
+        const auto data = readFile(GET_FIXTURE("mlod/empty_mlod.p3d"));
         REQUIRE_FALSE(P3D::ReadModelProxyBounds(data.data(), static_cast<int>(data.size())).valid);
     }
 
@@ -541,7 +565,7 @@ TEST_CASE("Peeking proxy bounds leaves the reader where it was found", "[p3d][od
     auto acceptedOdol = odol73Header();
     auto acceptedMlod = readFile(GET_FIXTURE("p3d/simple_tree.p3d"));
     auto refusedOdol = readFile(GET_FIXTURE("p3d/animated_morph_odol.p3d"));
-    auto refusedMlod = readFile(GET_FIXTURE("p3d/empty_shape.p3d"));
+    auto refusedMlod = readFile(GET_FIXTURE("mlod/empty_mlod.p3d"));
 
     for (auto* data : {&acceptedOdol, &acceptedMlod, &refusedOdol, &refusedMlod})
     {

@@ -64,8 +64,20 @@ add_custom_command(TARGET PoseidonStudioTests POST_BUILD
 )
 
 # Discover individual ImGui Test Engine test cases for CTest.
-include(${CMAKE_SOURCE_DIR}/cmake/ImGuiTestDiscovery.cmake)
-imgui_discover_tests(PoseidonStudioTests
-    EXTRA_ARGS "${FIXTURES_DST}"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-)
+#
+# The engine's headers arrive only with the vcpkg imgui "test-engine" feature, which
+# vcpkg.json does not request yet, so the suite cannot be compiled in a default
+# checkout. Registering its CTest include file anyway made every `ctest` run abort on a
+# missing PoseidonStudioTests_tests.cmake before a single test executed -- ctest that
+# reports nothing is worse than ctest that reports what it covers, so discovery is
+# wired only when the headers are really installed (docs/proteus/G3b-cpp-tests.md).
+find_path(IMGUI_TEST_ENGINE_INCLUDE_DIR imgui_te_engine.h)
+if(IMGUI_TEST_ENGINE_INCLUDE_DIR)
+    include(${CMAKE_SOURCE_DIR}/cmake/ImGuiTestDiscovery.cmake)
+    imgui_discover_tests(PoseidonStudioTests
+        EXTRA_ARGS "${FIXTURES_DST}"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    )
+else()
+    message(STATUS "PoseidonStudioTests: imgui test-engine headers not installed; CTest discovery skipped")
+endif()

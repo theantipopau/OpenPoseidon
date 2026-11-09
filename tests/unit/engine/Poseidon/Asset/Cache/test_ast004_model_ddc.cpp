@@ -198,7 +198,7 @@ TEST_CASE("ModelBlob: the stable base form of two fixtures is pinned by digest",
     };
     // Regenerate by running this case and reading the failure's expansion.
     const Case cases[] = {
-        {kMlod, "bd19e9e0d812713eb8ef7ac76e5bea960f8900ae4649fd9c0238d0c155664a98"},
+        {kMlod, "4108624deca6a9bed2a156501104f14c84e2b405c245acebfbb54415662cec0e"},
         {kOdol, "129cab0041e0a81fef2698ece68a8a1d3fa5b822a2835510ab64d7ad8cf61f26"},
     };
 

@@ -57,4 +57,14 @@ std::string getCurrentUserName()
     return {};
 }
 
+std::string getExecutablePath()
+{
+    wchar_t buf[MAX_PATH] = {};
+    const DWORD n = ::GetModuleFileNameW(nullptr, buf, MAX_PATH);
+    // n == MAX_PATH means the path was truncated, not that it fits.
+    if (n == 0 || n >= MAX_PATH)
+        return {};
+    return Poseidon::WidePathToUtf8(buf);
+}
+
 } // namespace Poseidon::Foundation

@@ -259,8 +259,13 @@ void RunBisReferenceCase(const char* wavStem)
     const fs::path wavPath = fixtureDir / (std::string(wavStem) + ".wav");
     const fs::path lipPath = fixtureDir / (std::string(wavStem) + ".bis.lip");
 
-    REQUIRE(fs::exists(wavPath));
-    REQUIRE(fs::exists(lipPath));
+    // The reference corpus is a documented omission from this source release: the text
+    // fixtures are committed, the media is not. Absent media is a skip, not a failure --
+    // and definitely not a case that takes the whole binary down.
+    if (!fs::exists(wavPath) || !fs::exists(lipPath))
+    {
+        SKIP("audio/wave-to-lip reference corpus is not in this checkout");
+    }
 
     WavMono16 wav;
     REQUIRE(LoadMonoWav(wavPath, wav));

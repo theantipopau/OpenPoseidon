@@ -11,16 +11,19 @@ use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, post, put};
 use axum::{Json, Router};
+use papa_bear_client::catalog::{
+    is_single_path_component, normalize_folder_name, InvalidFolderName,
+};
 use utoipa::OpenApi;
 
 use crate::model::{
-    DirectoryServerRecord, ListModsQuery, ListServersQuery, ModCatalogEntry, ModPackage,
-    ModUsageServer, ObserveServerRequest, PruneServersRequest, PruneServersResponse,
-    RegisterServerRequest, ServerDetail, ServerModReference, ServerPlayer, ServerPopulationSample,
-    ServerRecentSession, ServerVersionGroup, ServiceMetadata, ServiceSummary,
-    SetModCompatibilityRequest,
+    DirectoryServerRecord, FolderClaimReservation, FolderClaimToken, InstallFolderClaim,
+    ListModsQuery, ListServersQuery, ModCatalogEntry, ModPackage, ModUsageServer,
+    ObserveServerRequest, PruneServersRequest, PruneServersResponse, RegisterServerRequest,
+    ServerDetail, ServerModReference, ServerPlayer, ServerPopulationSample, ServerRecentSession,
+    ServerVersionGroup, ServiceMetadata, ServiceSummary, SetModCompatibilityRequest,
 };
-use crate::mods::ModUploadMeta;
+use crate::mods::{slugify, ModUploadMeta};
 use crate::repository::{SqliteServerDirectory, TokenRelocation};
 use crate::service::{self, PapaBearService};
 
@@ -61,6 +64,11 @@ fn max_mod_upload_bytes() -> usize {
         download_mod_revision,
         list_mod_versions,
         list_mod_servers,
+        check_folder_claim,
+        reserve_folder_claim,
+        renew_folder_reservation,
+        commit_folder_reservation,
+        abort_folder_reservation,
         register_server,
         heartbeat_server_doc,
         observe_server,
@@ -82,6 +90,9 @@ fn max_mod_upload_bytes() -> usize {
         ServerRecentSession,
         ModUsageServer,
         ModCatalogEntry,
+        InstallFolderClaim,
+        FolderClaimReservation,
+        FolderClaimToken,
         ModPackage,
         SetModCompatibilityRequest,
         PruneServersRequest,
@@ -205,6 +216,22 @@ fn build_router_for_service(
         .route("/v1/mods/:mod_id/versions", get(list_mod_versions))
         .route("/v1/mods/:mod_id/servers", get(list_mod_servers))
         .route("/v1/mods/:mod_id/download", get(download_mod))
+        .route(
+            "/v1/catalog/folder-claim",
+            get(check_folder_claim).post(reserve_folder_claim),
+        )
+        .route(
+            "/v1/catalog/folder-claim/renew",
+            post(renew_folder_reservation),
+        )
+        .route(
+            "/v1/catalog/folder-claim/commit",
+            post(commit_folder_reservation),
+        )
+        .route(
+            "/v1/catalog/folder-claim/abort",
+            post(abort_folder_reservation),
+        )
         .route("/v1/servers/register", post(register_server))
         .route("/v1/servers/heartbeat", post(register_server))
         .route("/v1/servers/prune", post(prune_servers))
@@ -670,6 +697,282 @@ async fn list_mod_servers(
     Ok(Json(records))
 }
 
+#[derive(Debug, serde::Deserialize)]
+struct FolderClaimQuery {
+    #[serde(rename = "modId")]
+    mod_id: Option<String>,
+    name: Option<String>,
+    #[serde(rename = "folderName")]
+    folder_name: Option<String>,
+}
+
+/// Publisher preflight for the install folder a publish would claim, answered before the source
+/// folder is packed and the artifact uploaded.
+///
+/// `modId` is the entry the publish would use (`name` derives it when absent); `folderName` is
+/// the manifest value, whose absence means the `@<modId>` fallback — or, for a revision, the
+/// folder the entry already holds. The answer is the one `POST /v1/mods` would give after the
+/// whole artifact had arrived, including its refusal wording. Reads only.
+#[utoipa::path(
+    get,
+    path = "/v1/catalog/folder-claim",
+    params(
+        ("modId" = Option<String>, Query, description = "Catalog id the publish would use"),
+        ("name" = Option<String>, Query, description = "Display name, used to derive the id when modId is absent"),
+        ("folderName" = Option<String>, Query, description = "Install folder; @<modId>, or the current revision's folder when absent")
+    ),
+    responses(
+        (status = 200, description = "The folder the publish would claim, and whether it is free", body = InstallFolderClaim),
+        (status = 400, description = "Invalid mod id or folder name"),
+        (status = 503, description = "Mods are not configured")
+    )
+)]
+async fn check_folder_claim(
+    State(state): State<AppState>,
+    Query(query): Query<FolderClaimQuery>,
+) -> Result<Json<InstallFolderClaim>, (StatusCode, String)> {
+    if !state.service.mods_enabled() {
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "mods directory is not configured".to_string(),
+        ));
+    }
+    let folder_name = normalize_folder_name(query.folder_name.as_deref())
+        .map_err(|error| (StatusCode::BAD_REQUEST, error.to_string()))?;
+    let mod_id = folder_claim_mod_id(query.mod_id.as_deref(), query.name.as_deref())?;
+    state
+        .service
+        .check_install_folder(&mod_id, folder_name.as_deref())
+        .await
+        .map(Json)
+        .map_err(|error| {
+            if error.downcast_ref::<InvalidFolderName>().is_some() {
+                (StatusCode::BAD_REQUEST, error.to_string())
+            } else {
+                internal_error(&error)
+            }
+        })
+}
+
+/// The catalog id a folder-claim request is about: `modId` when given, otherwise the slug of
+/// `name`, exactly as a first publish derives it.
+fn folder_claim_mod_id(
+    mod_id: Option<&str>,
+    name: Option<&str>,
+) -> Result<String, (StatusCode, String)> {
+    let mod_id = if let Some(mod_id) = mod_id {
+        mod_id.to_string()
+    } else {
+        let name = name.map(str::trim).filter(|name| !name.is_empty());
+        let Some(name) = name else {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                "modId or name is required".to_string(),
+            ));
+        };
+        let mod_id = slugify(name);
+        if mod_id.is_empty() {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                format!("mod name '{name}' has no usable characters for an id"),
+            ));
+        }
+        mod_id
+    };
+    if !is_single_path_component(&mod_id) {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            format!("invalid mod id '{mod_id}'"),
+        ));
+    }
+    Ok(mod_id)
+}
+
+#[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
+struct FolderClaimRequest {
+    #[serde(rename = "modId")]
+    mod_id: Option<String>,
+    name: Option<String>,
+    #[serde(rename = "folderName")]
+    folder_name: Option<String>,
+}
+
+/// Reserve the install folder a publish is about to use, before it packs and streams.
+///
+/// The publisher cannot see the catalog, so two publishes of one folder can both pass the
+/// read-only `GET /v1/catalog/folder-claim` and both stream; the upload refuses the loser only
+/// after the whole artifact has arrived. This writes the claim now and answers the token that
+/// holds it, so the loser is refused here instead, and the winner sends the token back as the
+/// upload's `claimToken`. Admin-gated: a reservation refuses the folder to every other publish.
+#[utoipa::path(
+    post,
+    path = "/v1/catalog/folder-claim",
+    request_body = FolderClaimRequest,
+    responses(
+        (status = 200, description = "The folder is reserved for this publish", body = FolderClaimReservation),
+        (status = 400, description = "Invalid mod id or folder name"),
+        (status = 401, description = "Missing or wrong admin key"),
+        (status = 409, description = "Another entry, or another publish of this entry, holds the folder"),
+        (status = 503, description = "Mods are not configured")
+    )
+)]
+async fn reserve_folder_claim(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    payload: Result<Json<FolderClaimRequest>, JsonRejection>,
+) -> Result<Json<FolderClaimReservation>, (StatusCode, String)> {
+    require_admin_api_key(&state, &headers)?;
+    if !state.service.mods_enabled() {
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "mods directory is not configured".to_string(),
+        ));
+    }
+    let Json(request) = payload.map_err(|rejection| (rejection.status(), rejection.body_text()))?;
+    let folder_name = normalize_folder_name(request.folder_name.as_deref())
+        .map_err(|error| (StatusCode::BAD_REQUEST, error.to_string()))?;
+    let mod_id = folder_claim_mod_id(request.mod_id.as_deref(), request.name.as_deref())?;
+    state
+        .service
+        .reserve_folder_claim(&mod_id, folder_name.as_deref())
+        .await
+        .map(Json)
+        .map_err(|error| claim_error(&error))
+}
+
+/// Push a reservation's lease forward while its publisher keeps packing and streaming.
+///
+/// The lease is what tells a sweep a reservation is still alive: a pack and transfer can outlast
+/// any fixed age, and before this route `check-names --fix` could read a live publish as an
+/// abandoned claim and hand the folder to a second publisher. Only the token that took the claim
+/// may renew it, and the write is conditional on the body the renewal read: a claim whose token
+/// the upload already consumed answers 204, and one the upload cleared in between is not written
+/// back with the token, so a renewal that races the upload is harmless.
+#[utoipa::path(
+    post,
+    path = "/v1/catalog/folder-claim/renew",
+    request_body = FolderClaimToken,
+    responses(
+        (status = 204, description = "The reservation's lease is extended"),
+        (status = 404, description = "No reservation is held for that folder"),
+        (status = 409, description = "The reservation belongs to another publish"),
+        (status = 503, description = "Mods are not configured")
+    )
+)]
+async fn renew_folder_reservation(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    payload: Result<Json<FolderClaimToken>, JsonRejection>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    require_admin_api_key(&state, &headers)?;
+    if !state.service.mods_enabled() {
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "mods directory is not configured".to_string(),
+        ));
+    }
+    let Json(request) = payload.map_err(|rejection| (rejection.status(), rejection.body_text()))?;
+    state
+        .service
+        .renew_folder_claim(&request.mod_id, &request.folder, &request.token)
+        .await
+        .map(|()| StatusCode::NO_CONTENT)
+        .map_err(|error| claim_error(&error))
+}
+
+/// Keep a reserved folder once its publisher has written the revision. The upload that carries
+/// the token already committed it, so this answers 204 for a token-less claim as well: a
+/// publisher can send it after every publish without having to know which path committed.
+#[utoipa::path(
+    post,
+    path = "/v1/catalog/folder-claim/commit",
+    request_body = FolderClaimToken,
+    responses(
+        (status = 204, description = "The folder stays the entry's"),
+        (status = 404, description = "No reservation is held for that folder"),
+        (status = 409, description = "The reservation belongs to another publish"),
+        (status = 503, description = "Mods are not configured")
+    )
+)]
+async fn commit_folder_reservation(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    payload: Result<Json<FolderClaimToken>, JsonRejection>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    require_admin_api_key(&state, &headers)?;
+    if !state.service.mods_enabled() {
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "mods directory is not configured".to_string(),
+        ));
+    }
+    let Json(request) = payload.map_err(|rejection| (rejection.status(), rejection.body_text()))?;
+    state
+        .service
+        .commit_folder_claim(&request.mod_id, &request.folder, &request.token)
+        .await
+        .map(|()| StatusCode::NO_CONTENT)
+        .map_err(|error| claim_error(&error))
+}
+
+/// Give a reserved folder back before its revision was written, so another publish can take it at
+/// once instead of waiting for the sweep's age floor. Works for a revision that keeps its folder
+/// too, where the catalog already installs there: the token, not the catalog, decides.
+#[utoipa::path(
+    post,
+    path = "/v1/catalog/folder-claim/abort",
+    request_body = FolderClaimToken,
+    responses(
+        (status = 204, description = "The reservation is released"),
+        (status = 404, description = "No reservation is held for that folder"),
+        (status = 409, description = "Another publish holds it"),
+        (status = 503, description = "Mods are not configured")
+    )
+)]
+async fn abort_folder_reservation(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    payload: Result<Json<FolderClaimToken>, JsonRejection>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    require_admin_api_key(&state, &headers)?;
+    if !state.service.mods_enabled() {
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "mods directory is not configured".to_string(),
+        ));
+    }
+    let Json(request) = payload.map_err(|rejection| (rejection.status(), rejection.body_text()))?;
+    state
+        .service
+        .abort_folder_claim(&request.mod_id, &request.folder, &request.token)
+        .await
+        .map(|()| StatusCode::NO_CONTENT)
+        .map_err(|error| claim_error(&error))
+}
+
+/// Map a reservation failure onto the status a publisher can act on: a conflict is a folder
+/// another publish holds, a missing claim is a reservation that is gone, everything else is the
+/// request's own fault.
+fn claim_error(error: &anyhow::Error) -> (StatusCode, String) {
+    let message = error.to_string();
+    if error.downcast_ref::<InvalidFolderName>().is_some() {
+        (StatusCode::BAD_REQUEST, message)
+    } else if message.contains("already claimed")
+        || message.contains("reserved by")
+        || message.contains("already installs")
+        || message.contains("does not install")
+        || message.contains("belongs to another publish")
+        || message.contains("changed while it was being")
+        || message.contains("being claimed by several publishes")
+    {
+        (StatusCode::CONFLICT, message)
+    } else if message.contains("no install-folder reservation") {
+        (StatusCode::NOT_FOUND, message)
+    } else {
+        (StatusCode::BAD_REQUEST, message)
+    }
+}
+
 /// Publish a packed mod to the workshop. Admin-gated (`x-api-key`); accepts a
 /// `multipart/form-data` body with a `name` field, optional `app`/`actver`/`vertag`,
 /// optional `version`/`description`/`homepageUrl`, repeated `author` fields, and the PBO
@@ -725,6 +1028,7 @@ async fn upload_mod(
     let mut version_tag: Option<String> = None;
     let mut version: Option<String> = None;
     let mut folder_name: Option<String> = None;
+    let mut claim_token: Option<String> = None;
     let mut description: Option<String> = None;
     let mut homepage_url: Option<String> = None;
     let mut authors: Vec<String> = Vec::new();
@@ -745,6 +1049,7 @@ async fn upload_mod(
             Some("vertag") => version_tag = Some(read_text_field(field).await?),
             Some("version") => version = Some(read_text_field(field).await?),
             Some("folderName") => folder_name = Some(read_text_field(field).await?),
+            Some("claimToken") => claim_token = Some(read_text_field(field).await?),
             Some("description") => description = Some(read_text_field(field).await?),
             Some("homepageUrl") => homepage_url = Some(read_text_field(field).await?),
             Some("author") => authors.push(read_text_field(field).await?),
@@ -805,6 +1110,7 @@ async fn upload_mod(
         version_tag: version_tag.filter(|value| !value.trim().is_empty()),
         version: version.filter(|value| !value.trim().is_empty()),
         folder_name: folder_name.filter(|value| !value.trim().is_empty()),
+        claim_token: claim_token.filter(|value| !value.trim().is_empty()),
         description: description.filter(|value| !value.is_empty()),
         authors,
         homepage_url: homepage_url.filter(|value| !value.trim().is_empty()),
@@ -820,7 +1126,10 @@ async fn upload_mod(
     };
     result.map(Json).map_err(|error| {
         let message = error.to_string();
-        let status = if message.contains("already exists") {
+        let status = if message.contains("already exists")
+            || message.contains("already claimed")
+            || message.contains("reserved by")
+        {
             StatusCode::CONFLICT
         } else if message.contains("does not exist") {
             StatusCode::NOT_FOUND

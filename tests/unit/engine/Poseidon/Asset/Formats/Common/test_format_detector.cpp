@@ -54,7 +54,8 @@ TEST_CASE("FormatDetector: generated P3D files", "[format][detector][p3d]")
     {
         FormatInfo info = P3DFormatDetector::DetectFormat(GET_FIXTURE("p3d/empty_shape.p3d"));
 
-        REQUIRE(info.signature == "MLOD");
+        REQUIRE(info.signature == "ODOL");
+        REQUIRE(info.version == 7);
         REQUIRE(info.isSupported == true);
     }
 
@@ -62,7 +63,8 @@ TEST_CASE("FormatDetector: generated P3D files", "[format][detector][p3d]")
     {
         FormatInfo info = P3DFormatDetector::DetectFormat(GET_FIXTURE("p3d/proxy_structure.p3d"));
 
-        REQUIRE(info.signature == "MLOD");
+        REQUIRE(info.signature == "ODOL");
+        REQUIRE(info.version == 7);
         REQUIRE(info.isSupported == true);
     }
 
@@ -70,7 +72,8 @@ TEST_CASE("FormatDetector: generated P3D files", "[format][detector][p3d]")
     {
         FormatInfo info = P3DFormatDetector::DetectFormat(GET_FIXTURE("p3d/sky_plane.p3d"));
 
-        REQUIRE(info.signature == "MLOD");
+        REQUIRE(info.signature == "ODOL");
+        REQUIRE(info.version == 7);
         REQUIRE(info.isSupported == true);
     }
 
@@ -78,7 +81,8 @@ TEST_CASE("FormatDetector: generated P3D files", "[format][detector][p3d]")
     {
         FormatInfo info = P3DFormatDetector::DetectFormat(GET_FIXTURE("p3d/complex_vehicle.p3d"));
 
-        REQUIRE(info.signature == "MLOD");
+        REQUIRE(info.signature == "ODOL");
+        REQUIRE(info.version == 7);
         REQUIRE(info.isSupported == true);
     }
 }
@@ -227,25 +231,23 @@ TEST_CASE("FormatDetector: All fixture files cataloged", "[format][detector][fix
     std::vector<std::string> p3dFiles = {GET_FIXTURE("p3d/empty_shape.p3d"), GET_FIXTURE("p3d/proxy_structure.p3d"),
                                          GET_FIXTURE("p3d/sky_plane.p3d"), GET_FIXTURE("p3d/complex_vehicle.p3d")};
 
-    int mlodCount = 0;
-    int p3dMlodCount = 0;
-
+    // The two directories hold different containers and this test used to assert
+    // MLOD for both, which is why it never passed: mlod/ is MLOD 1.1 and p3d/ is
+    // the compiled ODOL 7 form of the same models.
     for (const auto& file : mlodFiles)
     {
+        CAPTURE(file);
         FormatInfo info = P3DFormatDetector::DetectFormat(file);
-        if (info.signature == "MLOD")
-            mlodCount++;
+        REQUIRE(info.signature == "MLOD");
         REQUIRE(info.isSupported);
     }
 
     for (const auto& file : p3dFiles)
     {
+        CAPTURE(file);
         FormatInfo info = P3DFormatDetector::DetectFormat(file);
-        if (info.signature == "MLOD")
-            p3dMlodCount++;
+        REQUIRE(info.signature == "ODOL");
+        REQUIRE(info.version == 7);
         REQUIRE(info.isSupported);
     }
-
-    REQUIRE(mlodCount == 4);
-    REQUIRE(p3dMlodCount == 4);
 }

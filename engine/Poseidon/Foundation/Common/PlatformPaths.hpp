@@ -33,4 +33,12 @@ std::string getUserDocumentsDir(const char* appName);
 /// Returns the current OS login name encoded as UTF-8.
 std::string getCurrentUserName();
 
+/// Absolute path of the running executable (UTF-8), or empty when it cannot be
+/// determined. Callers take its parent directory to find files shipped beside the
+/// binary (`assets/`, `Fonts/`).
+/// Windows: GetModuleFileNameW; Linux: /proc/self/exe; macOS: _NSGetExecutablePath.
+/// It lives here because the callers had each inlined
+/// `GetModuleFileNameA(..., MAX_PATH)`, which does not exist off Windows.
+std::string getExecutablePath();
+
 } // namespace Poseidon::Foundation

@@ -38,8 +38,10 @@ checksum; `StrToInt("ODOL")` == MSVC `'LODO'` == `0x4C4F444F`.
 ## Follow-ups (deliberately NOT fabricated here)
 
 - `p3d/` render/loader corpus (`simple_proxy`, `complex_vehicle`, `flat_quad`,
-  …): needs ODOL/MLOD files with proxies, weighted selections, multi-LOD —
+  …): needed ODOL/MLOD files with proxies, weighted selections, multi-LOD —
   a model-generator ticket with format research, not a bytes ticket.
+  **Done in `FIXTURE-P3D-1`** (`tests/fixtures/p3d/make_p3d_corpus.py`); that
+  ticket also retargeted the content-asserting cases named next.
 - `mlod/complex_vehicle_mlod.p3d`: tests assert original content (Czech
   selection names, 2617 points) — needs owner decision (retarget tests to
   synthetic fixtures vs. provide data); same for any test asserting shipped
