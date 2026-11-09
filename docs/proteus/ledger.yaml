@@ -389,9 +389,71 @@ tickets:
     evidence: "[fuzz] 11 cases pass (incl. newly wired MLOD TAGG); texture/format 30 cases 9873 assertions pass; both marker tests pass in their binaries. Full binary advances past all texture/shape-fuzz gaps. check-all OK."
     gpu_verified: false
     follow_ups:
-      - p3d render/loader corpus needs model-generator ticket (ODOL research)
+      - p3d render/loader corpus needs model-generator ticket (ODOL research) -> FIXTURE-P3D-1
       - complex_vehicle content-asserting tests need owner decision (retarget vs data)
       - wrp/jpg/pbo/rtm gaps; Core post-build pbo copy failure
+  - id: G3b-cpp-tests
+    title: CI job that builds and runs the C++ test binaries (per-case CTest gate)
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - .github/workflows/proteus.yml
+      - tests/unit/apps/Studio/CMakeLists.txt
+      - docs/proteus/G3b-cpp-tests.md
+    toggle: n/a (CI configuration + configure-time discovery guard; no engine behaviour)
+    evidence: "Before this ticket no CI run executed a C++ test case: both build jobs link PoseidonGame only (their ctest step had no executables), their build command used --build --preset for a preset file that defines configure presets only, and ctest aborted project-wide on PoseidonStudioTests_tests.cmake -- a POST_BUILD discovery file the build could not produce because the imgui test-engine headers are not installed. New main/dispatch cpp-tests job on windows-latest builds the six compiling suites (directory-form cmake --build) and runs ctest -E <three named cases> --output-on-failure --no-tests=error. Locally: 3,886 tests, 100% passed, exit 0, 111.8 s; without the machine-content exclusion 1 failed (installed DayZ corpus off-revision, known failure 3). Three cases excluded by name: two red on every machine and one that answers from an installed corpus. Studio discovery now registered only when imgui_te_engine.h is found; ctest -N lists tests again."
+    gpu_verified: false
+    follow_ups:
+      - not yet exercised on Actions; cold vcpkg install time unknown
+      - imgui test-engine vcpkg feature + PoseidonStudioTests in the gate
+      - run on pull requests once main timings are known
+  - id: QSTREAM-ESCAPE-1
+    title: A mod-relative path that walks above its root can no longer resolve
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - engine/Poseidon/IO/Streams/QBStream.cpp
+      - docs/proteus/QSTREAM-ESCAPE-1.md
+    toggle: n/a (containment fix; a switch restoring the old path would restore the escape)
+    evidence: "FIXTURE-SKIP-1 known failure 4 closed. EscapesRoot refuses a relative name whose \"..\" walks above the root before any directory is joined (ResolveModRootAlias tail, ResolveModOverride whole name), so \"..\\@voicemod\\voice\\Jari\\reportstatus.wss\" no longer resolves to the file inside @voicemod while \"voice\\..\\@voicemod\\...\" still does. PoseidonCoreTests: 895 cases / 871 passed / 0 failed / 24 skipped (was 1 failed), 15,994 assertions; [qstream] 132 cases 110/22 exit 0. PoseidonTests unchanged at 3 pre-existing failures / 154 skipped. check-format OK."
+    gpu_verified: false
+    follow_ups:
+      - audit the remaining directory-join sites (bank paths) for the same escape
+  - id: FIXTURE-P3D-1
+    title: Synthetic P3D/MLOD corpus generated from one model description (both encodings)
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - tests/fixtures/p3d/make_p3d_corpus.py
+      - tests/fixtures/p3d/complex_vehicle.p3d
+      - tests/fixtures/p3d/proxy_structure.p3d
+      - tests/fixtures/p3d/crew_proxy.p3d
+      - tests/fixtures/p3d/simple_proxy.p3d
+      - tests/fixtures/p3d/simple_tree.p3d
+      - tests/fixtures/p3d/multi_lod_vehicle.p3d
+      - tests/fixtures/p3d/animated_actor.p3d
+      - tests/fixtures/p3d/sky_plane.p3d
+      - tests/fixtures/p3d/light_disc.p3d
+      - tests/fixtures/p3d/flat_quad.p3d
+      - tests/fixtures/p3d/empty_shape.p3d
+      - tests/fixtures/mlod/complex_vehicle_mlod.p3d
+      - tests/fixtures/mlod/animated_marker_mlod.p3d
+      - tests/fixtures/mlod/proxy_probe.p3d
+      - tests/fixtures/mlod/empty_mlod.p3d
+      - tests/fixtures/mlod/camera_path_a.p3d
+      - tests/fixtures/mlod/camera_path_b.p3d
+      - tests/fixtures/mlod/camera_path_c.p3d
+      - tests/unit/engine/Poseidon/Asset/Formats/P3D/test_p3d_complex_vehicle.cpp
+      - tests/unit/engine/Poseidon/Asset/Formats/P3D/test_p3d_proxy_structure.cpp
+      - tests/unit/engine/Poseidon/Asset/Formats/test_poseidon_formats_capi.cpp
+      - tests/unit/engine/Poseidon/Asset/Cache/test_ast004_model_ddc.cpp
+      - docs/proteus/FIXTURE-P3D-1.md
+    toggle: n/a (test data + retargeted assertions; no engine behaviour change)
+    evidence: "Both encodings (ODOL 7 and MLOD 1.1/SP3X) emitted from one model description; LZSS payloads are literal-only streams with the checksum SsCompress::Decode requires. [p3d],[mlod] 177 cases: 168 passed, 0 failed, 9 skipped; 344,603 assertions pass. The 9 skips are the env-var real-corpus gates (POSEIDON_ODOL73_FIXTURE/CORPUS, POSEIDON_ODOL40_CORPUS), not fixture absence. PoseidonTests full: 3 failed (the three documented pre-existing failures), 154 skipped. PoseidonCoreTests: 895 cases 870 passed / 1 failed (qstream mod-path escape, pre-existing) / 24 skipped; DDC base-form digest re-pinned. Zero p3d/ or mlod/ files remain in the absent list (19 other-family fixtures left)."
+    gpu_verified: false
+    follow_ups:
+      - wrp/jpg/pbo/rtm/audio/cfg/png fixture families still absent
+      - no check ties the generator to the readers beyond the tests that load its output
   - id: UI-THEME-C
     title: Proteus theme on the mission-editor dialogs (no art backdrop)
     branch: proteus/main (direct)
@@ -545,3 +607,466 @@ tickets:
     gpu_verified: false
     follow_ups:
       - owner CI: watch the next fmt-changed run to confirm it reports hunk counts on the line instead of 169 files
+  - id: G2a-fixture-strays
+    title: Fixture binaries that committed tests require were untracked; third-party Aspect_Ratio.hpp sat at the root
+    branch: proteus/DX12-1-dx12-upscaler-fixes
+    status: done-unverified
+    files:
+      - .gitignore
+      - tests/fixtures/mlod/p3dm_geometry_mass.p3d
+      - tests/fixtures/mlod/p3dm_mixed_signatures.p3d
+      - tests/fixtures/mlod/p3dm_two_lod.p3d
+      - tests/fixtures/mlod/p3dm_uv_bad_size.p3d
+      - tests/fixtures/mlod/p3dm_uv_collapse.p3d
+      - tests/fixtures/mlod/unknown_lod_signature.p3d
+      - tests/fixtures/paa/taggs_compressed_mip.paa
+      - tests/fixtures/paa/taggs_full.paa
+      - tests/fixtures/paa/taggs_none.paa
+      - tests/fixtures/paa/taggs_unknown.paa
+    toggle: n/a (fixture provenance + ignore rule)
+    evidence: "Regenerating both fixtures scripts is byte-stable: sha256 of all 26 files unchanged, tracked fuzz_*/synthetic_* included. [graphics][paa][ast-013] 24 cases: 23 passed, 1 skipped, 149 assertions, exit 0 against the taggs fixtures. MLOD p3dm tests still cannot run to completion in this checkout: mlod/complex_vehicle_mlod.p3d is deliberately absent (FIXTURE-SYNTH-1) and aborts the binary with exit 127. check-assets unaffected (it scans assets/ only), check-all OK."
+    gpu_verified: false
+    follow_ups:
+      - owner decision: retarget the complex_vehicle_mlod content tests to synthetic fixtures so the MLOD tag can run without the omitted corpus
+  - id: FIXTURE-SKIP-1
+    title: An absent fixture SKIPs its own cases instead of aborting the whole test binary
+    branch: proteus/DX12-1-dx12-upscaler-fixes
+    status: done-unverified
+    files:
+      - tests/unit/engine/Poseidon/test_fixtures.hpp
+      - tests/unit/engine/Poseidon/Support/test_fixtures.hpp
+      - tests/unit/engine/Poseidon/CMakeLists.txt
+      - scripts/proteus/copy-fixtures.cmake
+      - tests/unit/engine/Poseidon/Graphics/test_jpg_import.cpp
+      - tests/unit/engine/Poseidon/Graphics/Textures/test_sinkhole_texture_formats.cpp
+      - tests/unit/engine/Poseidon/World/test_landscape_object_ids.cpp
+      - tests/unit/engine/Poseidon/TcPbo/test_tc_pbo_api.cpp
+      - tests/unit/engine/Poseidon/Graphics/Rendering/test_cloudlet_depth_contract.cpp
+      - tests/unit/engine/Poseidon/Graphics/Rendering/test_archive_source_binding.cpp
+      - tests/unit/engine/Poseidon/Asset/Probes/test_wave_to_lip.cpp
+      - tests/unit/engine/Poseidon/Audio/test_campaign_sound_voice_suffix.cpp
+      - tests/unit/engine/Poseidon/Graphics/test_shutdown_order_audit.cpp
+      - engine/Poseidon/World/SimStageEvidence.cpp
+      - docs/proteus/FIXTURE-SKIP-1.md
+    toggle: n/a (test infrastructure)
+    evidence: "GET_FIXTURE/REQUIRE_FIXTURE skip the calling case and an atexit reporter prints the 34 absent files; Support/test_fixtures.hpp forwards to the single definition; PoseidonCoreTests stages fixtures through copy-fixtures.cmake (it could not link before: raw copy_directory on the absent tests/fixtures/pbo). PoseidonTests 3,996 cases: 3,765 passed, 3 failed, 228 skipped; 888,085 assertions: 888,076 passed, 9 failed (was exit 127 with 0 cases and 0 assertions at p3d/simple_proxy.p3d). PoseidonCoreTests builds and runs: 895 cases, 867 passed, 1 failed, 27 skipped. I-05's fixed 2000-char window and two sim-stage census omissions were fixed on the way; 4 failures left visible on purpose (dev-panel ImGui:: wrapper bypasses, DrainInstanceOps model-lookup ordering, local DayZ corpus revisions, QIFStreamB mod path escape)."
+    gpu_verified: false
+    follow_ups:
+      - add a C++ test job to CI (build-windows builds PoseidonGame only, so ctest runs nothing)
+      - open tickets for the 4 failures kept visible by this change
+      - BUILDING.md documents a build preset that CMakePresets.json does not define
+  - id: G3c-panel-wrappers
+    title: "GI dev-panel tab draws through the Dev:: wrappers (panel search covers its rows)"
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - engine/Poseidon/Dev/Debug/DebugOverlay.cpp
+      - docs/proteus/G3c-panel-wrappers.md
+      - docs/proteus/FIXTURE-SKIP-1.md
+    toggle: n/a (panel search is pass-through with an empty filter; a filtered control returns false)
+    evidence: "FIXTURE-SKIP-1 known failure 1, GI part closed. DrawGiTab's 14 raw controls (Combo, SliderFloat x9, SliderInt x2, ColorEdit3; lines 4874-4906) now call Dev::, so they match the panel search and pick up their PanelHelp text. The source-invariant case drops from 7 failing needles to 4 ([dev] 383 assertions, 379 passed) and reports zero hits inside the GI tab. The four left are outside it -- Zeus InputText, head-torch ColorEdit3, grass IsItemHovered, SmokeTab's 31 IsItemHovered -- plus MapEditorTab's modal TextUnformatted, so the case stays red on purpose until those tabs are migrated. PoseidonTests builds (clang-cl exit 0); check-format OK (40 changed files)."
+    gpu_verified: false
+    follow_ups:
+      - migrate the remaining DebugOverlay bypasses (Zeus InputText, head-torch ColorEdit3, grass IsItemHovered)
+      - SmokeTab's 31 ImGui::IsItemHovered -> Dev::PanelItemHovered; decide MapEditorTab's modal TextUnformatted
+      - drop the panel case from cpp-tests' ctest -E exclusion once the invariant is green
+  - id: PATH-JOIN-AUDIT-1
+    title: Audit of the remaining directory joins (bank path helpers first)
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - docs/proteus/PATH-JOIN-AUDIT-1.md
+      - tests/unit/engine/Poseidon/IO/Streams/test_qstream_path_resolution.cpp
+      - engine/Poseidon/Asset/Addon/AddonSystem.cpp
+    toggle: n/a (audit plus a test that pins existing behaviour; the only engine change is the ResolveAddonFile guard added when the last row was closed)
+    evidence: 'QSTREAM-ESCAPE-1 follow-up. Every join of a supplied relative name onto a base directory is listed with a verdict: the two mod-relative joiners are guarded; CollapseParentDirs refuses a .. at depth 0 so the bank fallback can never name anything above the game root; the bank result indexes QFBank::_files, not a directory; AddonSystem::ResolveAddonFile has since been guarded (its only caller passes the literal stringtable.csv, so nothing observable changed); config parsers, bank mounting, ModArchive::Unpack (IsSafeEntryPath) and ModCollection are cleared with reasons. Two exposed sites were found and filed as proposed tickets: MODINSTALL-PATH-1 and MP-MISSION-NAME-1. The new test writes its own one-member PBO so it cannot skip on the absent pbo/ fixture: 14 assertions; [qstream] 133 cases, 111 passed, 22 skipped, 513 assertions pass; PoseidonCoreTests full 896 cases, 872 passed, 0 failed, 24 skipped, 16,008 assertions; check-format OK.'
+    gpu_verified: false
+    follow_ups:
+      - MODINSTALL-PATH-1 (proposed): validate catalog folderName/modId before it becomes an install path
+      - MP-MISSION-NAME-1 (proposed): require a single relative component for client mission template names
+      - AddonSystem::ResolveAddonFile takes a free-form name but only gets a literal; closed later the same day with Foundation::IsSinglePathComponent (see MP-MISSION-NAME-1 follow-ups)
+  - id: MODINSTALL-PATH-1
+    title: Workshop installer joins a remote folder name onto the mods root (remove_all/rename sink)
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - engine/Poseidon/Core/ModInstall.cpp
+      - engine/Poseidon/Core/ModInstall.hpp
+      - engine/Poseidon/UI/ModDownloadSupport.hpp
+      - engine/Poseidon/UI/OptionsUIApp.cpp
+      - engine/Poseidon/UI/DisplayUIMultiplayer.cpp
+      - tests/unit/engine/Poseidon/Core/test_mod_install.cpp
+      - docs/proteus/MODINSTALL-PATH-1.md
+    toggle: n/a (path containment)
+    evidence: 'PATH-JOIN-AUDIT-1 finding 1 closed. One predicate, IsSinglePathComponent (Foundation/Common/Filenames.hpp): non-empty, not . or .., none of / \ : * ? " < > |, no control chars, and no trailing . or space (Windows trims those, so ".. " would collapse back to ".."). Both ModInstallDir overloads (:354/:359) return "" instead of a joined path when the folder component or the mod id fails it; empty is a refusal, never a redirection. Every layer carries it outward: MakeStagedModInstall returns empty staging/backup dirs (no relative .staging-N in the cwd), SwapStagedModInstalls refuses, FindPreservedStagedModInstall refuses, BuildCheckedDownloadTasks refuses the batch and the MODS screen discards it with a message, MakeModDownloadTask returns a task with no destination, and the MP join refuses a server-chosen folder name before any task is built. Tests: 65 assertions for the predicate and both overloads (14 hostile names; accepted names verified to stay directly under the root) and 8 for the refused transaction; [mods] 72 cases 70 passed/0 failed/2 skipped, 412 assertions. PoseidonCoreTests 896 cases 872/0/24, 16,008 assertions (unchanged). PoseidonTests full 4,081 cases 3,924 passed / 3 failed / 154 skipped, the same three pre-existing non-ModInstall failures (local DayZ corpus, DrainInstanceOps ordering, dev-panel ImGui invariant). PoseidonGame builds; check-format and check-all OK.'
+    gpu_verified: false
+    follow_ups:
+      - MP-MISSION-NAME-1 (proposed) is the other PATH-JOIN-AUDIT-1 finding. It joins a client-selected mission template name onto the MPMissions tree (same predicate, read/mount sink)
+      - (done) AddonSystem::ResolveAddonFile guarded with the same Foundation::IsSinglePathComponent predicate at AddonSystem.cpp:41; the signature is unchanged, so the literal caller is untouched
+      - (done) mserver now holds a publish manifest folderName to the same is_safe_segment rule as mod_id, on both publish paths (see MSERVER-FOLDERNAME-1)
+  - id: MP-MISSION-NAME-1
+    title: A mission template name that is not one path component is refused, not joined
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - engine/Poseidon/Foundation/Common/Filenames.hpp
+      - engine/Poseidon/Network/NetworkServerCommon.hpp
+      - engine/Poseidon/Network/NetworkServerMission.cpp
+      - engine/Poseidon/Network/NetworkServerSimulate.cpp
+      - tests/unit/engine/Poseidon/Network/test_network_server.cpp
+      - docs/proteus/MP-MISSION-NAME-1.md
+    toggle: n/a (path containment)
+    evidence: 'PATH-JOIN-AUDIT-1 finding 2 closed. The MODINSTALL predicate moved to Foundation/Common/Filenames.hpp and is shared: ResolveMPMissionTemplateBase validates mission and world separately (concatenating first would hide a mission of "..") before any lookup directory is joined, and returns empty on refusal; CreateMission then logs, clears _originalName/_missionBank and RemoveBank(MPCurrentPrefix) (the "no mission" state), InitMission leaves the bank empty (its senders already treat an unreadable bank as nothing to transfer), and SimulateDS calls FailSimulateSmokeCheck before building either "<dir>/<template>.pbo" or "<dir>/<template>/mission.sqm". The whole "<mission>.<world>" string is checked where it is itself the component (IsMissionTemplateNameValid). Nested missions are unaffected: lookup directories are enumerated, so a nested mission is found by walking directories, not by a separator in its name. Test: 18 assertions (7 hostile missions, 2 hostile worlds, 5 hostile whole-template strings, 2 positive controls + 2 positive-template checks). [network] 218 cases 217 passed / 1 failed (the deliberately hidden [.] OOB reproducer, excluded from the default suite), 2,983 assertions; [mods] 72 cases 70/0/2 skipped, 412 assertions; PoseidonCoreTests 896 cases 872/0/24, 16,008 assertions; PoseidonTests full 4,082 cases 3,925 passed / 3 failed / 154 skipped, 1,310,771 assertions, the +18 being the new case and the 3 being the known non-mission failures; PoseidonGame builds; check-format and check-all OK.'
+    gpu_verified: false
+    follow_ups:
+      - warn at load time in the server.cfg mission-list parser so an admin sees why a template was refused
+      - (done) AddonSystem::ResolveAddonFile now refuses a name that is not one relative component before the join or the directory scan; this closes the audit's last open row
+      - (done) mserver accepts folderName from the publish manifest without an is_safe_segment equivalent (mserver/MasterService/src/mods.rs:1024)
+  - id: MSERVER-FOLDERNAME-1
+    title: A publish manifest folderName that names a directory outside the mods root is refused
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/MasterService/src/mods.rs
+      - mserver/MasterService/src/lib.rs
+      - docs/proteus/MSERVER-FOLDERNAME-1.md
+    toggle: n/a (an absent or empty folderName keeps the @<modId> fallback)
+    evidence: 'PATH-JOIN-AUDIT-1 last follow-up closed, on the write side of the same value. normalize_folder_name (mods.rs:1061) trims a manifest folderName, keeps absent/empty as None so the @<modId> fallback is unchanged, and otherwise holds it to is_safe_segment - the check mod_id already gets: no /, no backslash, no two consecutive dots. finalize_mod validates with the other pre-flight checks and deletes the finished temp upload on refusal (mods.rs:494); finalize_revision validates the combined meta-or-latest value before the placement loop (mods.rs:617), so a legacy unvalidated name cannot be carried into a new revision. http.rs needs no change: it already maps any other finalize error to 400. Test publish_rejects_a_folder_name_that_could_leave_the_mods_root (mods.rs:1416): five hostile names through finalize_mod, each failing with the exact message, creating no catalog entry and placing no artifact; a revision republish with ../escaped refused with the current revision and its folder name unchanged; and "  CSLA  " accepted trimmed. Broken-state delta measured: with the guard short-circuited the test fails on the first name with unwrap_err() on an Ok value whose folder_name is Some("..\..\Documents\x"). A second case, tests::http_mod_publish_rejects_a_folder_name_that_could_leave_the_mods_root (lib.rs:1314), drives the real endpoint: a multipart publish whose folderName is traversal-shaped answers 400 invalid folder name, GET /v1/mods stays empty and no <modsRoot>/folder-name-mod appears, while the same manifest with @folder-name-mod returns 200 and keeps that folder name verbatim. cargo test -p papa-bear-master-service --lib: 73 passed / 0 failed (71 cases before). One earlier parallel run flaked on delete_removes_mod_and_artifact_from_store and catalog_selects_latest_compatible_revision with LocalFileSystem Unable to rename file: Access is denied; neither passes a folder name, both pass on unmodified HEAD in the same configuration, and seven later runs are green - recorded in the ticket record rather than hidden.'
+    gpu_verified: false
+    follow_ups:
+      - (done) widened the server rule to the engine IsSinglePathComponent set (* ? " < > | :, control chars, trailing dot/space) for mod_id and folderName together (see MSERVER-PATHCHARSET-1)
+      - (done) the check-names sweep reports entries published before this check whose folder name now fails it (see MSERVER-CHECK-NAMES-1)
+
+  - id: MSERVER-PATHCHARSET-1
+    title: mod_id and folderName are held to the engine's one-component set, not a coarser rule
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/MasterService/src/mods.rs
+      - mserver/MasterService/src/lib.rs
+      - docs/proteus/MSERVER-PATHCHARSET-1.md
+    toggle: n/a (validation only; an absent or empty folderName keeps the @<modId> fallback)
+    evidence: 'MSERVER-FOLDERNAME-1 follow-up closed. is_safe_segment (mods.rs:1038) is now the engine predicate Foundation::IsSinglePathComponent: non-empty, not . or .., no trailing dot/space, no C0/DEL, no / \ : * ? " < > |, while C1 stays allowed exactly as the engine allows it. Every existing call site, no signature change. Because mod_id is a store key (mod_id/mod_id.pbo.zst) and folderName becomes <modsRoot>/<folderName> on every client, the old rule published names the installer refuses (a*b, a:b, trailing., interior DEL) and refused names it installs (Sth..else, because it could not tell .. from an interior run). New test publish_holds_both_manifest_names_to_the_engine_component_set (mods.rs:1479): 13 reserved/trailing/whole-dot names through finalize_mod as mod_id, each with the exact message and an empty catalog; 6 of them as folderName with no artifact directory; then mod_id Sth..else + folderName ver2.0 publishes and round-trips through artifact_bytes. The same list the C++ case ModInstallDir refuses catalog names that are not one path component checks against IsSinglePathComponent. The existing endpoint test (lib.rs:1314) gained a bad?name publish that must answer 400 invalid folder name. Broken-state delta measured: with the old body restored the new test fails on a*b with unwrap_err() on an Ok value whose download_url is /v1/mods/a*b/revisions/1/download. cargo test -p papa-bear-master-service --lib: 74 passed / 0 failed (73 before). cargo clippy -p papa-bear-master-service --all-targets: no error (the crate denies clippy::all; the first draft was rewritten to the nonminimal_bool form it asked for), remaining warnings pre-existing. check-format and check-all OK.'
+    gpu_verified: false
+    follow_ups:
+      - (done) the publisher CLI now calls the shared predicate instead of its own contains("..") check (see MSERVER-CLI-RULE-1)
+      - (done) the check-names sweep reports ids and folder names published before both server checks (see MSERVER-CHECK-NAMES-1)
+
+  - id: MSERVER-CLI-RULE-1
+    title: The publisher CLI validates mod ids and folder names with the service's shared rule
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/Client/src/catalog.rs
+      - mserver/Client/src/lib.rs
+      - mserver/MasterService/src/mods.rs
+      - mserver/CLI/src/main.rs
+      - mserver/CLI/tests/cli_roundtrip.rs
+      - docs/proteus/MSERVER-CLI-RULE-1.md
+    toggle: n/a (validation only)
+    evidence: 'MSERVER-PATHCHARSET-1 follow-up closed. The rule moved to papa_bear_client::catalog::is_single_path_component (catalog.rs:22) - the dependency both the CLI and the master service already have - and the service imports it; the private is_safe_segment is gone and the eight functions that used it are unchanged otherwise. papa publish now validates --mod-id with it (formerly empty/no-slash/no-backslash/no-two-dots, which sent a*b, a:b and trailing. to a 400 and refused Sth..else), validates --folder-name after the same trim the server applies (so a bad name fails before packaging and upload), and papa install validates the catalog folderName before Path::join (formerly only an empty/separator/dot check, so a reserved character or a drive prefix passed). Tests: catalog::tests::the_component_rule_matches_the_engine (catalog.rs:46) pins 8 accepted and 19 refused names plus the C1-allowed case shared with the C++ list; publish_validates_mod_id_before_any_network_call (cli_roundtrip.rs:64) drives the built binary against an unreachable 127.0.0.1:1 - five mod ids and three folder names refused with the exact messages, then Sth..else + ver2.0 passes validation and stops at catalog lookup failed /v1/mods/Sth..else. Broken-state delta measured: with the old inline check restored the first name reaches the service (catalog lookup failed: http://127.0.0.1:1/v1/mods/a*b). cargo test -p papa-bear-client 14 passed / 0 failed (13 before); papa-bear-cli 18 unit + 2 integration passed; papa-bear-master-service 74 + 7 + 0 unchanged; clippy no error; check-format and check-all OK.'
+    gpu_verified: false
+    follow_ups:
+      - (done) moved folderName normalization (trim, empty means @<modId> fallback) into the shared catalog module (see MSERVER-NORMALIZE-1)
+      - (done) the C++ and Rust boundary tests now read one shared case list (see MSERVER-NAME-CASES-1)
+      - (done) the check-names sweep reports names published before MSERVER-PATHCHARSET-1 that the rule now rejects (see MSERVER-CHECK-NAMES-1)
+
+  - id: MSERVER-NORMALIZE-1
+    title: One folderName normalizer (trim, blank means @<modId>) shared by publisher and service
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/Client/src/catalog.rs
+      - mserver/MasterService/src/mods.rs
+      - mserver/CLI/src/main.rs
+      - docs/proteus/MSERVER-NORMALIZE-1.md
+    toggle: n/a (validation only)
+    evidence: 'MSERVER-CLI-RULE-1 follow-up closed. normalize_folder_name and InvalidFolderName moved into papa_bear_client::catalog (catalog.rs:43 and :58): trim, absent/blank -> Ok(None) (the @<modId> fallback stays the client/engine rule), otherwise one component or Err carrying the trimmed value; the error implements Display as invalid folder name <value> and std::error::Error, so the service wraps it in anyhow and the CLI propagates it with ? - one wording for both. The service s private helper is deleted and both publish paths import the shared one (mods.rs:495 and :617, deletion of the temp upload preserved with error.into()); the CLI assigns the normalized value to args.folder_name (main.rs:325), so it uploads what the service would store and a blank --folder-name sends no field. papa install deliberately keeps the raw-value component check: the engine uses the catalog value verbatim, so trimming it client-side would install elsewhere. New test folder_names_normalize_or_carry_one_message (catalog.rs:123): four blank spellings -> None, four valid names -> normalized, seven refused -> trimmed value and exact message, plus the dyn Error bound. Broken-state delta measured: with the trim removed the first blank case yields Err(InvalidFolderName("   ")) instead of Ok(None). Earlier exact-message tests (store, endpoint, CLI) unchanged and green. cargo test -p papa-bear-client 15 passed / 0 failed (14 before); papa-bear-cli 18 unit + 2 integration; papa-bear-master-service 74 + 7; clippy no error; check-format and check-all OK. One parallel --lib run flaked concurrent_updates_allocate_distinct_revisions_without_regressing_latest on LocalFileSystem Unable to rename file: Access is denied - the known Windows rename race, no folder name involved, three following runs green.'
+    gpu_verified: false
+    follow_ups:
+      - the @<modId> fallback spelling is still composed in the CLI and in the engine; share it end to end
+      - (done) the C++ and Rust boundary tests now read one shared case list (see MSERVER-NAME-CASES-1)
+      - (done) the check-names sweep reports names published before MSERVER-PATHCHARSET-1 that the rule now rejects (see MSERVER-CHECK-NAMES-1)
+
+  - id: MSERVER-NAME-CASES-1
+    title: One shared case list for the catalog-name boundary, read by C++ and Rust
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - tests/fixtures/mod_names/catalog_name_cases.json
+      - tests/unit/engine/Poseidon/Core/test_mod_install.cpp
+      - mserver/Client/src/catalog.rs
+      - mserver/Client/Cargo.toml
+      - mserver/MasterService/src/mods.rs
+      - mserver/CLI/tests/cli_roundtrip.rs
+      - docs/proteus/MSERVER-NAME-CASES-1.md
+    toggle: n/a (tests only)
+    evidence: 'MSERVER-PATHCHARSET-1 risk closed: the boundary was tested three times with three different hand-typed lists (14/6 in the C++ case, 19/8 in catalog.rs, 13 ids + 6 folders in the publish test), so a newly reserved character could fail one suite and pass the others. tests/fixtures/mod_names/catalog_name_cases.json now holds refused (24) and accepted (10) with the verdict semantics in $comment; test_mod_install.cpp parses it with cJSON from TESTS_ROOT_DIR (source tree, not the POST_BUILD staged copy, so a fixture-only edit is not tested against a stale list; absent/unparsable is a failure, not a SKIP), catalog.rs and mods.rs read it at compile time via include_str!(CARGO_MANIFEST_DIR + /../../tests/fixtures/...) after serde_json became a dev-dependency of the client crate. The publish test loops both manifest names over the full refused list (24 + 24 publishes, was 13 + 6) with the exact messages - folderName asserts the trimmed value, so ".. " reports .. - and publishes every accepted name as both names, keeping the spelling and round-tripping artifact_bytes. Blank stays out of the file: an empty folderName means no folder name while an empty modId is refused, so each suite asserts its own blank case. Broken-state delta measured in all three suites by adding "plain-name" to refused and restoring: C++ 3 failed CHECKs naming it (no rebuild needed), client accepted "plain-name", publish unwrap_err on the Ok ModCatalogEntry for it. PoseidonTests builds (clang-cl, cJSON via Poseidon PUBLIC cjson) and the case runs 122 assertions; [mods] 72 cases 70/2 skipped, 469 assertions; full PoseidonTests 4,082 cases with the same 3 known failures; The publisher-side round-trip test now drives every refused name through both --mod-id and --folder-name (48 real papa publish invocations; each asserted to fail with the exact message and without catalog lookup failed, so the refusal precedes the closed port) and asserts its URL-safe positive pair is still in accepted; the full accepted sweep stays in the unit tests because each publish that reaches the network costs ~2 s against 127.0.0.1:1, and the suite still runs in 2.6 s. Broken-state delta measured there too: plain-name reaches /v1/mods/plain-name. cargo client 15, cli 18+2, master 74+7; clippy no new warning; check-format and check-all OK.'
+    gpu_verified: false
+    follow_ups:
+      - the two predicates are still separate implementations; the fixture makes a divergence fail, not prevent it
+      - (done) the check-names sweep reports names published before MSERVER-PATHCHARSET-1 that the rule now rejects (see MSERVER-CHECK-NAMES-1)
+
+  - id: MSERVER-CHECK-NAMES-1
+    title: A check-names sweep for catalog entries published before the name rule
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/MasterService/src/mods.rs
+      - mserver/MasterService/src/main.rs
+      - mserver/MasterService/tests/check_names.rs
+      - docs/proteus/MSERVER-CHECK-NAMES-1.md
+    toggle: n/a (read-only audit command)
+    evidence: 'Closes the last follow-up of the name-rule chain. list_mods could not answer the question: read_all resolves every catalog directory through get_mod, which returns None for a mod_id that is not one path component, so /v1/mods silently hides exactly the entries the sweep looks for. ModStore::scan_names() now enumerates directory names straight from the store listing (mod.json/current markers via a catalog_directories helper read_all also uses) and reads each current entry through a private stored_entry with no id gate and no parse_metadata (which rewrites legacy metadata; a sweep must not mutate). Rows are per field: InvalidCatalogName { directory, field: mod_id|folderName, value verbatim } for a directory name that is not one component, a stored modId that differs from its directory and is not one component (it still reaches downloadUrl), and a folderName that differs from its trim or is not one component; absent/blank folderName stays the @<modId> fallback and is not a violation. Current revision only. The check-names subcommand takes --mods-dir or the MODS_S3_* bucket the server uses, prints one line per row to stdout and exits non-zero with a summary (check-names: 2 rejected names in 3 catalog entries) so it can gate a maintenance window; a clean sweep prints checked N catalog entries, no rejected names and exits 0. Tests: scan_names_is_clean_for_a_published_catalog (2 entries, no rows), scan_names_reports_a_stored_folder_name_the_rule_rejects (tampered revision ..\..\Documents; asserts list_mods still serves the entry AND the sweep reports it), scan_names_reports_a_stored_mod_id_that_disagrees_with_its_directory (modId a*b under character-mod), and scan_names_reports_a_directory_whose_mod_id_is_not_one_component (cfg(not(windows)): asserts list_mods returns nothing for the a*b directory while the sweep counts and reports it). Binary tests in tests/check_names.rs: clean dir exits 0 with the exact summary, hostile folderName exits 1 with the exact report line and summary; the a*b directory case is cfg(not(windows)), compile-checked here by temporarily dropping the cfg and running cargo test --no-run but only executable on Linux. cargo test -p papa-bear-master-service 77 lib + 7 bin + 2 integration, 0 failed (74 lib before); clippy back to baseline 31 lib / 40 lib test / 8 bin after is_clean became const fn and one long if condition moved its brace; check-format and check-all OK. One full --lib run flaked concurrent_updates_allocate_distinct_revisions_without_regressing_latest at advancing concurrent-mod to revision 2 - the Windows rename race recorded in MSERVER-FOLDERNAME-1 and MSERVER-NORMALIZE-1; two following full runs and three isolated runs were green (77 passed).'
+    gpu_verified: false
+    follow_ups:
+      - a --fix mode that rewrites trimmable folder names is deliberately absent; renaming a catalog directory changes the store key
+      - (done) the sweep also reports missing artifacts and sha256 mismatches (see MSERVER-CHECK-ARTIFACTS-1)
+
+  - id: MSERVER-CHECK-ARTIFACTS-1
+    title: The check-names sweep reports catalog artifacts that are missing or no longer match their sha256
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/MasterService/src/mods.rs
+      - mserver/MasterService/src/main.rs
+      - mserver/MasterService/tests/check_names.rs
+      - docs/proteus/MSERVER-CHECK-ARTIFACTS-1.md
+    toggle: n/a (read-only audit command)
+    evidence: 'Closes the second follow-up of MSERVER-CHECK-NAMES-1: the sweep could ask which stored names the service refuses, but not whether the entries it lists are downloadable. /v1/mods advertises /v1/mods/<id>/revisions/<rev>/download from mod.json alone, so a deleted object is a listed mod whose link 404s and a replaced one downloads fully before papa install refuses it with a SHA-256 mismatch. ModStore::scan_names became scan_catalog in one pass (NameScan -> CatalogScan { entries_checked, artifacts_checked, rejected_names, damaged_artifacts }; name rows unchanged), so both halves see the same catalog. The object is resolved by a new artifact_object(mod_id, revision), extracted from revision_stream / signed_revision_url / revision_bytes, which each carried the revision-path-or-<id>/<id>.pbo.zst-for-revision-1 fallback: the sweep and a download now cannot disagree about what is served. A missing object is ArtifactFault::Missing; a stored sha256 that is not the object hash is Sha256Mismatch { expected, actual }, compared with eq_ignore_ascii_case (what papa install uses) and reported verbatim. A legacy entry with no sha256 is existence-checked only: parse_metadata backfills the hash on its next read and a sweep must not write. Current revision only. check-names keeps its name and prints both kinds of row, then one summary - check-names: 1 rejected name, 1 damaged artifact in 2 catalog entries, or checked N catalog entries, no rejected names, every artifact intact and exit 0. Tests: scan_catalog_is_clean_for_a_published_catalog (artifacts_checked == 2), scan_catalog_reports_a_current_artifact_that_is_missing (delete revisions/1/<id>.pbo.zst; list_mods still lists it, sweep reports Missing at the published revision), scan_catalog_reports_a_current_artifact_whose_sha256_no_longer_matches (exact expected/actual hex), scan_catalog_finds_a_legacy_artifact_at_its_pre_revision_path (no revisions/ dir; would be Missing without the shared fallback). Binary tests: 5 on Windows (clean summary with every artifact intact, folderName refusal, missing line + 1 damaged artifact in 1 catalog entry, mismatch line, combined 1 rejected name, 1 damaged artifact in 2 catalog entries), plus the Linux-only a*b directory case. Manual run over three legacy entries printed the two artifact lines and exited 1; a clean two-entry run printed the intact summary and exited 0. cargo test -p papa-bear-master-service 80 lib + 7 bin + 5 integration, 0 failed (77 + 7 + 2 before); clippy exit 0 with no warning in the new code; check-format and check-all OK. Flakes seen while re-running: http_mod_revision_routes_keep_stable_identity_and_history (revision POST 400 via the store-error-to-400 mapping) once, and catalog_selects_latest_compatible_revision (add_revision unwrap) once in ten full --lib runs - the parallel Windows filesystem race already recorded in MSERVER-FOLDERNAME-1 / MSERVER-NORMALIZE-1 / MSERVER-CHECK-NAMES-1; neither test calls the sweep and every rerun was green.'
+    gpu_verified: false
+    follow_ups:
+      - sizeBytes is not compared with the object; a hash match already proves the content, so only metadata that misstates the size would slip through
+      - (done) two entries whose folderName resolve to the same install directory are reported by MSERVER-CHECK-COLLISIONS-1
+      - a --no-hash switch (existence only) is absent; no production catalog has been measured, so the full read is the only mode
+
+  - id: MSERVER-CHECK-COLLISIONS-1
+    title: The check-names sweep reports catalog entries that install into the same folder
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/MasterService/src/mods.rs
+      - mserver/MasterService/src/main.rs
+      - mserver/MasterService/tests/check_names.rs
+      - docs/proteus/MSERVER-CHECK-COLLISIONS-1.md
+    toggle: n/a (read-only audit command)
+    evidence: 'Third follow-up of MSERVER-CHECK-NAMES-1, and the collision MSERVER-CHECK-ARTIFACTS-1 listed as unseeable by a per-entry pass. The install destination is <modsRoot>/<folderName>, or <modsRoot>/@<modId> when the entry carries none: papa install builds it (CLI run_install) and the engine builds it again (ModInstallDir), and the install transaction clears that directory before unpacking, so the second entry to install deletes the files of the first. Both entries are individually valid (names pass the one-component rule, artifacts hash), and a publisher sees only its own manifest, so nothing could report the pair. scan_catalog now records each resolvable folder into a BTreeMap<String, Vec<InstallClaim>> keyed by folder.to_lowercase() during the same pass and emits InstallCollision { claims } for groups of two or more; CatalogScan gains install_collisions and is_clean covers it. Resolution matches the installer: folderName verbatim when not blank after a trim, otherwise @<served modId> (the stored id when non-empty, else the directory - what parse_metadata does for a legacy entry). Folding is the Windows view: CSLA and csla are one directory for the shipped client, so they group together, while each InstallClaim keeps its own spelling for the report. An entry the engine would refuse (either name not one component) is left out, because it can never install and its names are already rejected_names. check-names prints one row per group between the name and artifact rows: the plain install collision: a and b install into the same folder shared when every claim agrees, and a case-insensitive row naming each directory with its folder when they do not. Collisions count in the failing summary (1 install collision, 1 damaged artifact in 3 catalog entries); a clean sweep reads no shared install folders. Tests: scan_catalog_reports_two_entries_that_install_into_one_folder (two shared, one solo - exactly one collision, no name or artifact rows, spells_one_folder true), scan_catalog_catches_a_folder_name_that_shadows_the_mod_id_fallback (alpha with no folder name vs beta with @alpha), scan_catalog_folds_case_when_matching_install_folders (CSLA and csla - one collision carrying both spellings, spells_one_folder false), scan_catalog_does_not_collide_install_folders_the_installer_refuses (two a*b names, zero collisions). Binary tests: two_entries_that_install_into_one_folder_are_reported, a_folder_name_that_shadows_the_fallback_is_a_collision and case_only_install_folders_are_a_collision assert the exact rows and the 1 install collision summary with exit 1; the clean case asserts the new sentence. Manual: five entries printed a case-insensitive row and a plain row and exited 1; a mixed catalog printed the collision plus a missing artifact and summed both; a clean pair exited 0. cargo test -p papa-bear-master-service 84 lib + 7 bin + 8 integration, 0 failed (80 + 7 + 5 before); clippy back to baseline 31 lib / 40 lib test / 8 bin; check-format and check-all OK; roadmap regenerated. One full-package run failed a single lib test before the fold but the name was lost to piped output; fourteen full runs afterwards (eight of the package, six of --lib) were green at 83/0 and every run after the fold was green at 84/0; the new cases allocate their own temp directories without renaming anything.'
+    gpu_verified: false
+    follow_ups:
+      - the fold uses str::to_lowercase rather than a model of the NTFS upcase table, so exotic folds such as the sharp s are not guaranteed to group as Windows would
+      - (done) refuse a publish whose folderName another entry already claims; see MSERVER-FOLDER-CLAIM-1
+      - a --fix mode is absent for the same reason as MSERVER-CHECK-NAMES-1: the fix is a re-publish, not an edit of stored metadata
+
+  - id: MSERVER-FOLDER-CLAIM-1
+    title: A publish cannot claim an install folder another catalog entry holds
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/MasterService/src/mods.rs
+      - mserver/MasterService/src/http.rs
+      - mserver/MasterService/src/lib.rs
+      - docs/proteus/MSERVER-FOLDER-CLAIM-1.md
+      - docs/proteus/MSERVER-CHECK-COLLISIONS-1.md
+    toggle: n/a (catalog integrity; the old behaviour was the silent overwrite)
+    evidence: 'MSERVER-CHECK-COLLISIONS-1 follow-up, requested by the owner. An entry installs into <modsRoot>/<folderName> (or @<modId>) and the install transaction clears that directory first, so a second claim deletes the first entry files; the sweep could report the pair but nothing stopped it, and the fallback makes it invisible (alpha with no folder name occupies @alpha, which beta can claim as folderName). InstallClaim::resolve now holds the sweep resolution (folderName verbatim when not blank, @<served modId> otherwise, None when ModInstallDir would refuse either name) and scan_catalog builds its claim map through it, so detection and prevention cannot drift. ModStore::ensure_install_folder_available lists the catalog (catalog_directories + the non-mutating stored_entry), skips the entry being written, resolves every other entry the same way and compares install_folder_key (lowercased folder, the Windows view). It runs on all three publish paths before placement: finalize_mod (manifest folder or @<slug>), finalize_revision (meta or current value; a refusal leaves the current revision untouched) and publish_mod (in-memory, @<slug>); a refused streamed upload deletes its temp object. A revision that keeps its folder skips the lookup, so an entry caught in a pre-rule pair can still publish while the sweep keeps the pair visible. The refusal message says already claimed, which the existing handler mapping now sends as 409 beside a duplicate modId (papa publish prints the body unchanged). Not atomic: two simultaneous publishes can both list a catalog without each other, the same best-effort shape as the duplicate-id check. Tests: publish_refuses_a_folder_name_another_entry_already_claims (exact and SHARED, message shows as shared, no beta directory), publish_refuses_the_folder_another_entry_reaches_by_fallback, a_revision_keeps_its_folder_but_cannot_take_another_entries (keeps, refuses beta-dir and BETA-DIR at revision 2, then accepts alpha-new at 3), a_revision_under_a_preexisting_collision_still_publishes (rewritten @alpha, revision publishes, sweep still reports one collision), and http_mod_publish_refuses_a_folder_name_another_entry_already_claims (409 + message, one listed entry, no directory, same manifest with shared-two returns 200). The three collision-sweep fixtures now publish distinct folders and relabel the stored value, because publish itself refuses their pair now. cargo test -p papa-bear-master-service 89 lib + 7 bin + 8 integration, 0 failed (84 + 7 + 8 before; +5 lib); clippy exit 0 with no warning in the new code (the pre-existing too_many_lines on finalize_revision remains, 109 to 118 lines); check-format and check-all OK; roadmap regenerated (50 tickets). Manual run of the built binary with a temp SQLite directory and mods root: 200 for shared, 409 for SHARED with the catalog message, 200 for shared-two, mods/_incoming empty afterwards, and check-names clean on the resulting two-entry catalog.'
+    gpu_verified: false
+    follow_ups:
+      - (done) a preflight folder check in papa publish, so the refusal precedes packing and upload (see MSERVER-PREFLIGHT-1)
+      - (done) an atomic claim marker: a conditional-put reservation per install folder (see MSERVER-FOLDER-RESERVE-1)
+
+  - id: MSERVER-PREFLIGHT-1
+    title: papa publish asks the catalog about its install folder before packing and uploading
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/MasterService/src/mods.rs
+      - mserver/MasterService/src/model.rs
+      - mserver/MasterService/src/service.rs
+      - mserver/MasterService/src/http.rs
+      - mserver/MasterService/src/lib.rs
+      - mserver/CLI/src/main.rs
+      - mserver/CLI/tests/cli_roundtrip.rs
+      - docs/proteus/MSERVER-PREFLIGHT-1.md
+    toggle: n/a (read-only query; the upload check is unchanged)
+    evidence: 'MSERVER-FOLDER-CLAIM-1 follow-up, requested by the owner: the upload already refused a folder another entry holds, but only after receiving the whole multipart body, and papa publish packs the source folder and zstd-compresses it at level 19 before that. ModStore::check_install_folder(mod_id, folder_name) is the read-only twin: it reads the current revision with the non-mutating stored_entry, resolves the folder the publish would claim (folderName verbatim; for a revision that names none, the folder it already holds, exactly as finalize_revision decides; otherwise @<modId>), and asks install_folder_holder, extracted from ensure_install_folder_available so the preflight and the upload share one lookup. folder_claim_refusal words the same refusal for both, and a revision that keeps its folder skips the lookup, so an entry cannot be blocked by itself or by a pre-rule pair. GET /v1/catalog/folder-claim?modId=&name=&folderName= answers 200 InstallFolderClaim { modId, folder, available, claimedBy, refusal } (modId derived from name with the shared slugify when absent), 400 for a bad name, 503 with mods off; it is public like GET /v1/mods and sits under /v1/catalog so a mod id cannot shadow it. papa publish calls it after the identity rules and the new-vs-revision lookup and before run_upload, so a claimed folder produces publish refused before uploading: <message> with nothing packed or sent; query values are percent-encoded per UTF-8 byte, so a folder with a space or & arrives as written. A 404 (a master predating the route) warns and continues, because the upload still runs the check. Tests: check_install_folder_answers_before_a_publish_writes (shared and SHARED refused with claimedBy alpha and both spellings, shared-two free, @beta free while the fallback entry holds @omega, nothing written) and check_install_folder_keeps_a_revisions_own_folder (no folder keeps alpha-dir, ALPHA-DIR allowed, beta-dir refused, and after relabelling epsilon onto @delta the fallback member keeps its folder while a new entry may not take it); http_folder_claim_answers_before_an_upload (200 answers for a refused folder, a free one, the entry own folder and the name-derived case, three 400 queries, one catalog entry, no directory created); folder_claim_query_values_are_percent_encoded; and two binary tests against a stub master (a claimed folder refuses while the source error is absent, a free claim reaches the pack error with folderName=Free%20Folder). Counts: master 92 lib + 7 bin + 8 integration, 0 failed (89 + 7 + 8 before); CLI 19 unit + 4 integration (18 + 2 before); client 15 unchanged; clippy exit 0 with no warning in the new code; check-format and check-all OK; roadmap regenerated (51 tickets). Manual run on the built binaries with a temp SQLite directory and mods root: shared published, the claim query returned available false with the case-only message, a publish from a missing source was refused at the claim (proving the ordering), shared-two published, _incoming empty and check-names clean at exit 0.'
+    gpu_verified: false
+    follow_ups:
+      - (done) an atomic claim marker (conditional put), so the preflight and the upload answer from one reservation instead of two compatible best-effort reads (see MSERVER-FOLDER-RESERVE-1)
+      - drop the 404 fallback once the deployed master serves /v1/catalog/folder-claim, so a missing route is loud
+
+  - id: MSERVER-FOLDER-RESERVE-1
+    title: An install folder is taken with a conditional reservation, so two concurrent publishes cannot both pass
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/MasterService/src/mods.rs
+      - docs/proteus/MSERVER-FOLDER-RESERVE-1.md
+    toggle: n/a (catalog integrity; the read-only lookup stays for entries published before reservations)
+    evidence: 'MSERVER-FOLDER-CLAIM-1 and MSERVER-PREFLIGHT-1 follow-up, requested by the owner: both checks read the catalog, so two overlapping publishers both saw a free folder and both passed. ModStore now keeps one claim object per folded folder, `_claims/<hex of the lowercased folder>.json`, body { modId, folder }, and takes it with PutMode::Create — S3/R2 answer `If-None-Match: *` in a single PUT, the local backend uses hard_link — so exactly one put wins and the loser reads the winner and is refused with the same folder_claim_refusal wording as the catalog check; the conditional put was already required for revision metadata, so no backend gains a dependency. reserve_install_folder replaces ensure_install_folder_available: for a new claim it still runs the read-only install_folder_holder lookup first, so entries published before reservations existed are answered exactly as before, and the put then serializes new claims. A revision that keeps its folder (folded compare) skips the lookup and never refuses on another holder — a pre-rule pair can still receive revisions — but still attempts the put, which is how such an entry acquires a claim object. InstallFolderReservation records whether this call created the object, so a publish that fails afterwards releases only its own claim, never a winner; a revision that moves folders releases the old claim after the new revision is current; delete_mod releases every claim naming the entry. check_install_folder reads the claim before the catalog, so the preflight reports a folder reserved by a publish that has no entry yet, exactly what the upload refuses. is_claim_file keeps the local backend staged <hex>.json#1 out of the delete sweep. Tests: two_concurrent_publishes_cannot_both_take_one_folder (join of two finalize_mod publishes, one Ok, the loser names the winner, one entry and one claim), a_reservation_refuses_before_the_winner_has_a_catalog_entry (a claim with no entry refuses the upload and the preflight, and releasing it frees the folder), a_failed_publish_releases_the_folder_it_reserved (a stray revision object fails placement, no claim remains, the retry publishes), deleting_a_mod_frees_the_folder_it_reserved, and a_revision_that_moves_releases_the_folder_it_left (the old folder is taken by another entry, the new one is refused to others, the owner is still allowed). Counts: master 97 lib + 7 bin + 8 integration, 0 failed (92 + 7 + 8 before); CLI 19 + 4 and client 15 unchanged; clippy exit 0 with no warning in the new code; check-format and check-all OK; roadmap regenerated (52 tickets). Live on Windows with two 2 MB random sources published at the same instant into one folder: beta exit 0, alpha exit 1 with publish rejected: HTTP 409 ... already claimed by catalog entry beta as SHARED, one catalog entry, one claim 736861726564.json {modId:beta,folder:SHARED}, _incoming empty; the claim query then answered gamma unavailable, a third publish stopped before uploading, beta revision 2 moved the claim to beta-new and gamma took Shared, DELETE beta released beta-new and delta took it, and check-names finished clean at 2 entries. Risks: a crash between the put and the release leaves a stale claim (no TTL, because a lease could expire under a slow writer and reopen the race), the claim is taken at finalize so both publishers still stream, pre-reservation entries stay read-only until their next revision, and a mod id of exactly _claims shares the directory.'
+    gpu_verified: false
+    follow_ups:
+      - (done) report orphaned claims (a claim naming no catalog entry) from check-names, with a --fix that removes them (see MSERVER-ORPHAN-CLAIMS-1)
+      - (done) reserve before the upload (a claim endpoint with a token plus commit/abort), so the losing publisher stops before streaming (see MSERVER-CLAIM-RESERVE-1)
+
+  - id: MSERVER-ORPHAN-CLAIMS-1
+    title: check-names reports install-folder claims that name no catalog entry, and --fix removes the stale ones
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/MasterService/src/mods.rs
+      - mserver/MasterService/src/main.rs
+      - mserver/MasterService/tests/check_names.rs
+      - docs/proteus/MSERVER-ORPHAN-CLAIMS-1.md
+    toggle: n/a (audit command; --fix deletes only claim objects, never metadata or an artifact)
+    evidence: 'MSERVER-FOLDER-RESERVE-1 follow-up, requested by the owner. A reservation is released by three in-process paths (a failed publish, a revision that moves, delete_mod), so a crash or a failed delete leaves _claims/<hex>.json naming an entry that never appeared: the folder is refused to every publish with nothing in GET /v1/mods to explain it, and removing the object meant knowing the layout. scan_catalog now keeps the BTreeSet from catalog_directories and lists _claims/ once after the entry pass, so an orphan is compared with the same snapshot the name, collision and artifact checks used; read_claim gives the named directory and an entry that is not in the set becomes OrphanedClaim { path, claim, claimed_at } (claimed_at is the object modification time). Staged local-backend <hex>.json#1 objects are skipped as in release_claims_of, an object listed then deleted before the read is dropped, and CatalogScan::is_clean covers the new list. ModStore::remove_orphaned_claims(orphans, min_age) deletes the claims at least min_age old and answers with the paths; a NotFound counts as removed so two sweeps or a delete_mod racing is not an error. check-names gains --fix and passes ORPHAN_CLAIM_MIN_AGE (five minutes): a claim is taken at finalize after the upload and the entry follows within a few object writes, so an old claim cannot belong to a running publish while a fresh one might. Rows keep one shape, orphan claim: folder is reserved by entry, which is not a catalog entry (claimed 3h 0m ago), with ; removed or ; kept, a publish may still be finishing under --fix; a removed claim stops counting so the run exits 0 once the folder is free, a kept one keeps it failing, the clean sentence gains no orphaned folder claims, and the failing summary counts N orphaned claims. Tests: scan_catalog_reports_a_claim_that_names_no_catalog_entry (a direct reservation with no entry is the only orphan; publishing another entry leaves it at one, so a live claim is not reported), removing_an_orphaned_claim_frees_its_folder (the orphan refuses Beta/shared, a one-hour minimum removes nothing, zero deletes it, the scan is clean, Beta publishes and the scan stays clean); binary tests a_claim_that_names_no_catalog_entry_is_reported, a_claim_held_by_a_catalog_entry_is_not_reported, fixing_removes_an_orphaned_claim_and_passes (a backdated claim removed, removed 1 orphaned install-folder claim, a second sweep exits 0) and fixing_keeps_a_claim_a_publish_may_still_be_finishing. Broken-state delta: without the scan assignment one store test fails on left 0 right 1 and three binary tests fail by name; restoring is green. Counts: master 99 lib + 7 bin + 12 integration, 0 failed (97 + 7 + 8 before); CLI 19 + 4 and client 15 unchanged; clippy has no warning in the new code (lib stays at 32, the bin drops 9 to 8 because run_check_names is back under too_many_lines after sweep_orphaned_claims was split out); rustfmt clean on the three files; check-format and check-all OK; roadmap regenerated. Manual run on Windows: the row and exit 1, --fix on the fresh claim kept it and still failed, the same object backdated three hours was removed with the clean summary and exit 0, a second sweep clean. Risks: the five minutes are a heuristic, a pre-reservation entry has no claim to free, a claim naming an entry that exists but has moved folders is not this shape and stays invisible, and a malformed claim body fails the sweep instead of being skipped.'
+    gpu_verified: false
+    follow_ups:
+      - (done) report a claim whose folder disagrees with its entry's current revision (a failed release after a move), with the same --fix (see MSERVER-STALE-CLAIMS-1)
+      - (done) reserve before the upload (a claim endpoint with a token plus commit/abort), so the losing publisher stops before streaming (see MSERVER-CLAIM-RESERVE-1)
+
+  - id: MSERVER-STALE-CLAIMS-1
+    title: check-names reports install-folder claims left on a folder an entry moved off, and --fix removes them
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/MasterService/src/mods.rs
+      - mserver/MasterService/src/main.rs
+      - mserver/MasterService/tests/check_names.rs
+      - docs/proteus/MSERVER-STALE-CLAIMS-1.md
+    toggle: n/a (audit command; --fix deletes only claim objects, never metadata or an artifact)
+    evidence: 'MSERVER-ORPHAN-CLAIMS-1 follow-up, requested by the owner. finalize_revision moves an entry in three steps: it takes the new folder claim, makes the new revision current, then releases the claim on the folder it left; release_claim_for only warns when that delete fails, so a crash or a failed delete leaves an old claim naming a live entry while GET /v1/mods says it installs elsewhere - the old folder stays refused to every publisher with nothing in the catalog to explain it, and the orphan rule could not see it because the named entry exists. OrphanedClaim became UnusedClaim { path, claim, reason, claimed_at } with UnusedClaimReason::{NoEntry, MovedTo { folder }}, so both shapes are one _claims listing, one age rule and one removal loop; CatalogScan::orphaned_claims became unused_claims, remove_orphaned_claims became remove_unused_claims, and is_clean still covers one list. scan_catalog already resolves each directory install folder for the collision map and now records the same value in current_folders: BTreeMap<String, Option<String>>, keyed by catalog directory (None when stored_entry was unreadable or InstallClaim::resolve refused the names, which the claim half leaves alone rather than guess). A claim naming a directory outside the map is NoEntry; one inside it whose folded folder differs is MovedTo, compared with install_folder_key so CSLA and csla are one folder as on the Windows installer. The age floor covers both directions of a move, because a move takes the new claim before the revision is current: --fix keeps any unused claim younger than five minutes (UNUSED_CLAIM_MIN_AGE, renamed from ORPHAN_CLAIM_MIN_AGE) and prints ; kept, a publish may still be finishing, while a report-only run stays read-only and can show a move in flight, the same audit-versus-live limitation as the orphan half. The row is stale claim: folder is reserved by entry, which now installs into other-folder (claimed 3h 0m ago), the orphan row is unchanged, the clean sentence is no unused folder claims and the failing summary counts N unused claims. Tests: scan_catalog_reports_a_claim_on_the_folder_an_entry_moved_off (publish alpha into alpha-dir, move it to alpha-new which releases alpha-dir, write the failed-release claim, scan reports exactly one unused claim alpha/alpha-dir with MovedTo alpha-new and not the alpha-new claim, remove zero deletes it, scan clean, alpha still answers alpha-new, Beta publishes into alpha-dir and the scan stays clean); the orphan tests assert NoEntry and the renamed list. Binary tests: a_claim_on_the_folder_an_entry_moved_off_is_reported (exact row and 1 unused claim in 1 catalog entry, exit 1) and fixing_removes_a_claim_on_the_folder_the_entry_left (backdated ten minutes, removed, removed 1 unused install-folder claim, object gone, second sweep exits 0); the four orphan cases keep their assertions apart from the renamed summary and clean sentence, and a_claim_held_by_a_catalog_entry_is_not_reported now also pins that a matching folder is not stale. Broken-state delta: without the current_folders.insert line the store test fails on left 0 right 1 and both binary tests fail by name; restoring is green. Counts: master 100 lib + 7 bin + 14 integration, 0 failed (99 + 7 + 12 before); CLI 19 + 4 and client 15 unchanged; clippy has no warning in the new code (lib 32, bin 8); rustfmt clean on the three files. Manual run on Windows with an entry at alpha-new and a claim on alpha-dir: report printed the stale row and exited 1, --fix on the fresh claim kept it and still failed, the same object backdated three hours was removed with the clean summary and exit 0, and a second sweep was clean. Risks: the five minutes are a heuristic and now also cover the new claim a move takes before the revision is current, so a move stalled longer than the grace could lose the claim on the folder it is moving to (the entry then holds it unclaimed, the pre-reservation state, not a wrong refusal); a report-only run can show a move in flight; an entry whose current metadata is unreadable is not judged; a pre-reservation entry still holds its folder without a claim; and the parallel Windows local-store rename race made one lib test fail on each of three default-parallel runs (different tests each time, including the new one), while every affected test passes alone and -- --test-threads=1 is green.'
+    gpu_verified: false
+    follow_ups:
+      - (done) make the move decidable without the age floor: the claim records the folder it replaces, so the sweep names a pending move instead of guessing from elapsed time (see MSERVER-CLAIM-MOVES-1)
+      - (done) reserve before the upload (a claim endpoint with a token plus commit/abort), so the losing publisher stops before streaming (see MSERVER-CLAIM-RESERVE-1)
+
+  - id: MSERVER-CLAIM-MOVES-1
+    title: a move records the folder it leaves, so check-names decides a leftover without the age floor
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/MasterService/src/mods.rs
+      - mserver/MasterService/src/main.rs
+      - mserver/MasterService/tests/check_names.rs
+      - docs/proteus/MSERVER-CLAIM-MOVES-1.md
+    toggle: n/a (claim bodies gain one optional field; the age floor now covers only a publish that can still be running)
+    evidence: 'MSERVER-STALE-CLAIMS-1 follow-up, requested by the owner. The sweep could name a claim left on a folder an entry had moved off, but only the five-minute age floor separated that leftover from a move in flight, so a report could not say which it was and --fix waited on a claim the catalog had already decided. StoredClaim (the claim body) gains replaces, written by reserve_install_folder from the folder the revision leaves whenever the folder changes, in the same conditional put that takes the claim; a move onto a folder this entry already claims finds its own object, which PutMode::Create will not replace, so the reservation rewrites the body with a plain put, and a failed rewrite fails the publish rather than leave a record that reads as stale. unused_claims compares the record with the entry current folder through install_folder_key: equal is MovePending { from } (a move between taking its destination and writing its revision), and anything else, including the None of a claim written before this ticket, is MovedAway { folder }. UnusedClaimReason::may_still_be_finishing is true only for NoEntry and MovePending, and remove_unused_claims applies min_age only then; a MovedAway claim is deleted at any age, because the only step a move has left on a folder the catalog has moved past is the delete. The row is pending move: folder is reserved for entry, which still installs into from (claimed 0s ago), with ; kept, a publish may still be finishing under --fix; the stale and orphan rows, the clean sentence and the summary are unchanged, and serde(default) keeps old bodies readable. Tests: scan_catalog_reports_a_claim_on_the_folder_an_entry_moved_off now reads the claim a real add_revision move wrote on alpha-new and asserts replaces alpha-dir, reports the recreated failed-release claim as MovedAway and removes it with a one-hour minimum, proving no floor applies; a_move_that_has_not_written_its_revision_is_left_for_its_age takes the destination claim directly (alpha-new from alpha-dir), sees MovePending with may_still_be_finishing true, keeps it at one hour, removes it at zero, and leaves alpha installing into and holding alpha-dir; a_move_refreshes_the_folder_its_claim_says_it_replaces covers the created=false rewrite on a move back. Binary tests: fixing_removes_a_claim_on_the_folder_the_entry_left no longer backdates and removes a fresh claim; fixing_keeps_a_fresh_move_that_has_not_landed asserts the exact pending row, the kept suffix, exit 1 and the surviving object. Broken-state delta: without the record the extended store test fails on left None right Some(alpha-dir) and the pending test on left MovedAway right MovePending; with the age gate unconditional the fresh-removal binary test fails. Counts: master 102 lib + 7 bin + 15 integration, 0 failed (100 + 7 + 14 before); CLI 19 + 4 and client 15 unchanged; rustfmt clean on the three files; clippy reports only the crate pre-existing warnings, none in a new item (the two client too_long_first_doc_paragraph warnings predate this and make -D warnings fail there); check-all OK with the roadmap regenerated. Manual on Windows: a fresh failed-release claim was removed by --fix with exit 0 and no backdating, and a fresh pending-move claim was reported as pending move and kept with exit 1. Risks: a claim on a folder the entry has since moved back to is byte-identical to a new move onto it and still waits out the floor; a publish started before the upgrade writes no record and could be read as stale; two concurrent moves of one entry can still lose the loser claim after the winner commits; a failed move that rewrote its own claim reads as pending until it ages out; and the scan-to-delete window remains.'
+    gpu_verified: false
+    follow_ups:
+      - (done) re-read a claim immediately before --fix deletes it and skip it if its body changed, narrowing the scan-to-delete window (see MSERVER-CLAIM-RECHECK-1)
+      - (done) reserve before the upload (a claim endpoint with a token plus commit/abort), so the losing publisher stops before streaming (see MSERVER-CLAIM-RESERVE-1)
+
+  - id: MSERVER-CLAIM-RECHECK-1
+    title: check-names --fix re-reads a claim before deleting it, so a folder taken after the scan survives
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/MasterService/src/mods.rs
+      - mserver/MasterService/src/main.rs
+      - docs/proteus/MSERVER-CLAIM-RECHECK-1.md
+    toggle: n/a (audit command; --fix deletes only claim objects, and now only one whose body the scan read)
+    evidence: 'MSERVER-CLAIM-MOVES-1 follow-up, requested by the owner. The sweep decided from a scan and deleted later, so a claim the scan read as unused could be released and its folder taken by another publish before --fix ran; the delete then removed the new claim and handed a live folder to a third publisher, the overwrite the claim exists to prevent. UnusedClaim keeps the body the scan read (body: StoredClaim, private) beside claimed_at, StoredClaim gained Debug/Clone/PartialEq/Eq, and read_claim_state returns the body with GetResult meta last_modified (read_claim is a wrapper, so the holder, reservation and test callers are unchanged). remove_unused_claims re-reads each claim immediately before deleting: a different body, or a write newer than the scan saw, is answered as retaken and left alone; an unchanged body with an equal or older write is deleted as before; NotFound still counts as removed. The write time is compared as well as the body because a release and a fresh publish of one mod write an identical body, so only the write time says the folder was taken again. The return type became UnusedClaimSweep { removed, retaken } (five call sites adapted), the row for a retaken claim reads ; kept, the claim changed after the scan, and it still counts as unused in the failing summary because the folder is still claimed and only a fresh scan can call it free; the clean path and the removed summary are unchanged. object_store has no conditional delete, so the window is narrowed to one delete rather than closed. Tests: a_sweep_leaves_a_claim_taken_again_after_the_scan (a real add_revision move off alpha-dir, the failed-release claim recreated and scanned as MovedAway, then that claim deleted and Beta published into alpha-dir after the scan; the sweep over the old scan answers removed empty and retaken with that path, the object still reads beta/alpha-dir, the catalog is clean and beta holds the folder) and a_sweep_leaves_a_claim_written_again_after_the_scan (the same leftover backdated three hours, scanned, then rewritten with an identical body; the sweep leaves it as retaken, a fresh scan removes it and the catalog is clean). Broken-state delta: with the re-read block removed both tests fail on UnusedClaimSweep { removed: [_claims/616c7068612d646972.json], retaken: [] }; with only the write-time comparison dropped the body-changed test passes and the identical-body test fails the same way. Counts: master 104 lib + 7 bin + 15 integration, 0 failed (102 + 7 + 15 before); CLI 19 + 4 and client 15 unchanged; rustfmt clean on the two files; clippy exit 0 with no warning in the new items (the mods.rs and main.rs warnings are older lines); check-all OK with the roadmap at 56 tickets. Manual run on Windows: a fresh stale claim was removed by --fix with no backdating and a second sweep was clean, and a fresh pending-move claim was kept with ; kept, a publish may still be finishing and exit 1; the retaken row needs a publisher inside the gap and is covered by the store tests only. Risks: a write between the re-read and the delete is still lost; a same-body rewrite inside the storage clock granularity (S3/R2 whole seconds) is not seen by the time check; a restored object with an older write time and the same body reads as unchanged; a report-only run is still a snapshot; a retaken claim still fails the run; and a malformed body on the re-read fails the sweep.'
+    gpu_verified: false
+    follow_ups:
+      - (done) reserve before the upload (a claim endpoint with a token plus commit/abort), so the losing publisher stops before streaming (see MSERVER-CLAIM-RESERVE-1)
+
+  - id: MSERVER-CLAIM-RESERVE-1
+    title: a publish reserves its install folder before it streams, and the losing publisher is refused before the upload
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/MasterService/src/mods.rs
+      - mserver/MasterService/src/model.rs
+      - mserver/MasterService/src/service.rs
+      - mserver/MasterService/src/http.rs
+      - mserver/MasterService/src/lib.rs
+      - mserver/CLI/src/main.rs
+      - mserver/CLI/tests/cli_roundtrip.rs
+      - docs/proteus/MSERVER-CLAIM-RESERVE-1.md
+    toggle: n/a (additive, an upload without claimToken and a master without the routes behave as before)
+    evidence: 'MSERVER-CLAIM-MOVES-1 follow-up, requested by the owner, and the last one on this chain. The read-only preflight let two publishers of one folder both pass it and both stream; the loser was refused only when the claim was taken at finalize, after the whole compressed artifact had arrived (a large mod takes minutes to pack and the transfer takes minutes to hours). A POST to the same route now reserves: reserve_folder_claim resolves the claim through the new resolve_claim helper (the same one check_install_folder uses), takes it with the same conditional put and answers FolderClaimReservation; the token is 32 random bytes from new_claim_token, returned once and written into StoredClaim::token only as SHA-256, so the publisher can prove it made the reservation without the store holding the secret. ClaimTake Plain/Reserve/Consume replaces the plain take: Reserve writes the token and refuses a claim that already carries another publish token; Consume requires the hash and rewrites the body token-less before the revision is placed; Plain on a tokened claim is refused with reserved by a publish of that entry that has not finished. A second reservation of the same entry is refused, and a token that is not the claim token is refused by the hash comparison. InstallFolderReservation::created became owned: a claim this call created, or one whose token it consumed, is released when the publish fails, while a claim from an earlier publish of the entry is still left alone. commit_folder_claim clears the token idempotently and refuses while the entry does not install into the folder; abort_folder_claim checks the catalog first and then deletes only when the token matches, so a conclusive abort frees the folder at once instead of at the sweep age floor, and an abort after the publish cannot remove a live claim. A revision that keeps its folder reserves no token: unused_claims ignores a claim whose entry installs into that folder, so a token there could never be aged out and would block that entry forever. The HTTP layer adds the reserve, commit and abort routes, the claimToken multipart field and a shared folder_claim_mod_id; the upload conflict mapping now includes reserved by. The CLI reserves before build_artifact_reader, sends claimToken, aborts on any failure and commits after success, and falls back to the old GET preflight on 404 (an older master). Tests: seven store tests (lease shape and sweep reading, no token / wrong token / right token / abort refused / idempotent commit, a failed upload releasing the consumed claim, commit before the publish, abort freeing the folder, a keeps-folder revision reserving nothing, and a move that aborts back and then commits), one route test (401, 200 with a token, 409 for a second entry, 409 and an empty catalog for an untokened upload, the tokened upload publishing, 409 abort, 204 commit), one CLI prelude test and the two round-trip cases now asserting the reservation and abort requests. Broken-state delta: consuming without owning makes the failed-upload test fail on the reservation surviving its publish; accepting any token makes the upload test fail on unwrap_err of an Ok entry. Counts: master 112 lib + 7 bin + 15 integration, 0 failed (104 + 7 + 15 before); CLI 20 + 4 (19 + 4 before) and client 15 unchanged; rustfmt clean on the seven files; clippy exit 0 with no warning in a new item; check-all OK with the roadmap regenerated. Manual on Windows: publish into alpha-dir succeeded, a second publisher with the same folder and a nonexistent source was refused before packing, the published claim held no token, and a gamma-dir reservation answered a 64-char token, aborted 204 and left only the alpha claim; a second abort answered 404. Risks: the five-minute floor was sized for a claim taken at finalize, so --fix more than five minutes into a large pack or upload can delete a live lease; a publisher that dies between reserving and aborting leaves a token that refuses that entry until the sweep; a lost reservation response strands a token; abort and commit address the claim by the folder string as the publisher sends it; a same-entry revision that keeps its folder is still not excluded early; and the token comparison is a plain equality check on a hash behind the admin key.'
+    gpu_verified: false
+    follow_ups:
+      - (done) let a reservation outlive a long transfer with a lease check-names --fix will not take while its publisher is alive (see MSERVER-CLAIM-LEASE-1)
+      - (done) reserve for a revision that keeps its folder too, with a lease the sweep can age out, so two publishes of one entry also stop before streaming (see MSERVER-CLAIM-KEEP-1)
+
+  - id: MSERVER-CLAIM-LEASE-1
+    title: a reservation carries a lease its publisher renews, so check-names --fix cannot take a live folder
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/MasterService/src/mods.rs
+      - mserver/MasterService/src/model.rs
+      - mserver/MasterService/src/service.rs
+      - mserver/MasterService/src/http.rs
+      - mserver/MasterService/src/main.rs
+      - mserver/MasterService/src/lib.rs
+      - mserver/MasterService/tests/check_names.rs
+      - mserver/CLI/src/main.rs
+      - mserver/CLI/tests/cli_roundtrip.rs
+      - docs/proteus/MSERVER-CLAIM-LEASE-1.md
+    toggle: n/a (additive; a master that sends no renewAfterMs is uploaded to as before, and a claim without a lease keeps the age floor)
+    evidence: 'MSERVER-CLAIM-RESERVE-1 follow-up, requested by the owner. A reservation is taken before the source is packed and held until the upload lands, but the sweep could only judge it by the claim object write time and the five-minute floor; a pack plus transfer longer than that let check-names --fix delete a live lease, after which a second publisher could take the folder while the first still streamed. StoredClaim gains lease_until (unix ms, serde default), written by ClaimTake::Reserve as now plus ten minutes and cleared with the token by Consume and commit; POST /v1/catalog/folder-claim/renew (token-gated, 204/404/409) extends it once less than two thirds of it is left - the renewal the publisher sends right after reserving answers 204 without rewriting the object, the write a Windows scanner can refuse - and ModStore::renew_folder_claim leaves the token alone, answering 204 for a claim the upload already consumed so a racing renewal is harmless. FolderClaimReservation answers renewAfterMs (200 s, the master cadence) beside the token. UnusedClaim carries lease_until and lease_held, and remove_unused_claims skips a claim whose lease is running at any age while reclaiming a lapsed one without waiting for the write time; the row reads ; kept, its reservation is still being renewed. papa publish starts FolderClaimRenewal: one renewal before packing (a lost reservation stops the publish before the source is touched) and a worker every renewAfterMs until the publish ends, stopped and joined before commit or abort. A token written back onto an installed folder by a renewal that raced the consume is cleared by the next revision that keeps the folder, which prevents a permanent refusal of that entry own next revision. claim_error maps belongs to another publish to 409. Tests: three store tests (a live lease kept at zero age, a lapsed lease reclaimed, a renewal moves the deadline and not the token, a wrong or missing holder refused, a token-less renewal accepted, a leftover token cleared), one route test (204/409/404), one check-names case (an hour old claim with a live lease kept) and one CLI round-trip (renew before packing, abort after). Measured deltas: without the sweep lease skip two tests fail, without the keeps_folder arm the leftover test fails, without the immediate CLI renewal the round-trip sees three requests instead of four. Master 117 lib + 7 bin + 16 integration, CLI 20 + 5, client 15, 0 failed; rustfmt and clippy clean on the new items; check-all OK, roadmap 58 tickets. Manual on Windows: a publish consumed its token (no lease in the claim), a reservation answered a token and renewAfterMs 200000 and wrote lease_until, check-names --fix kept it with the new wording and exit 1, a wrong-token renewal answered 409, a renewal while its lease was still fresh answered 204 and left the claim byte-identical, and the same renewal after its lease was aged into the past answered 204 and wrote a new deadline with the token unchanged; the abort left only the published claim. Risks: a crash strands the folder for the lease, the renewal is read-then-write without a conditional update (one request window), an in-flight renewal can re-create a claim after an abort until the lease lapses, a report-only sweep still fails during a live publish, and a lease-less master keeps the old behaviour.'
+    gpu_verified: false
+    follow_ups:
+      - (done) reserve for a revision that keeps its folder too, with a lease the sweep can age out, so two publishes of one entry also stop before streaming (see MSERVER-CLAIM-KEEP-1)
+      - (done) a conditional claim write so a renewal cannot race the upload consume or an abort; the claim now carries a generation compared inside a per-claim write window (see MSERVER-CLAIM-CAS-1)
+
+  - id: MSERVER-CLAIM-KEEP-1
+    title: a revision that keeps its folder reserves it too, with a lease the sweep can age out
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/MasterService/src/mods.rs
+      - mserver/MasterService/src/main.rs
+      - mserver/MasterService/src/model.rs
+      - mserver/MasterService/src/http.rs
+      - mserver/MasterService/src/lib.rs
+      - mserver/MasterService/tests/check_names.rs
+      - mserver/CLI/src/main.rs
+      - mserver/CLI/tests/cli_roundtrip.rs
+      - docs/proteus/MSERVER-CLAIM-KEEP-1.md
+    toggle: n/a (additive; a master that answers no token for a kept folder is uploaded to as before, and a token-less claim keeps the age floor)
+    evidence: 'MSERVER-CLAIM-RESERVE-1 and MSERVER-CLAIM-LEASE-1 follow-up, requested by the owner. A revision that keeps its folder reserved nothing: the catalog lookup already excluded other entries, but two publishes of one entry both passed the read-only answer and both streamed, and the loser was refused only at artifact placement after the whole upload. Keeping a folder now takes the same claim and token as any other publish: reserve_folder_claim always mints a token and answers renewAfterMs, and the claim the installing publish left is rewritten with the new token and lease. StoredClaim::lease_held makes the take arms lease-aware: Reserve refuses only a live token and takes a lapsed one over with a new token and deadline, while Plain refuses while the lease runs and clears a lapsed leftover (what a renewal that raced a consume becomes). folder_reserved_refusal words the 409 once for the reservation and the preflight. check_install_folder reads the entry own claim and reports a live keeps-folder reservation as unavailable with claimedBy naming that entry, so the read-only fallback also stops before packing. abort_folder_claim drops the catalog test - a kept-folder reservation is taken while the entry installs there, so the token is the only test that can release a failed revision; a token the upload consumed is gone, and one a racing renewal writes back only deletes a claim the catalog explains. scan_catalog adds UnusedClaimReason::LapsedReservation for a claim whose entry installs into its folder and whose token lease ran out; may_still_be_finishing is false and --fix removes it at any age with the row lapsed reservation: folder is reserved for entry, whose reservation stopped renewing, while a live keeps-folder reservation stays invisible because it is the folder record. Tests: four store tests (a second publish of one entry refused at the reservation with the same answer from the preflight, the upload consuming the token, abort releasing a kept folder, a lapsed token taken over and its old renewal refused, a lapsed claim reported once and removed at zero age, a leftover token refused while live and cleared once lapsed), the route test keeps-folder half (200 token plus renewAfterMs, 409, unavailable with claimedBy alpha, abort 204; the post-publish abort now reads belongs to another publish), one check-names case (report exit 1, --fix removes, clean afterwards) and two CLI round-trips (a kept-folder reservation renewed before packing, a token-less older master leaving no renewal or abort). Measured deltas: refusing every token in the Reserve arm fails the lapsed-takeover test on the second unwrap, and dropping the LapsedReservation arm fails the check-names case on its first row. Master 120 lib + 7 bin + 17 integration, CLI 20 + 7, client 15, 0 failed (117 + 7 + 16, 20 + 5 and 15 before); rustfmt clean on the three crates, clippy exit 0 with no diagnostic in the new items, check-all OK and roadmap 59 tickets. Manual on Windows (127.0.0.1:18120, temp db and mods root): a publish into alpha-dir left a plain claim, a keeps-folder reservation answered a 64-character token and renewAfterMs 200000 and wrote the hash plus lease_until, a second reservation of alpha answered 409 before packing and the preflight answered available:false with claimedBy alpha and the same refusal, check-names --fix during the live lease printed the clean sentence and exit 0, the same claim with lease_until 1 printed the lapsed row and exit 1, --fix removed it and exit 0, and after ageing a fresh token a second reservation answered 200 with a new token, the old renewal 409, and the new abort 204 leaving no claim and alpha still installing into alpha-dir. Risks: a leftover token from the renewal-consume race refuses its own entry for the rest of its lease instead of being cleared at once, a live keeps-folder reservation is invisible in a report-only sweep, the second publish must retry rather than queue, an older CLI is now refused while a newer publisher holds the folder it also keeps, an abort matching a re-written token deletes a claim the catalog explains, the preflight can name the caller own entry in claimedBy, and takeover trusts the master clock.'
+    gpu_verified: false
+    follow_ups:
+      - (done) a conditional claim write so a renewal cannot race the upload consume or an abort, which also closes the leftover-token window; the claim now carries a generation compared inside a per-claim write window (see MSERVER-CLAIM-CAS-1)
+      - show a live keeps-folder reservation in check-names without counting it as a problem, so an operator can see a long pack instead of the clean sentence
+  - id: MSERVER-CLAIM-CAS-1
+    title: a claim write carries the generation it was decided against, so a renewal cannot resurrect a consumed token
+    branch: proteus/main (direct)
+    status: done-unverified
+    files:
+      - mserver/MasterService/src/mods.rs
+      - mserver/MasterService/src/http.rs
+      - mserver/CLI/src/main.rs
+      - docs/proteus/MSERVER-CLAIM-CAS-1.md
+    toggle: n/a (additive; a claim without a generation reads as 0, and the write window is an internal object no client or sweep sees as a claim)
+    evidence: 'MSERVER-CLAIM-LEASE-1 and MSERVER-CLAIM-KEEP-1 follow-up, requested by the owner. A claim write was a read followed by a blind put: object_store 0.11 has no conditional update on the local backend, so a renewal that read a token-bearing claim just before the upload consumed it wrote the token back with a fresh deadline, and the folder then refused its own entry next revision for up to ten minutes; two renewals from one body could shorten each other lease, and a renewal in flight when its publish aborted could re-create the claim. StoredClaim gains generation (u64, serde default, read as 0 for every older body); the initial Create writes 1 and every rewrite stores one more. rewrite_claim becomes a compare-and-set returning bool: it takes a per-claim write window (claim_write_marker, _claims/<hex>.json.writing, created with the same If-None-Match / hard_link rule as the claim, and invisible to is_claim_file), reads the body, and writes only while the stored generation equals the one the caller read. lock_claim retries ten times 20 ms apart and clears a marker older than five seconds (a master that died inside the window); unlock_claim is best effort, because the guarded write already landed and a scanner holding the marker open must not turn it into a reported failure. reserve_install_folder keeps its Create for a free folder and loops on AlreadyExists, deciding again from the body that won instead of writing the first-read decision; renew_folder_claim and commit_folder_claim loop the same way (a consume that lands first turns the renewal into the token-less success, a takeover into 409); abort_folder_claim, remove_unused_claims and release_claims_of (entry delete) delete through delete_claim_if, which re-reads body and write time under the window and deletes only while the token, the scan body and its write time, or the named entry, still hold. claim_error maps changed while it was being ... and being claimed by several publishes to 409. Three store tests: a renewal holding the pre-consume body cannot write the token back and the next revision is accepted at once; a held window refuses a second writer, leaves the body byte-identical, is not seen by the sweep, and releases; deleting an entry whose claim window a writer holds leaves the claim, and the next delete after the release removes it. Measured deltas: accepting any generation fails the first on a write decided against the pre-consume body must not land, and bypassing lock_claim fails the second on a writer that cannot take the window must not write; deleting unconditionally in release_claims_of fails the third on a claim a writer holds is not deleted under it. Master 123 lib + 7 bin + 17 integration, CLI 20 + 7, client 15, 0 failed (120 + 7 + 17, 20 + 7 and 15 before); rustfmt clean, clippy exit 0 with the same 32 library warnings and none in a new item, check-all OK, roadmap 60 tickets. Manual on Windows (127.0.0.1:18130, cas-key, temp db and mods root): a publish left generation 2 with no token, a keeps-folder reservation wrote token and lease at generation 3 with renewAfterMs 200000, a fresh renewal answered 204 and left the claim byte-identical, a marker held by hand made the renewal answer 409 changed while it was being renewed with the claim unchanged, the same renewal after 5 s cleared the marker and wrote generation 4, check-names saw one row for one claim and never the window file, --fix with that window held reported the lapsed reservation as kept, the claim changed after the scan and left it, the next --fix after 5 s cleared the window and removed the claim, and a revision-2 publish of alpha consumed its token and left generation 2. Risks: three extra object operations per claim write, a hung master can still land its stale body if nothing else changed, a fixed five second window expiry on the master clock, an older master defeats the compare for writes that land through it, contention answers 409 rather than queueing, and a sweep can report a claim it did not remove.'
+    gpu_verified: false
+    follow_ups:
+      - sweep stale write windows too, so a marker left by a master that died is removed even when nothing writes its claim again
+      - use the S3 PutMode::Update mode when the backend is S3, so a claim write is one request there and the marker remains the local-backend path
+
+  - id: G3e-linux-clang
+    title: PoseidonGame builds with clang in GNU mode, so the Linux build job can run its gate
+    branch: proteus/DX12-1-dx12-upscaler-fixes
+    status: done-unverified
+    files:
+      - engine/Poseidon/World/Entities/Weapons/Ballistics.hpp
+      - engine/Poseidon/World/Physics/PhysicsWorld.hpp
+      - engine/Poseidon/World/Physics/PhysicsBackend.hpp
+      - engine/Poseidon/Dev/Diag/ProbeMeshes.hpp
+      - engine/Poseidon/Core/Game/GameLoop.cpp
+      - engine/Poseidon/Foundation/Common/PlatformPaths.hpp
+      - engine/Poseidon/Foundation/Common/PlatformPaths_posix.cpp
+      - engine/Poseidon/Foundation/Common/PlatformPaths_win.cpp
+      - engine/Poseidon/Graphics/Rendering/Draw/Font.cpp
+      - engine/Poseidon/UI/ProteusTheme.cpp
+      - engine/Random/randomGen.cpp
+      - docs/proteus/G3e-linux-clang.md
+    toggle: 'n/a (no behaviour change: forward declarations move into the namespace their class is in, the executable path resolves through one helper with the same platform calls, Sleep without :: is the same Win32 function on Windows)'
+    evidence: 'G3d-ci-repair follow-up, requested by the owner. Once vcpkg and configure were fixed, build-linux reached the compiler for the first time on this line, at [16/708], and clang in GNU mode stopped on Ballistics.hpp:46 - a global class AmmoType; beside Core/Types.hpp using Poseidon::AmmoType, which declares a second class of that name and then makes every unqualified use ambiguous (Network/NetworkIface.hpp:392). MSVC accepts the pair, so nothing had ever reported it. A CI-only loop would have cost ~20 minutes per error class, since ninja stops at the first failing edge, so the build was reproduced locally instead: Ubuntu 26.04 WSL, clang 21.1.8, CMake 4.2.3, vcpkg manifest x64-linux-clang (42 ports) configured with the preset into /root/bld and built with -k 0, which keeps going after a failure and so lists every broken TU in one pass. That pass found eight errors in three classes and six files: three global forward declarations that collide with Types.hpp using-declarations (AmmoType in Ballistics.hpp, LODShape in PhysicsWorld.hpp and PhysicsBackend.hpp, LODShapeWithShadow in ProbeMeshes.hpp); ::Sleep in GameLoop.cpp, where Foundation/platform.hpp defines Sleep(ms) as a function-like macro onto sleepMs() on POSIX and the leading :: is left stranded in front of the expansion; an unguarded windows.h and GetModuleFileNameA/MAX_PATH in Font.cpp and ProteusTheme.cpp; and an unguarded intrin.h in randomGen.cpp, since clang resource-dir intrin.h forwards to MSVC own. Both executable-path sites now call the new Foundation::getExecutablePath() in PlatformPaths (GetModuleFileNameW / /proc/self/exe / _NSGetExecutablePath) instead of each pasting a POSIX branch, and _ReturnAddress() became RngDrawReturnAddress() with __builtin_return_address(0) behind the same call, intrin.h staying under _MSC_VER. Evidence: the enumerating build compiled 673 of 681 edges and reported exactly those eight; after the fixes ninja -t clean plus a full rebuild compiled 673 C++ TUs to exit 0 and linked apps/cwr/Game/ProteusGame, the first Linux build and link of this line; check-format OK over 136 changed files, check-assets, gen-roadmap --check and the perf_parse/imgdiff selftests OK; and the CI job itself is green on run 40450018964 (head 3d8dad1) - toolchain, vcpkg restore, configure, then 707/708 edges with no error line and Linking CXX executable ProteusGame. Because the two Windows jobs only run on main pushes and dispatch, a workflow_dispatch run (40456099564, head 17f9296) was used to verify that side: all seven jobs green - build (win-x64-clang-rwdi) linked ProteusGame.exe, C++ unit tests (win-x64-clang-rwdi) reported 3,887 tests 100% passed in 148.8 s, and rust unit tests (validation layer, serial) ran for the first time; the same two commands were run locally first (PoseidonGame exit 0, 3,887/3,887 in 138 s), so the first fully green run of the workflow is on this head. Risks: the Windows side of these edits is not compiled locally (cpp-tests and build-windows are main-push/dispatch-gated), the macOS _NSGetExecutablePath branch is uncompiled, the local compiler is clang 21 where the runner has clang 18, and this is a build, not a run - no GPU or game data here. Follow-up: Font.cpp flat fallback still formats Fonts<backslash>%s, which cannot resolve on Linux.'
+    gpu_verified: false
+    follow_ups:
+      - give Font.cpp's flat Fonts fallback a portable prefix instead of a hardcoded backslash, which cannot resolve on Linux
